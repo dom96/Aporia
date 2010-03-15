@@ -358,7 +358,7 @@ proc initControls() =
   # Window
   win.w = windowNew(gtk2.WINDOW_TOPLEVEL)
   win.w.setDefaultSize(800, 600)
-  win.w.setTitle("Nimrod IDE")
+  win.w.setTitle("Aporia IDE")
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(nimide.destroy), nil)
   
   # MainBox (vbox)
