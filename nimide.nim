@@ -1,3 +1,12 @@
+#
+#
+#            Aporia - Nimrod IDE
+#        (c) Copyright 2010 Dominik Picheta
+#
+#    See the file "copying.txt", included in this
+#    distribution, for details about the copyright.
+#
+
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
 
 type
@@ -41,12 +50,14 @@ proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
     
     discard win.bottomBar.push(0, "Line: " & $row & " Column: " & $col)
   
-proc cursorMoved(buffer: PTextBuffer, location: PTextIter, mark: PTextMark, user_data: pgpointer){.cdecl.} =
+proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
+                 mark: PTextMark, user_data: pgpointer){.cdecl.} =
   #echo("cursorMoved")
   updateStatusBar(buffer)
 
 var repelChanged: bool = False  # When a file is opened, the text changes
                                 # Repel the "changed" event, when opening files 
+
 proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
   # Update the 'Line & Column'
   updateStatusBar(buffer)
@@ -63,11 +74,13 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
       win.Tabs[current].saved = False
       name = splitFile(win.Tabs[current].filename).name &
                       splitFile(win.Tabs[current].filename).ext & " *"
-    win.sourceViewTabs.setTabLabelText(win.sourceViewTabs.getNthPage(current), name)
+    win.sourceViewTabs.setTabLabelText(
+        win.sourceViewTabs.getNthPage(current), name)
   
 # Other(Helper) functions
 
-proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow, buffer: var PSourceBuffer) =
+proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
+                    buffer: var PSourceBuffer) =
   # This gets called by addTab
   # Each tabs creats a new SourceView
   # SourceScrolledWindow(ScrolledWindow)
@@ -183,7 +196,8 @@ proc saveFile(menuItem: PMenuItem, user_data: pgpointer) =
           win.Tabs[current].filename = path
           win.Tabs[current].saved = True
           var name = splitFile(path).name & splitFile(path).ext
-          win.sourceViewTabs.setTabLabelText(win.sourceViewTabs.getNthPage(current), name)
+          win.sourceViewTabs.setTabLabelText(
+              win.sourceViewTabs.getNthPage(current), name)
           
         else:
           error(win.w, "Unable to write to file")
