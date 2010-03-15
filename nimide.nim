@@ -321,14 +321,17 @@ proc initTabs(MainBox: PBox) =
   addTab("", "")
   
 proc initFindBar(MainBox: PBox) =
+  # Create a fixed container
   var findFixed = fixedNew()
 
+  # Add a text entry
   var findTextEntry = entryNew()
   findFixed.Put(findTextEntry, 5, 0)
   findTextEntry.show()
   var rq: TRequisition 
   findTextEntry.sizeRequest(addr(rq))
 
+  # Make the text entry longer
   findTextEntry.set_size_request(190, rq.height)
   
   var nextBtn = buttonNew("Next")
