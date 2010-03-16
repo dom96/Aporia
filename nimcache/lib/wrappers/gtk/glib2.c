@@ -63,9 +63,9 @@ N_NIMCALL(void*, nimLoadLibrary)(NimStringDesc* Path_6470);
 N_NIMCALL(void, nimUnloadLibrary)(void* Lib_6473);
 N_NOINLINE(void, nimLoadLibraryError)(NimStringDesc* Path_6480);
 N_NIMCALL(void*, nimGetProcAddr)(void* Lib_6476, NCSTRING Name_6477);
-STRING_LITERAL(TMP124182, "libgobject-2.0-0.dll", 20);
-STRING_LITERAL(TMP124183, "libgobject-2.0-0.dll", 20);
-static void* TMP124181;
+STRING_LITERAL(TMP124185, "libgobject-2.0-0.dll", 20);
+STRING_LITERAL(TMP124186, "libgobject-2.0-0.dll", 20);
+static void* TMP124184;
 TY18718 Dl_18717;
 N_NIMCALL(NI, Gsignalconnect_18786)(void* Instance_18788, NCSTRING Detailedsignal_18789, TY18361 Chandler_18790, void* Data_18791) {
 NI Result_24286;
@@ -107,9 +107,9 @@ F.prev = framePtr;
 F.filename = "C:\\Programy\\nimrod\\lib\\wrappers\\gtk\\glib2.nim";
 F.line = 0;
 framePtr = (TFrame*)&F;
-if (!((TMP124181 = nimLoadLibrary((NimStringDesc*) &TMP124182))
-)) nimLoadLibraryError((NimStringDesc*) &TMP124183);
-Dl_18717 = (TY18718) nimGetProcAddr(TMP124181, "g_signal_connect_data");
+if (!((TMP124184 = nimLoadLibrary((NimStringDesc*) &TMP124185))
+)) nimLoadLibraryError((NimStringDesc*) &TMP124186);
+Dl_18717 = (TY18718) nimGetProcAddr(TMP124184, "g_signal_connect_data");
 F.len = 0;
 framePtr = framePtr->prev;
 }

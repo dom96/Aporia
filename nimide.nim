@@ -17,6 +17,9 @@ type
     SourceViewTabs: PNotebook
     bottomBar: PStatusBar
     
+    findBar: PFixed
+    findEntry: PEntry
+    
     Tabs: seq[Tab] # Other
 
   Tab = object
@@ -170,7 +173,7 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
 proc saveFile(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if current != -1:
-    if win.Tabs[current].saved == False:
+    if not win.Tabs[current].saved:
       var path = ""
       if win.Tabs[current].filename == "":
         path = ChooseFileToSave(win.w)
@@ -211,6 +214,38 @@ proc redo(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
+    
+# -- FindBar
+
+proc findText(button: PButton, user_data: pgpointer) =
+  # This proc get's called when the 'Next' or 'Prev' buttons
+  # are pressed, user_data is a boolean which is
+  # True for Next and False for Previous
+  
+  var findText = getText(win.findEntry)
+  echo("text=", findText)
+  # Get the current tab
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  
+  var startFind, endFind: TTextIter
+  win.Tabs[currentTab].buffer.getStartIter(addr(startFind))
+  win.Tabs[currentTab].buffer.getEndIter(addr(endFind))
+  
+  var startMatch, endMatch: TTextIter
+  var matchFound: gboolean
+  
+  var usrData = (cast[ptr bool](user_data))^
+  echo(usrData)
+  if not usrData:
+    matchFound = forwardSearch(addr(startFind), findText, TEXT_SEARCH_TEXT_ONLY or 
+        TEXT_SEARCH_VISIBLE_ONLY, addr(startMatch), addr(endMatch), nil)
+  else:
+    matchFound = backwardSearch(addr(startFind), findText, TEXT_SEARCH_TEXT_ONLY or 
+        TEXT_SEARCH_VISIBLE_ONLY, addr(startMatch), addr(endMatch), nil)
+  
+  if matchFound:
+    win.Tabs[currentTab].buffer.moveMarkByName("insert", addr(startMatch))
+    win.Tabs[currentTab].buffer.moveMarkByName("selection_bound", addr(endMatch))
 
 
 # GUI Initialization
@@ -336,30 +371,32 @@ proc initTabs(MainBox: PBox) =
   
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container
-  var findFixed = fixedNew()
+  win.findBar = fixedNew()
 
   # Add a text entry
-  var findTextEntry = entryNew()
-  findFixed.Put(findTextEntry, 5, 0)
-  findTextEntry.show()
+  win.findEntry = entryNew()
+  win.findBar.Put(win.findEntry, 5, 0)
+  win.findEntry.show()
   var rq: TRequisition 
-  findTextEntry.sizeRequest(addr(rq))
+  win.findEntry.sizeRequest(addr(rq))
 
   # Make the text entry longer
-  findTextEntry.set_size_request(190, rq.height)
+  win.findEntry.set_size_request(190, rq.height)
   
   var nextBtn = buttonNew("Next")
-  findFixed.Put(nextBtn, 200, 0)
+  win.findBar.Put(nextBtn, 200, 0)
+  var dummyBool = True
+  discard nextBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.findText), addr(dummyBool))
   nextBtn.show()
   var nxtBtnRq: TRequisition
   nextBtn.sizeRequest(addr(nxtBtnRq))
   
   var prevBtn = buttonNew("Prev")
-  findFixed.Put(prevBtn, 205 + nxtBtnRq.width, 0)
+  win.findBar.Put(prevBtn, 205 + nxtBtnRq.width, 0)
   prevBtn.show()
   
-  MainBox.packStart(findFixed, False, False, 0)
-  findFixed.show()
+  MainBox.packStart(win.findBar, False, False, 0)
+  win.findBar.show()
 
 proc initStatusBar(MainBox: PBox) =
   win.bottomBar = statusbarNew()
