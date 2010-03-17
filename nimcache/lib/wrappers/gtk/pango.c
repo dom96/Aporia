@@ -46,9 +46,9 @@ N_NIMCALL(void*, nimLoadLibrary)(NimStringDesc* Path_6470);
 N_NIMCALL(void, nimUnloadLibrary)(void* Lib_6473);
 N_NOINLINE(void, nimLoadLibraryError)(NimStringDesc* Path_6480);
 N_NIMCALL(void*, nimGetProcAddr)(void* Lib_6476, NCSTRING Name_6477);
-STRING_LITERAL(TMP124182, "libpango-1.0-0.dll", 18);
-STRING_LITERAL(TMP124183, "libpango-1.0-0.dll", 18);
-static void* TMP124181;
+STRING_LITERAL(TMP124186, "libpango-1.0-0.dll", 18);
+STRING_LITERAL(TMP124187, "libpango-1.0-0.dll", 18);
+static void* TMP124185;
 TY29142 Dl_29141;
 N_NOINLINE(void, pangoInit)(void) {
 volatile struct {TFrame* prev;NCSTRING procname;NI line;NCSTRING filename;NI len;
@@ -58,9 +58,9 @@ F.prev = framePtr;
 F.filename = "C:\\Programy\\nimrod\\lib\\wrappers\\gtk\\pango.nim";
 F.line = 0;
 framePtr = (TFrame*)&F;
-if (!((TMP124181 = nimLoadLibrary((NimStringDesc*) &TMP124182))
-)) nimLoadLibraryError((NimStringDesc*) &TMP124183);
-Dl_29141 = (TY29142) nimGetProcAddr(TMP124181, "pango_font_description_from_string");
+if (!((TMP124185 = nimLoadLibrary((NimStringDesc*) &TMP124186))
+)) nimLoadLibraryError((NimStringDesc*) &TMP124187);
+Dl_29141 = (TY29142) nimGetProcAddr(TMP124185, "pango_font_description_from_string");
 F.len = 0;
 framePtr = framePtr->prev;
 }

@@ -10,6 +10,11 @@
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
 
 type
+  
+  TSettings = object
+    useRegex: bool
+
+
   MainWin = object
     # Widgets
     w: gtk2.PWindow
@@ -17,10 +22,12 @@ type
     SourceViewTabs: PNotebook
     bottomBar: PStatusBar
     
-    findBar: PFixed
+    findBar: PHBox # findBar - Why can't i have it? ^
     findEntry: PEntry
     
     Tabs: seq[Tab] # Other
+    
+    settings: TSettings
 
   Tab = object
     buffer: PSourceBuffer
@@ -246,10 +253,24 @@ proc findText(forward: bool) =
   if matchFound:
     win.Tabs[currentTab].buffer.moveMarkByName("insert", addr(startMatch))
     win.Tabs[currentTab].buffer.moveMarkByName("selection_bound", addr(endMatch))
-    win.Tabs[currentTab].sourceView.grab_focus()
 
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
 proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
+
+proc useRegex_Toggled(checkmenuitem: PCheckMenuitem, user_data: pgpointer) =
+  win.settings.useRegex = checkmenuitem.itemGetActive()
+
+proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
+  var extraMenu = menuNew()
+  
+  var regexMenuItem = check_menu_item_new("Use Regex")
+  extraMenu.append(regexMenuItem)
+  PCheckMenuItem(regexMenuItem).itemSetActive(win.settings.useRegex)
+  discard signal_connect(regexMenuItem, "toggled", 
+                          SIGNAL_FUNC(useRegex_Toggled), nil)
+  regexMenuItem.show()
+  
+  extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
 
 # GUI Initialization
@@ -375,11 +396,12 @@ proc initTabs(MainBox: PBox) =
   
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container
-  win.findBar = fixedNew()
+  win.findBar = HBoxNew(False, 0)
 
   # Add a text entry
   win.findEntry = entryNew()
-  win.findBar.Put(win.findEntry, 5, 0)
+  win.findBar.packStart(win.findEntry, False, False, 5)
+  discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
   win.findEntry.show()
   var rq: TRequisition 
   win.findEntry.sizeRequest(addr(rq))
@@ -387,17 +409,43 @@ proc initFindBar(MainBox: PBox) =
   # Make the text entry longer
   win.findEntry.set_size_request(190, rq.height)
   
+  # Find next button
   var nextBtn = buttonNew("Next")
-  win.findBar.Put(nextBtn, 200, 0)
+  win.findBar.packStart(nextBtn, false, false, 1)
   discard nextBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
   nextBtn.show()
   var nxtBtnRq: TRequisition
   nextBtn.sizeRequest(addr(nxtBtnRq))
   
-  var prevBtn = buttonNew("Prev")
-  win.findBar.Put(prevBtn, 205 + nxtBtnRq.width, 0)
+  # Find previous button
+  var prevBtn = buttonNew("Previous")
+  win.findBar.packStart(prevBtn, false, false, 2)
   discard prevBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.prevBtn_Clicked), nil)
   prevBtn.show()
+  
+  # Close button - With a close stock image
+  var closeBtn = buttonNew()
+  var closeImage = imageNewFromStock(STOCK_CLOSE, ICON_SIZE_SMALL_TOOLBAR)
+  var closeBox = hboxNew(False, 0)
+  closeBtn.add(closeBox)
+  closeBox.show()
+  closeBox.add(closeImage)
+  closeImage.show()
+  win.findBar.packEnd(closeBtn, False, False, 2)
+  closeBtn.show()
+  
+  # Extra button - When clicked shows a menu with options like 'Use regex'
+  var extraBtn = buttonNew()
+  var extraImage = imageNewFromStock(STOCK_GO_UP, ICON_SIZE_SMALL_TOOLBAR)
+  # maybe the icon should be STOCK_PROPERTIES, this one i think looks nicer though
+  var extraBox = hboxNew(False, 0)
+  extraBtn.add(extraBox)
+  extraBox.show()
+  extraBox.add(extraImage)
+  extraImage.show()
+  discard extraBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.extraBtn_Clicked), nil)
+  win.findBar.packEnd(extraBtn, False, False, 0)
+  extraBtn.show()
   
   MainBox.packStart(win.findBar, False, False, 0)
   win.findBar.show()
