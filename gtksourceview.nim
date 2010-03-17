@@ -1,12 +1,3 @@
-#
-#
-#            Aporia - Nimrod IDE
-#        (c) Copyright 2010 Dominik Picheta
-#
-#    See the file "copying.txt", included in this
-#    distribution, for details about the copyright.
-#
-
 import gtk2, glib2
 
 const
@@ -24,6 +15,9 @@ type
   
   TSourceView*{.pure, final.} = object of TTextView
   PSourceView* = ptr TSourceView
+  
+const
+  TEXT_SEARCH_CASE_INSENSITIVE* = 1 shl 2
   
 proc source_view_new*(): PWidget {.cdecl, dynlib: lib,
   importc: "gtk_source_view_new".}
@@ -76,7 +70,14 @@ proc can_undo*(buffer: PSourceBuffer): gboolean {.cdecl, dynlib: lib,
 proc can_redo*(buffer: PSourceBuffer): gboolean {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_can_redo".}
   
+proc forward_search*(iter: PTextIter, str: cstring, flags: TTextSearchFlags, 
+                     match_start: PTextIter, match_end: PTextIter, 
+                     limit: PTextIter): gboolean {.cdecl, dynlib: lib,
+  importc: "gtk_source_iter_forward_search".}
   
-  
+proc backward_search*(iter: PTextIter, str: cstring, flags: TTextSearchFlags, 
+                     match_start: PTextIter, match_end: PTextIter, 
+                     limit: PTextIter): gboolean {.cdecl, dynlib: lib,
+  importc: "gtk_source_iter_backward_search".}
   
   

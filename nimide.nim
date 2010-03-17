@@ -217,35 +217,39 @@ proc redo(menuItem: PMenuItem, user_data: pgpointer) =
     
 # -- FindBar
 
-proc findText(button: PButton, user_data: pgpointer) =
+proc findText(forward: bool) =
   # This proc get's called when the 'Next' or 'Prev' buttons
   # are pressed, user_data is a boolean which is
   # True for Next and False for Previous
   
-  var findText = getText(win.findEntry)
-  echo("text=", findText)
+  var text = getText(win.findEntry)
+  echo("text=", text)
   # Get the current tab
   var currentTab = win.SourceViewTabs.getCurrentPage()
   
-  var startFind, endFind: TTextIter
-  win.Tabs[currentTab].buffer.getStartIter(addr(startFind))
-  win.Tabs[currentTab].buffer.getEndIter(addr(endFind))
+  # Get the position where the cursor is
+  # Search based on that
+  var startSel, endSel: TTextIter
+  discard win.Tabs[currentTab].buffer.getSelectionBounds(
+      addr(startsel), addr(endsel))
   
   var startMatch, endMatch: TTextIter
   var matchFound: gboolean
   
-  var usrData = (cast[ptr bool](user_data))^
-  echo(usrData)
-  if not usrData:
-    matchFound = forwardSearch(addr(startFind), findText, TEXT_SEARCH_TEXT_ONLY or 
-        TEXT_SEARCH_VISIBLE_ONLY, addr(startMatch), addr(endMatch), nil)
+  if forward:
+    matchFound = gtksourceview.forwardSearch(addr(endSel), text, TEXT_SEARCH_TEXT_ONLY or 
+        TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE, addr(startMatch), addr(endMatch), nil)
   else:
-    matchFound = backwardSearch(addr(startFind), findText, TEXT_SEARCH_TEXT_ONLY or 
-        TEXT_SEARCH_VISIBLE_ONLY, addr(startMatch), addr(endMatch), nil)
+    matchFound = gtksourceview.backwardSearch(addr(startSel), text, TEXT_SEARCH_TEXT_ONLY or 
+        TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE, addr(startMatch), addr(endMatch), nil)
   
   if matchFound:
     win.Tabs[currentTab].buffer.moveMarkByName("insert", addr(startMatch))
     win.Tabs[currentTab].buffer.moveMarkByName("selection_bound", addr(endMatch))
+    win.Tabs[currentTab].sourceView.grab_focus()
+
+proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
+proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
 
 
 # GUI Initialization
@@ -293,9 +297,9 @@ proc initTopMenu(MainBox: PBox) =
                           SIGNAL_FUNC(saveFile), nil)
 
   var SaveAsMenuItem = menu_item_new("Save As...") # Save as...
-  # CTRL + Shift + S no idea how to do this
-  #SaveMenuItem.add_accelerator("activate", accGroup, 
-  #                KEY_s, MOD1_MASK, ACCEL_VISIBLE) 
+  # CTRL + Shift + S no idea how to do this :(
+  SaveMenuItem.add_accelerator("activate", accGroup, 
+                  KEY_s, CONTROL_MASK or SHIFT_MASK, ACCEL_VISIBLE) 
   FileMenu.append(SaveAsMenuItem)
   show(SaveAsMenuItem)
   #discard signal_connect(SaveAsMenuItem, "activate", 
@@ -385,14 +389,14 @@ proc initFindBar(MainBox: PBox) =
   
   var nextBtn = buttonNew("Next")
   win.findBar.Put(nextBtn, 200, 0)
-  var dummyBool = True
-  discard nextBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.findText), addr(dummyBool))
+  discard nextBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
   nextBtn.show()
   var nxtBtnRq: TRequisition
   nextBtn.sizeRequest(addr(nxtBtnRq))
   
   var prevBtn = buttonNew("Prev")
   win.findBar.Put(prevBtn, 205 + nxtBtnRq.width, 0)
+  discard prevBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.prevBtn_Clicked), nil)
   prevBtn.show()
   
   MainBox.packStart(win.findBar, False, False, 0)
