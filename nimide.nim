@@ -12,7 +12,7 @@ import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
 type
   
   TSettings = object
-    useRegex: bool
+    search: string
 
 
   MainWin = object
@@ -38,6 +38,7 @@ type
 
 var win: MainWin
 win.Tabs = @[]
+win.settings.search = "caseinsens"
 
 # GTK Events
 # -- w(PWindow)
@@ -257,19 +258,74 @@ proc findText(forward: bool) =
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
 proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
 
-proc useRegex_Toggled(checkmenuitem: PCheckMenuitem, user_data: pgpointer) =
-  win.settings.useRegex = checkmenuitem.itemGetActive()
+proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer){.cdecl.} =
+  echo("caseSens_Changed")
+  win.settings.search = "casesens"
+proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer){.cdecl.} =
+  win.settings.search = "caseinsens"
+proc style_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer){.cdecl.} =
+  win.settings.search = "style"
+proc regex_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer){.cdecl.} =
+  win.settings.search = "regex"
+proc peg_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer){.cdecl.} =
+  win.settings.search = "peg"
 
 proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   var extraMenu = menuNew()
   
-  var regexMenuItem = check_menu_item_new("Use Regex")
-  extraMenu.append(regexMenuItem)
-  PCheckMenuItem(regexMenuItem).itemSetActive(win.settings.useRegex)
-  discard signal_connect(regexMenuItem, "toggled", 
-                          SIGNAL_FUNC(useRegex_Toggled), nil)
-  regexMenuItem.show()
+  var group: PGSList
+
+  var caseSensMenuItem = radio_menu_item_new(group, "Case sensitive")
+  extraMenu.append(caseSensMenuItem)
+  discard signal_connect(caseSensMenuItem, "toggled", 
+                          SIGNAL_FUNC(caseSens_Changed), nil)
+  caseSensMenuItem.show()
+  group = caseSensMenuItem.ItemGetGroup()
   
+  var caseInSensMenuItem = radio_menu_item_new(group, "Case insensitive")
+  extraMenu.append(caseInSensMenuItem)
+  discard signal_connect(caseInSensMenuItem, "toggled", 
+                          SIGNAL_FUNC(caseInSens_Changed), nil)
+  caseInSensMenuItem.show()
+  group = caseInSensMenuItem.ItemGetGroup()
+  
+  var styleMenuItem = radio_menu_item_new(group, "Style insensitive")
+  extraMenu.append(styleMenuItem)
+  discard signal_connect(styleMenuItem, "toggled", 
+                          SIGNAL_FUNC(style_Changed), nil)
+  styleMenuItem.show()
+  group = styleMenuItem.ItemGetGroup()
+  
+  var regexMenuItem = radio_menu_item_new(group, "Regex")
+  extraMenu.append(regexMenuItem)
+  discard signal_connect(regexMenuItem, "toggled", 
+                          SIGNAL_FUNC(regex_Changed), nil)
+  regexMenuItem.show()
+  group = regexMenuItem.ItemGetGroup()
+  
+  var pegMenuItem = radio_menu_item_new(group, "Pegs")
+  extraMenu.append(pegMenuItem)
+  discard signal_connect(pegMenuItem, "toggled", 
+                          SIGNAL_FUNC(peg_Changed), nil)
+  pegMenuItem.show()
+  
+  PCheckMenuItem(caseSensMenuItem).ItemSetActive(False)
+  echo(win.settings.search)
+  case win.settings.search
+  of "casesens":
+    PCheckMenuItem(caseSensMenuItem).ItemSetActive(True)
+  of "caseinsens":
+    echo("caseINSENSITIVE!")
+    PCheckMenuItem(caseInSensMenuItem).ItemSetActive(True)
+  of "style":
+    PCheckMenuItem(styleMenuItem).ItemSetActive(True)
+  of "regex":
+    PCheckMenuItem(regexMenuItem).ItemSetActive(True)
+  of "peg":
+    PCheckMenuItem(pegMenuItem).ItemSetActive(True)
+    
+  
+
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
 

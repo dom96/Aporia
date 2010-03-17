@@ -188,7 +188,7 @@ NimStringDesc* Filename;
 };
 struct TY124002 {
 TNimType* m_type;
-NIM_BOOL Useregex;
+NimStringDesc* Search;
 };
 struct TY124004 {
 TNimType* m_type;
@@ -2823,12 +2823,12 @@ TMP124022[7] = &TMP103[295];
 NTI124002->size = sizeof(TY124002);
 NTI124002->kind = 17;
 NTI124002->base = 0;
-NTI124002->flags = 3;
+NTI124002->flags = 2;
 TMP103[296].kind = 1;
-TMP103[296].offset = offsetof(TY124002, Useregex);
-TMP103[296].typ = NTI124;
+TMP103[296].offset = offsetof(TY124002, Search);
+TMP103[296].typ = NTI130;
 chckNil(TMP103[296].typ);
-TMP103[296].name = "useRegex";
+TMP103[296].name = "search";
 NTI124002->node = &TMP103[296];
 TMP103[295].kind = 1;
 TMP103[295].offset = offsetof(TY124004, Settings);
