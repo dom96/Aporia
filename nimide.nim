@@ -24,6 +24,10 @@ type
     
     findBar: PHBox # findBar - Why can't i have it? ^
     findEntry: PEntry
+    replaceEntry: PEntry
+    replaceLabel: PLabel
+    replaceBtn: PButton
+    replaceAllBtn: PButton
     
     Tabs: seq[Tab] # Other
     
@@ -223,6 +227,20 @@ proc redo(menuItem: PMenuItem, user_data: pgpointer) =
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
     
+proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) = 
+  win.findBar.show()
+  win.replaceEntry.hide()
+  win.replaceLabel.hide()
+  win.replaceBtn.hide()
+  win.replaceAllBtn.hide()
+
+proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  win.findBar.show()
+  win.replaceEntry.show()
+  win.replaceLabel.show()
+  win.replaceBtn.show()
+  win.replaceAllBtn.show()
+    
 # -- FindBar
 
 proc findText(forward: bool) =
@@ -231,7 +249,9 @@ proc findText(forward: bool) =
   # True for Next and False for Previous
   
   var text = getText(win.findEntry)
-  echo("text=", text)
+
+  # TODO: regex, pegs, style insensitive searching
+
   # Get the current tab
   var currentTab = win.SourceViewTabs.getCurrentPage()
   
@@ -244,12 +264,20 @@ proc findText(forward: bool) =
   var startMatch, endMatch: TTextIter
   var matchFound: gboolean
   
-  if forward:
-    matchFound = gtksourceview.forwardSearch(addr(endSel), text, TEXT_SEARCH_TEXT_ONLY or 
-        TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE, addr(startMatch), addr(endMatch), nil)
+  var options: TTextSearchFlags
+  if win.settings.search == "caseinsens":
+    options = TEXT_SEARCH_TEXT_ONLY or 
+        TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE
   else:
-    matchFound = gtksourceview.backwardSearch(addr(startSel), text, TEXT_SEARCH_TEXT_ONLY or 
-        TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE, addr(startMatch), addr(endMatch), nil)
+    options = TEXT_SEARCH_TEXT_ONLY or 
+        TEXT_SEARCH_VISIBLE_ONLY
+  
+  if forward:
+    matchFound = gtksourceview.forwardSearch(addr(endSel), text, 
+        options, addr(startMatch), addr(endMatch), nil)
+  else:
+    matchFound = gtksourceview.backwardSearch(addr(startSel), text, 
+        options, addr(startMatch), addr(endMatch), nil)
   
   if matchFound:
     win.Tabs[currentTab].buffer.moveMarkByName("insert", addr(startMatch))
@@ -257,9 +285,14 @@ proc findText(forward: bool) =
 
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
 proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
+proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
+  #
+proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
+  #
+
+proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = win.findBar.hide()
 
 proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer){.cdecl.} =
-  echo("caseSens_Changed")
   win.settings.search = "casesens"
 proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer){.cdecl.} =
   win.settings.search = "caseinsens"
@@ -309,13 +342,11 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
                           SIGNAL_FUNC(peg_Changed), nil)
   pegMenuItem.show()
   
-  PCheckMenuItem(caseSensMenuItem).ItemSetActive(False)
-  echo(win.settings.search)
+  # Make the correct radio button active
   case win.settings.search
   of "casesens":
     PCheckMenuItem(caseSensMenuItem).ItemSetActive(True)
   of "caseinsens":
-    echo("caseINSENSITIVE!")
     PCheckMenuItem(caseInSensMenuItem).ItemSetActive(True)
   of "style":
     PCheckMenuItem(styleMenuItem).ItemSetActive(True)
@@ -323,8 +354,6 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
     PCheckMenuItem(regexMenuItem).ItemSetActive(True)
   of "peg":
     PCheckMenuItem(pegMenuItem).ItemSetActive(True)
-    
-  
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
@@ -337,7 +366,6 @@ proc initTopMenu(MainBox: PBox) =
   # like CTRL + S in SaveMenuItem
   var accGroup = accel_group_new()
   add_accel_group(win.w, accGroup)
-
 
   # TopMenu(MenuBar)
   var TopMenu = menuBarNew()
@@ -376,7 +404,7 @@ proc initTopMenu(MainBox: PBox) =
   var SaveAsMenuItem = menu_item_new("Save As...") # Save as...
   # CTRL + Shift + S no idea how to do this :(
   SaveMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_s, CONTROL_MASK or SHIFT_MASK, ACCEL_VISIBLE) 
+                  KEY_s, CONTROL_MASK or gdk2.SHIFT_MASK, ACCEL_VISIBLE) 
   FileMenu.append(SaveAsMenuItem)
   show(SaveAsMenuItem)
   #discard signal_connect(SaveAsMenuItem, "activate", 
@@ -402,7 +430,27 @@ proc initTopMenu(MainBox: PBox) =
   show(RedoMenuItem)
   discard signal_connect(RedoMenuItem, "activate", 
                           SIGNAL_FUNC(nimide.redo), nil)
+
+  var editSep = separator_menu_item_new()
+  EditMenu.append(editSep)
+  editSep.show()
   
+  var FindMenuItem = menu_item_new("Find") # Find
+  FindMenuItem.add_accelerator("activate", accGroup, 
+                  KEY_f, CONTROL_MASK, ACCEL_VISIBLE) 
+  EditMenu.append(FindMenuItem)
+  show(FindMenuItem)
+  discard signal_connect(FindMenuItem, "activate", 
+                          SIGNAL_FUNC(nimide.find_Activate), nil)
+
+  var ReplaceMenuItem = menu_item_new("Replace") # Replace
+  ReplaceMenuItem.add_accelerator("activate", accGroup, 
+                  KEY_h, CONTROL_MASK, ACCEL_VISIBLE) 
+  EditMenu.append(ReplaceMenuItem)
+  show(ReplaceMenuItem)
+  discard signal_connect(ReplaceMenuItem, "activate", 
+                          SIGNAL_FUNC(nimide.replace_Activate), nil)
+
   var EditMenuItem = menuItemNewWithMnemonic("_Edit")
 
   EditMenuItem.setSubMenu(EditMenu)
@@ -453,21 +501,45 @@ proc initTabs(MainBox: PBox) =
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container
   win.findBar = HBoxNew(False, 0)
+  win.findBar.setSpacing(4)
 
-  # Add a text entry
+  # Add a Label 'Find'
+  var findLabel = labelNew("Find:")
+  win.findBar.packStart(findLabel, False, False, 0)
+  findLabel.show()
+
+  # Add a (find) text entry
   win.findEntry = entryNew()
-  win.findBar.packStart(win.findEntry, False, False, 5)
+  win.findBar.packStart(win.findEntry, False, False, 0)
   discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
   win.findEntry.show()
   var rq: TRequisition 
   win.findEntry.sizeRequest(addr(rq))
 
-  # Make the text entry longer
+  # Make the (find) text entry longer
   win.findEntry.set_size_request(190, rq.height)
+  
+  # Add a Label 'Replace' 
+  # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  win.replaceLabel = labelNew("Replace:")
+  win.findBar.packStart(win.replaceLabel, False, False, 0)
+  #replaceLabel.show()
+  
+  # Add a (replace) text entry 
+  # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  win.replaceEntry = entryNew()
+  win.findBar.packStart(win.replaceEntry, False, False, 0)
+  #discard win.replaceEntry.signalConnect("activate", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
+  #win.replaceEntry.show()
+  var rq1: TRequisition 
+  win.replaceEntry.sizeRequest(addr(rq1))
+
+  # Make the (replace) text entry longer
+  win.replaceEntry.set_size_request(100, rq1.height)
   
   # Find next button
   var nextBtn = buttonNew("Next")
-  win.findBar.packStart(nextBtn, false, false, 1)
+  win.findBar.packStart(nextBtn, false, false, 0)
   discard nextBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
   nextBtn.show()
   var nxtBtnRq: TRequisition
@@ -475,9 +547,25 @@ proc initFindBar(MainBox: PBox) =
   
   # Find previous button
   var prevBtn = buttonNew("Previous")
-  win.findBar.packStart(prevBtn, false, false, 2)
+  win.findBar.packStart(prevBtn, false, false, 0)
   discard prevBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.prevBtn_Clicked), nil)
   prevBtn.show()
+  
+  # Replace button
+  # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  win.replaceBtn = buttonNew("Replace")
+  win.findBar.packStart(win.replaceBtn, false, false, 0)
+  discard win.replaceBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.replaceBtn_Clicked), nil)
+  #replaceBtn.show()
+
+  # Replace all button
+  # - this Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  win.replaceAllBtn = buttonNew("Replace All")
+  win.findBar.packStart(win.replaceAllBtn, false, false, 0)
+  discard win.replaceAllBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.replaceAllBtn_Clicked), nil)
+  #replaceAllBtn.show()
+  
+  # Right side ...
   
   # Close button - With a close stock image
   var closeBtn = buttonNew()
@@ -487,6 +575,7 @@ proc initFindBar(MainBox: PBox) =
   closeBox.show()
   closeBox.add(closeImage)
   closeImage.show()
+  discard closeBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.closeBtn_Clicked), nil)
   win.findBar.packEnd(closeBtn, False, False, 2)
   closeBtn.show()
   
