@@ -8,6 +8,7 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
+{.push callConv:cdecl.}
 
 type
   
@@ -84,7 +85,7 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
     var name = ""
     if win.Tabs[current].filename == "":
       win.Tabs[current].saved = False
-      name = "Untitled * "
+      name = "Untitled *"
     else:
       win.Tabs[current].saved = False
       name = splitFile(win.Tabs[current].filename).name &
@@ -92,6 +93,9 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
     win.sourceViewTabs.setTabLabelText(
         win.sourceViewTabs.getNthPage(current), name)
   
+proc onCloseTab(btn: PButton, user_data: PWidget) = 
+  echo("closeTab")
+
 # Other(Helper) functions
 
 proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
@@ -128,16 +132,33 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
 
   buffer.setLanguage(win.nimLang)
 
+proc createTabLabel(name: string, t_child: PWidget): PWidget =
+  var box = hboxNew(False, 0)
+  var label = labelNew(name)
+  var closebtn = buttonNew()
+  closeBtn.setLabel(nil)
+  var iconSize = iconSizeFromName("tabIconSize")
+  if iconSize == 0:
+     iconSize = iconSizeRegister("tabIconSize", 10, 10)
+  var image = imageNewFromStock(STOCK_CLOSE, iconSize)
+  discard gSignalConnect(closebtn, "clicked", G_Callback(onCloseTab), t_child)
+  closebtn.setImage(image)
+  gtk2.setRelief(closebtn, RELIEF_NONE)
+  box.packStart(label, True, True, 0)
+  box.packEnd(closebtn, False, False, 0)
+  box.showAll()
+  return box
+
 proc addTab(name: string, filename: string) =
   var nam = name
   if nam == "": nam = "Untitled"
-  if filename == "": nam.add(" * ")
+  if filename == "": nam.add(" *")
   elif filename != "" and name == "":
     # Get the name.ext of the filename, for the tabs title
     nam = splitFile(filename).name & splitFile(filename).ext
     
 
-  var TabLabel = labelNew(nam)
+
   
   # Init the sourceview
   var sourceView: PWidget
@@ -145,8 +166,10 @@ proc addTab(name: string, filename: string) =
   var buffer: PSourceBuffer
   initSourceView(sourceView, scrollWindow, buffer)
   
+  var TabLabel = createTabLabel(nam, scrollWindow)
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
+
 
   var nTab: Tab
   nTab.buffer = buffer
