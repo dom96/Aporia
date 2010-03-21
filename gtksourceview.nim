@@ -1,7 +1,11 @@
 import gtk2, glib2
 
-const
-  lib = "libgtksourceview-2.0-0.dll"
+when defined(windows):
+  const lib = "libgtksourceview-2.0-0.dll"
+elif defined(macosx):
+  const lib = "libgtksourceview-2.0-0.dylib"
+else:
+  const lib = "libgtksourceview-2.0.so(|.0)"
 
 type
   TSourceLanguageManager*{.pure, final.} = object
@@ -15,6 +19,12 @@ type
   
   TSourceView*{.pure, final.} = object of TTextView
   PSourceView* = ptr TSourceView
+  
+  TSourceStyleSchemeManager*{.pure, final.} = object
+  PSourceStyleSchemeManager* = ptr TSourceStyleSchemeManager
+  
+  TSourceStyleScheme*{.pure, final.} = object
+  PSourceStyleScheme* = ptr TSourceStyleScheme
   
 const
   TEXT_SEARCH_CASE_INSENSITIVE* = 1 shl 2
@@ -36,6 +46,9 @@ proc get_language*(lm: PSourceLanguageManager, id: cstring): PSourceLanguage {.c
 
 proc set_language*(buffer: PSourceBuffer, language: PSourceLanguage) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_language".}
+
+proc set_scheme*(buffer: PSourceBuffer, scheme: PSourceStyleScheme) {.cdecl, dynlib: lib,
+  importc: "gtk_source_buffer_set_style_scheme".}
   
 proc set_highlight_syntax*(buffer: PSourceBuffer, highlight: gboolean) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_highlight_syntax".}
@@ -80,4 +93,15 @@ proc backward_search*(iter: PTextIter, str: cstring, flags: TTextSearchFlags,
                      limit: PTextIter): gboolean {.cdecl, dynlib: lib,
   importc: "gtk_source_iter_backward_search".}
   
+proc scheme_manager_get_default*(): PSourceStyleSchemeManager {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_get_default".}
+
+proc get_scheme_ids*(manager: PSourceStyleSchemeManager): cstringArray {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_get_scheme_ids".}
+
+proc get_scheme*(manager: PSourceStyleSchemeManager, scheme_id: cstring): PSourceStyleScheme {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_get_scheme".}
+
+proc get_name*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_get_name".}
   

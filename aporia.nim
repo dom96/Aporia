@@ -8,22 +8,20 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
+import settings
 {.push callConv:cdecl.}
 
 type
-  
-  TSettings = object
-    search: string
-
 
   MainWin = object
     # Widgets
     w: gtk2.PWindow
     nimLang: PSourceLanguage
+    scheme: PSourceStyleScheme
     SourceViewTabs: PNotebook
     bottomBar: PStatusBar
     
-    findBar: PHBox # findBar - Why can't i have it? ^
+    findBar: PHBox # findBar
     findEntry: PEntry
     replaceEntry: PEntry
     replaceLabel: PLabel
@@ -32,7 +30,7 @@ type
     
     Tabs: seq[Tab] # Other
     
-    settings: TSettings
+    settings: settings.TSettings
 
   Tab = object
     buffer: PSourceBuffer
@@ -40,10 +38,12 @@ type
     saved: bool
     filename: string
 
-
 var win: MainWin
 win.Tabs = @[]
+# Some default settings - These will be loaded from a cfg file in the future
 win.settings.search = "caseinsens"
+win.settings.font = "monospace 9"
+win.settings.colorSchemeID = "cobalt"
 
 # GTK Events
 # -- w(PWindow)
@@ -68,69 +68,14 @@ proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
-  #echo("cursorMoved")
   updateStatusBar(buffer)
 
-var repelChanged: bool = False  # When a file is opened, the text changes
-                                # Repel the "changed" event, when opening files 
+proc onCloseTab(btn: PButton, user_data: PWidget) =
+  if win.sourceViewTabs.getNPages() > 1:
+    var tab = win.sourceViewTabs.pageNum(user_data)
+    win.sourceViewTabs.removePage(tab)
 
-proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
-  # Update the 'Line & Column'
-  updateStatusBar(buffer)
-
-  if repelChanged == False:
-    # Change the tabs state to 'unsaved'
-    # and add '*' to the Tab Name
-    var current = win.SourceViewTabs.getCurrentPage()
-    var name = ""
-    if win.Tabs[current].filename == "":
-      win.Tabs[current].saved = False
-      name = "Untitled *"
-    else:
-      win.Tabs[current].saved = False
-      name = splitFile(win.Tabs[current].filename).name &
-                      splitFile(win.Tabs[current].filename).ext & " *"
-    win.sourceViewTabs.setTabLabelText(
-        win.sourceViewTabs.getNthPage(current), name)
-  
-proc onCloseTab(btn: PButton, user_data: PWidget) = 
-  echo("closeTab")
-
-# Other(Helper) functions
-
-proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
-                    buffer: var PSourceBuffer) =
-  # This gets called by addTab
-  # Each tabs creats a new SourceView
-  # SourceScrolledWindow(ScrolledWindow)
-  scrollWindow = scrolledWindowNew(nil, nil)
-  scrollWindow.show()
-  
-  # SourceView(gtkSourceView)
-  SourceView = sourceViewNew()
-  PSourceView(SourceView).setInsertSpacesInsteadOfTabs(True)
-  PSourceView(SourceView).setIndentWidth(2)
-  PSourceView(SourceView).setShowLineNumbers(True)
-
-  var font = font_description_from_string("monospace 9")
-  SourceView.modifyFont(font)
-  
-  scrollWindow.addWithViewport(SourceView)
-  SourceView.show()
-  # -- Set the syntax highlighter language
-  buffer = PSourceBuffer(PTextView(SourceView).getBuffer())
-  
-  # UGLY workaround for yet another compiler bug:
-  discard gsignalConnect(buffer, "mark-set", 
-                         GCallback(nimide.cursorMoved), nil)
-  discard gsignalConnect(buffer, "changed", GCallback(nimide.changed), nil)
-  
-  # Load up the language style
-  var LangMan = languageManagerNew()
-  var nimLang = LangMan.getLanguage("nimrod")
-  win.nimLang = nimLang
-
-  buffer.setLanguage(win.nimLang)
+    win.Tabs.delete(tab)
 
 proc createTabLabel(name: string, t_child: PWidget): PWidget =
   var box = hboxNew(False, 0)
@@ -148,6 +93,60 @@ proc createTabLabel(name: string, t_child: PWidget): PWidget =
   box.packEnd(closebtn, False, False, 0)
   box.showAll()
   return box
+  
+var repelChanged: bool = False  # When a file is opened, the text changes
+                                # Repel the "changed" event, when opening files 
+proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
+  # Update the 'Line & Column'
+  updateStatusBar(buffer)
+
+  if repelChanged == False:
+    # Change the tabs state to 'unsaved'
+    # and add '*' to the Tab Name
+    var current = win.SourceViewTabs.getCurrentPage()
+    var name = ""
+    if win.Tabs[current].filename == "":
+      win.Tabs[current].saved = False
+      name = "Untitled *"
+    else:
+      win.Tabs[current].saved = False
+      name = splitFile(win.Tabs[current].filename).name &
+                      splitFile(win.Tabs[current].filename).ext & " *"
+    
+    var cTab = win.sourceViewTabs.getNthPage(current)
+    win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
+  
+# Other(Helper) functions
+
+proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
+                    buffer: var PSourceBuffer) =
+  # This gets called by addTab
+  # Each tabs creats a new SourceView
+  # SourceScrolledWindow(ScrolledWindow)
+  scrollWindow = scrolledWindowNew(nil, nil)
+  scrollWindow.show()
+  
+  # SourceView(gtkSourceView)
+  SourceView = sourceViewNew()
+  PSourceView(SourceView).setInsertSpacesInsteadOfTabs(True)
+  PSourceView(SourceView).setIndentWidth(2)
+  PSourceView(SourceView).setShowLineNumbers(True)
+
+  var font = font_description_from_string(win.settings.font)
+  SourceView.modifyFont(font)
+  
+  scrollWindow.add(SourceView)
+  SourceView.show()
+  # -- Set the syntax highlighter language
+  buffer = PSourceBuffer(PTextView(SourceView).getBuffer())
+  
+  # UGLY workaround for yet another compiler bug:
+  discard gsignalConnect(buffer, "mark-set", 
+                         GCallback(aporia.cursorMoved), nil)
+  discard gsignalConnect(buffer, "changed", GCallback(aporia.changed), nil)
+
+  buffer.setLanguage(win.nimLang)
+  buffer.setScheme(win.scheme)
 
 proc addTab(name: string, filename: string) =
   var nam = name
@@ -156,10 +155,7 @@ proc addTab(name: string, filename: string) =
   elif filename != "" and name == "":
     # Get the name.ext of the filename, for the tabs title
     nam = splitFile(filename).name & splitFile(filename).ext
-    
 
-
-  
   # Init the sourceview
   var sourceView: PWidget
   var scrollWindow: PScrolledWindow
@@ -169,7 +165,6 @@ proc addTab(name: string, filename: string) =
   var TabLabel = createTabLabel(nam, scrollWindow)
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
-
 
   var nTab: Tab
   nTab.buffer = buffer
@@ -234,8 +229,9 @@ proc saveFile(menuItem: PMenuItem, user_data: pgpointer) =
           win.Tabs[current].filename = path
           win.Tabs[current].saved = True
           var name = splitFile(path).name & splitFile(path).ext
-          win.sourceViewTabs.setTabLabelText(
-              win.sourceViewTabs.getNthPage(current), name)
+          
+          var cTab = win.sourceViewTabs.getNthPage(current)
+          win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
           
         else:
           error(win.w, "Unable to write to file")
@@ -263,7 +259,10 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   win.replaceLabel.show()
   win.replaceBtn.show()
   win.replaceAllBtn.show()
-    
+  
+proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  settings.showSettings(win.w, win.settings)
+  
 # -- FindBar
 
 proc findText(forward: bool) =
@@ -305,6 +304,8 @@ proc findText(forward: bool) =
   if matchFound:
     win.Tabs[currentTab].buffer.moveMarkByName("insert", addr(startMatch))
     win.Tabs[currentTab].buffer.moveMarkByName("selection_bound", addr(endMatch))
+    discard PTextView(win.Tabs[currentTab].sourceView).
+        scrollToIter(addr(startMatch), 0.0, True, 0.5, 0.5)
 
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
 proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
@@ -413,7 +414,7 @@ proc initTopMenu(MainBox: PBox) =
   FileMenu.append(OpenMenuItem)
   show(OpenMenuItem)
   discard signal_connect(OpenMenuItem, "activate", 
-                          SIGNAL_FUNC(nimide.openFile), nil)
+                          SIGNAL_FUNC(aporia.openFile), nil)
   
   var SaveMenuItem = menu_item_new("Save") # Save
   # CTRL + S
@@ -446,13 +447,13 @@ proc initTopMenu(MainBox: PBox) =
   EditMenu.append(UndoMenuItem)
   show(UndoMenuItem)
   discard signal_connect(UndoMenuItem, "activate", 
-                          SIGNAL_FUNC(nimide.undo), nil)
+                          SIGNAL_FUNC(aporia.undo), nil)
   
   var RedoMenuItem = menu_item_new("Redo") # Undo
   EditMenu.append(RedoMenuItem)
   show(RedoMenuItem)
   discard signal_connect(RedoMenuItem, "activate", 
-                          SIGNAL_FUNC(nimide.redo), nil)
+                          SIGNAL_FUNC(aporia.redo), nil)
 
   var editSep = separator_menu_item_new()
   EditMenu.append(editSep)
@@ -464,7 +465,7 @@ proc initTopMenu(MainBox: PBox) =
   EditMenu.append(FindMenuItem)
   show(FindMenuItem)
   discard signal_connect(FindMenuItem, "activate", 
-                          SIGNAL_FUNC(nimide.find_Activate), nil)
+                          SIGNAL_FUNC(aporia.find_Activate), nil)
 
   var ReplaceMenuItem = menu_item_new("Replace") # Replace
   ReplaceMenuItem.add_accelerator("activate", accGroup, 
@@ -472,7 +473,17 @@ proc initTopMenu(MainBox: PBox) =
   EditMenu.append(ReplaceMenuItem)
   show(ReplaceMenuItem)
   discard signal_connect(ReplaceMenuItem, "activate", 
-                          SIGNAL_FUNC(nimide.replace_Activate), nil)
+                          SIGNAL_FUNC(aporia.replace_Activate), nil)
+
+  var editSep1 = separator_menu_item_new()
+  EditMenu.append(editSep1)
+  editSep1.show()
+  
+  var SettingsMenuItem = menu_item_new("Settings...") # Settings
+  EditMenu.append(SettingsMenuItem)
+  show(SettingsMenuItem)
+  discard signal_connect(SettingsMenuItem, "activate", 
+                          SIGNAL_FUNC(aporia.Settings_Activate), nil)
 
   var EditMenuItem = menuItemNewWithMnemonic("_Edit")
 
@@ -495,17 +506,17 @@ proc initToolBar(MainBox: PBox) =
   TopBar.setStyle(TOOLBAR_ICONS)
   
   var NewFileItem = TopBar.insertStock(STOCK_NEW, "New File",
-                      "New File", SIGNAL_FUNC(nimide.newFile), nil, 0)
+                      "New File", SIGNAL_FUNC(aporia.newFile), nil, 0)
   TopBar.appendSpace()
   var OpenItem = TopBar.insertStock(STOCK_OPEN, "Open",
-                      "Open", SIGNAL_FUNC(nimide.openFile), nil, -1)
+                      "Open", SIGNAL_FUNC(aporia.openFile), nil, -1)
   var SaveItem = TopBar.insertStock(STOCK_SAVE, "Save",
                       "Save", SIGNAL_FUNC(saveFile), nil, -1)
   TopBar.appendSpace()
   var UndoItem = TopBar.insertStock(STOCK_UNDO, "Undo", 
-                      "Undo", SIGNAL_FUNC(nimide.undo), nil, -1)
+                      "Undo", SIGNAL_FUNC(aporia.undo), nil, -1)
   var RedoItem = TopBar.insertStock(STOCK_REDO, "Redo",
-                      "Redo", SIGNAL_FUNC(nimide.redo), nil, -1)
+                      "Redo", SIGNAL_FUNC(aporia.redo), nil, -1)
   
   MainBox.packStart(TopBar, False, False, 0)
   TopBar.show()
@@ -534,7 +545,7 @@ proc initFindBar(MainBox: PBox) =
   # Add a (find) text entry
   win.findEntry = entryNew()
   win.findBar.packStart(win.findEntry, False, False, 0)
-  discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
+  discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(aporia.nextBtn_Clicked), nil)
   win.findEntry.show()
   var rq: TRequisition 
   win.findEntry.sizeRequest(addr(rq))
@@ -563,7 +574,7 @@ proc initFindBar(MainBox: PBox) =
   # Find next button
   var nextBtn = buttonNew("Next")
   win.findBar.packStart(nextBtn, false, false, 0)
-  discard nextBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
+  discard nextBtn.signalConnect("clicked", SIGNAL_FUNC(aporia.nextBtn_Clicked), nil)
   nextBtn.show()
   var nxtBtnRq: TRequisition
   nextBtn.sizeRequest(addr(nxtBtnRq))
@@ -571,21 +582,21 @@ proc initFindBar(MainBox: PBox) =
   # Find previous button
   var prevBtn = buttonNew("Previous")
   win.findBar.packStart(prevBtn, false, false, 0)
-  discard prevBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.prevBtn_Clicked), nil)
+  discard prevBtn.signalConnect("clicked", SIGNAL_FUNC(aporia.prevBtn_Clicked), nil)
   prevBtn.show()
   
   # Replace button
   # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
   win.replaceBtn = buttonNew("Replace")
   win.findBar.packStart(win.replaceBtn, false, false, 0)
-  discard win.replaceBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.replaceBtn_Clicked), nil)
+  discard win.replaceBtn.signalConnect("clicked", SIGNAL_FUNC(aporia.replaceBtn_Clicked), nil)
   #replaceBtn.show()
 
   # Replace all button
   # - this Is only shown, when the 'Search & Replace'(CTRL + H) is shown
   win.replaceAllBtn = buttonNew("Replace All")
   win.findBar.packStart(win.replaceAllBtn, false, false, 0)
-  discard win.replaceAllBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.replaceAllBtn_Clicked), nil)
+  discard win.replaceAllBtn.signalConnect("clicked", SIGNAL_FUNC(aporia.replaceAllBtn_Clicked), nil)
   #replaceAllBtn.show()
   
   # Right side ...
@@ -598,20 +609,20 @@ proc initFindBar(MainBox: PBox) =
   closeBox.show()
   closeBox.add(closeImage)
   closeImage.show()
-  discard closeBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.closeBtn_Clicked), nil)
+  discard closeBtn.signalConnect("clicked", SIGNAL_FUNC(aporia.closeBtn_Clicked), nil)
   win.findBar.packEnd(closeBtn, False, False, 2)
   closeBtn.show()
   
   # Extra button - When clicked shows a menu with options like 'Use regex'
   var extraBtn = buttonNew()
-  var extraImage = imageNewFromStock(STOCK_GO_UP, ICON_SIZE_SMALL_TOOLBAR)
-  # maybe the icon should be STOCK_PROPERTIES, this one i think looks nicer though
+  var extraImage = imageNewFromStock(STOCK_PROPERTIES, ICON_SIZE_SMALL_TOOLBAR)
+
   var extraBox = hboxNew(False, 0)
   extraBtn.add(extraBox)
   extraBox.show()
   extraBox.add(extraImage)
   extraImage.show()
-  discard extraBtn.signalConnect("clicked", SIGNAL_FUNC(nimide.extraBtn_Clicked), nil)
+  discard extraBtn.signalConnect("clicked", SIGNAL_FUNC(aporia.extraBtn_Clicked), nil)
   win.findBar.packEnd(extraBtn, False, False, 0)
   extraBtn.show()
   
@@ -626,11 +637,23 @@ proc initStatusBar(MainBox: PBox) =
   discard win.bottomBar.push(0, "Line: 0 Column: 0")
   
 proc initControls() =
+  # Load up the language style
+  var LangMan = languageManagerGetDefault()
+  var nimLang = LangMan.getLanguage("nimrod")
+  win.nimLang = nimLang
+  
+  # Load the scheme
+  var schemeMan = schemeManagerGetDefault()
+  for i in items(cstringArrayToSeq(schemeMan.getSchemeIds())):
+    echo(i)
+  win.scheme = schemeMan.getScheme(win.settings.colorSchemeID)
+  echo(win.scheme.getName())
+  
   # Window
   win.w = windowNew(gtk2.WINDOW_TOPLEVEL)
   win.w.setDefaultSize(800, 600)
   win.w.setTitle("Aporia IDE")
-  discard win.w.signalConnect("destroy", SIGNAL_FUNC(nimide.destroy), nil)
+  discard win.w.signalConnect("destroy", SIGNAL_FUNC(aporia.destroy), nil)
   
   # MainBox (vbox)
   var MainBox = vboxNew(False, 0)
