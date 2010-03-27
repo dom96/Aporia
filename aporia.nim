@@ -8,37 +8,10 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
-import settings
+import settings, types
 {.push callConv:cdecl.}
 
-type
-
-  MainWin = object
-    # Widgets
-    w: gtk2.PWindow
-    nimLang: PSourceLanguage
-    scheme: PSourceStyleScheme
-    SourceViewTabs: PNotebook
-    bottomBar: PStatusBar
-    
-    findBar: PHBox # findBar
-    findEntry: PEntry
-    replaceEntry: PEntry
-    replaceLabel: PLabel
-    replaceBtn: PButton
-    replaceAllBtn: PButton
-    
-    Tabs: seq[Tab] # Other
-    
-    settings: settings.TSettings
-
-  Tab = object
-    buffer: PSourceBuffer
-    sourceView: PWidget
-    saved: bool
-    filename: string
-
-var win: MainWin
+var win: types.MainWin
 win.Tabs = @[]
 # Some default settings - These will be loaded from a cfg file in the future
 win.settings.search = "caseinsens"
@@ -121,7 +94,7 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
 proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
                     buffer: var PSourceBuffer) =
   # This gets called by addTab
-  # Each tabs creats a new SourceView
+  # Each tabs creates a new SourceView
   # SourceScrolledWindow(ScrolledWindow)
   scrollWindow = scrolledWindowNew(nil, nil)
   scrollWindow.show()
@@ -241,7 +214,7 @@ proc undo(menuItem: PMenuItem, user_data: pgpointer) =
   if win.Tabs[current].buffer.canUndo():
     win.Tabs[current].buffer.undo()
   
-proc redo(menuItem: PMenuItem, user_data: pgpointer) = 
+proc redo(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
@@ -261,7 +234,7 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   win.replaceAllBtn.show()
   
 proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  settings.showSettings(win.w, win.settings)
+  settings.showSettings(win)
   
 # -- FindBar
 
@@ -563,7 +536,6 @@ proc initFindBar(MainBox: PBox) =
   # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
   win.replaceEntry = entryNew()
   win.findBar.packStart(win.replaceEntry, False, False, 0)
-  #discard win.replaceEntry.signalConnect("activate", SIGNAL_FUNC(nimide.nextBtn_Clicked), nil)
   #win.replaceEntry.show()
   var rq1: TRequisition 
   win.replaceEntry.sizeRequest(addr(rq1))
@@ -644,10 +616,7 @@ proc initControls() =
   
   # Load the scheme
   var schemeMan = schemeManagerGetDefault()
-  for i in items(cstringArrayToSeq(schemeMan.getSchemeIds())):
-    echo(i)
   win.scheme = schemeMan.getScheme(win.settings.colorSchemeID)
-  echo(win.scheme.getName())
   
   # Window
   win.w = windowNew(gtk2.WINDOW_TOPLEVEL)

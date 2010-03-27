@@ -104,4 +104,7 @@ proc get_scheme*(manager: PSourceStyleSchemeManager, scheme_id: cstring): PSourc
 
 proc get_name*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_get_name".}
+
+proc get_description*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_get_description".}
   
