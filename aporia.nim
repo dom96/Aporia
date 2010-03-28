@@ -8,19 +8,28 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
-import settings, types
+import settings, types, cfg
 {.push callConv:cdecl.}
 
 var win: types.MainWin
 win.Tabs = @[]
-# Some default settings - These will be loaded from a cfg file in the future
-win.settings.search = "caseinsens"
-win.settings.font = "monospace 9"
-win.settings.colorSchemeID = "cobalt"
+
+# Load the settings
+try:
+  win.settings = cfg.load()
+except EIO:
+  dialogs.error(win.w, "Could not load configuration file.")
+  quit(QuitFailure)
+except ECFGParse:
+  # Ask araq how to get the msg of the error
+  dialogs.error(win.w, "Error parsing the configuration file.")
+  quit(QuitFailure)
 
 # GTK Events
 # -- w(PWindow)
-proc destroy(widget: PWidget, data: pgpointer){.cdecl.} = 
+proc destroy(widget: PWidget, data: pgpointer){.cdecl.} =
+  # First save the settings
+  win.settings.save()
   main_quit()
 
 # -- SourceView(PSourceView) & SourceBuffer
@@ -67,27 +76,24 @@ proc createTabLabel(name: string, t_child: PWidget): PWidget =
   box.showAll()
   return box
   
-var repelChanged: bool = False  # When a file is opened, the text changes
-                                # Repel the "changed" event, when opening files 
 proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
   # Update the 'Line & Column'
   updateStatusBar(buffer)
 
-  if repelChanged == False:
-    # Change the tabs state to 'unsaved'
-    # and add '*' to the Tab Name
-    var current = win.SourceViewTabs.getCurrentPage()
-    var name = ""
-    if win.Tabs[current].filename == "":
-      win.Tabs[current].saved = False
-      name = "Untitled *"
-    else:
-      win.Tabs[current].saved = False
-      name = splitFile(win.Tabs[current].filename).name &
-                      splitFile(win.Tabs[current].filename).ext & " *"
-    
-    var cTab = win.sourceViewTabs.getNthPage(current)
-    win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
+  # Change the tabs state to 'unsaved'
+  # and add '*' to the Tab Name
+  var current = win.SourceViewTabs.getCurrentPage()
+  var name = ""
+  if win.Tabs[current].filename == "":
+    win.Tabs[current].saved = False
+    name = "Untitled *"
+  else:
+    win.Tabs[current].saved = False
+    name = splitFile(win.Tabs[current].filename).name &
+                    splitFile(win.Tabs[current].filename).ext & " *"
+  
+  var cTab = win.sourceViewTabs.getNthPage(current)
+  win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
   
 # Other(Helper) functions
 
@@ -102,8 +108,8 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   # SourceView(gtkSourceView)
   SourceView = sourceViewNew()
   PSourceView(SourceView).setInsertSpacesInsteadOfTabs(True)
-  PSourceView(SourceView).setIndentWidth(2)
-  PSourceView(SourceView).setShowLineNumbers(True)
+  PSourceView(SourceView).setIndentWidth(win.settings.indentWidth)
+  PSourceView(SourceView).setShowLineNumbers(win.settings.showLineNumbers)
 
   var font = font_description_from_string(win.settings.font)
   SourceView.modifyFont(font)
@@ -112,6 +118,8 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   SourceView.show()
   # -- Set the syntax highlighter language
   buffer = PSourceBuffer(PTextView(SourceView).getBuffer())
+  buffer.setHighlightMatchingBrackets(
+      win.settings.highlightMatchingBrackets)
   
   # UGLY workaround for yet another compiler bug:
   discard gsignalConnect(buffer, "mark-set", 
@@ -162,14 +170,20 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
     var file: string = readFile(path)
     if file != nil:
       addTab("", path)
-      # Repel the 'changed' event
-      repelChanged = True
-      # Set the TextBuffer's text.
-      win.Tabs[win.Tabs.len()-1].buffer.set_text(file, len(file))
       # Switch to the newly created tab
       win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+      # Set the TextBuffer's text.
+      var newTab = win.Tabs[win.Tabs.len()-1]
+      newTab.buffer.set_text(file, len(file))
+      # Change the saved state to True, 
+      # set_text(changed event) will change it to False
+      # We need to reset it, we also need to change
+      # the tab label because it got changed.
+      newTab.saved = True
+      var name = splitFile(newTab.filename).name & splitFile(newTab.filename).ext
+      var cTab = win.sourceViewTabs.getNthPage(win.Tabs.len()-1)
+      win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
       
-      repelChanged = False # Change it back to default
     else:
       error(win.w, "Unable to read from file")
 
@@ -198,7 +212,7 @@ proc saveFile(menuItem: PMenuItem, user_data: pgpointer) =
           f.write(text)
           f.close()
           
-          # Change the tab name, .Tabs.filename etc.
+          # Change the tab name and .Tabs.filename etc.
           win.Tabs[current].filename = path
           win.Tabs[current].saved = True
           var name = splitFile(path).name & splitFile(path).ext

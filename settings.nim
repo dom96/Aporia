@@ -7,11 +7,11 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gdk2, glib2
+import gtk2, gdk2, glib2, pango
 import gtksourceview, types
 {.push callConv:cdecl.}
 
-var win: types.MainWin
+var win: ptr types.MainWin
 
 # -- Fonts and Colors --
 
@@ -40,6 +40,7 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
   if getSelected(PTreeSelection(selection), addr(model), addr(iter)):
     model.get(addr(iter), 0, addr(value), -1)
     win.settings.colorSchemeID = $value
+    echo(win.settings.colorSchemeID)
     var schemeMan = schemeManagerGetDefault()
     var scheme = schemeMan.getScheme(value)
     # Loop through each tab, and set the scheme
@@ -52,6 +53,7 @@ proc fontDialog_Canc(widget: PWidget, user_data: PFontSelectionDialog) =
   PDialog(userData).response(RESPONSE_CANCEL)
 
 proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
+  # Initialize the FontDialog
   var fontDialog = fontSelectionDialogNew("Select font")
   fontDialog.setTransientFor(win.w)
   discard fontDialog.dialogSetFontName(win.settings.font)
@@ -67,6 +69,11 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
   if result == RESPONSE_OK:
     win.settings.font = $fontDialog.dialogGetFontName()
     userData.setText(fontDialog.dialogGetFontName())
+    # Loop through each tab, and change the font
+    for i in items(win.Tabs):
+      var font = fontDescriptionFromString(win.settings.font)
+      i.sourceView.modifyFont(font)
+    
   gtk2.POBject(fontDialog).destroy()
 
 
@@ -146,14 +153,13 @@ proc initFontsColors(settingsTabs: PNotebook) =
 var dialog: gtk2.PWindow
 proc closeDialog(widget: pWidget, user_data: pgpointer) =
   gtk2.PObject(dialog).destroy()
-proc dialog_destroy(widget: PWidget, user_data: pgpointer) =
-  # save the settings to file, win.settings should be set by the use of events
 
-proc showSettings*(aWin: types.MainWin) =
-  win = aWin
+proc showSettings*(aWin: var types.MainWin) =
+  win = addr(aWin)  # This has to be a pointer
+                    # Because i need the settings to be changed
+                    # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
-  discard dialog.signalConnect("destroy", SIGNAL_FUNC(dialog_destroy), nil)
   dialog.setDefaultSize(300, 400)
   dialog.setSizeRequest(300, 400)
   dialog.setTransientFor(win.w)

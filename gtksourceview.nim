@@ -70,7 +70,10 @@ proc source_buffer_new*(table: PTextTagTable): PSourceBuffer {.cdecl, dynlib: li
   
 proc source_buffer_new_with_language*(language: PSourceLanguage): PSourceBuffer {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_new_with_language".}
-  
+
+proc set_highlight_matching_brackets*(view: PSourceBuffer, show: gboolean) {.cdecl, dynlib: lib,
+  importc: "gtk_source_buffer_set_highlight_matching_brackets".}
+
 proc undo*(buffer: PSourceBuffer) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_undo".}
   

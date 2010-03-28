@@ -2,9 +2,14 @@ import gtk2, gtksourceview
 type
 
   TSettings* = object
+  
     search*: string
-    font*: string
-    colorSchemeID*: string
+    
+    font*: string # font used by the sourceview
+    colorSchemeID*: string # color scheme used by the sourceview
+    indentWidth*: int # how many spaces used for indenting code(in the sourceview)
+    showLineNumbers*: bool # whether to show line numbers in the sourceview
+    highlightMatchingBrackets*: bool # whether to highlight matching brackets
 
   MainWin* = object
     # Widgets
