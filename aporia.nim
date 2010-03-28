@@ -515,9 +515,6 @@ proc initTabs(MainBox: PBox) =
   MainBox.packStart(win.SourceViewTabs, True, True, 0)
   win.SourceViewTabs.show()
   addTab("", "")
-  addTab("", "")
-  addTab("", "")
-  addTab("", "")
   
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container

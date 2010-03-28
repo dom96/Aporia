@@ -40,12 +40,12 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
   if getSelected(PTreeSelection(selection), addr(model), addr(iter)):
     model.get(addr(iter), 0, addr(value), -1)
     win.settings.colorSchemeID = $value
-    echo(win.settings.colorSchemeID)
+
     var schemeMan = schemeManagerGetDefault()
-    var scheme = schemeMan.getScheme(value)
+    win.scheme = schemeMan.getScheme(value)
     # Loop through each tab, and set the scheme
     for i in items(win.Tabs):
-      i.buffer.setScheme(scheme)
+      i.buffer.setScheme(win.scheme)
       
 proc fontDialog_OK(widget: PWidget, user_data: PFontSelectionDialog) =
   PDialog(userData).response(RESPONSE_OK)

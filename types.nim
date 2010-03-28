@@ -15,7 +15,7 @@ type
     # Widgets
     w*: gtk2.PWindow
     nimLang*: PSourceLanguage
-    scheme*: PSourceStyleScheme
+    scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
     SourceViewTabs*: PNotebook
     bottomBar*: PStatusBar
     

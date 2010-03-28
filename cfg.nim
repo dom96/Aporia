@@ -13,7 +13,7 @@ type
 
 proc save*(settings: TSettings) =
   var f: TFile
-  if open(f, "config.conf", fmWrite):
+  if open(f, "aporia.ini", fmWrite):
     var confInfo = "; Aporia configuration file - Created on "
     confInfo.add($getTime())
     f.write(confInfo & "\n")
@@ -32,7 +32,7 @@ proc save*(settings: TSettings) =
     f.close()
 
 proc load*(): TSettings = 
-  var f = newFileStream("config.conf", fmRead)
+  var f = newFileStream("aporia.ini", fmRead)
   if f != nil:
     var p: TCfgParser
     open(p, f, "config.conf")
