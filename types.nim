@@ -11,13 +11,23 @@ type
     showLineNumbers*: bool # whether to show line numbers in the sourceview
     highlightMatchingBrackets*: bool # whether to highlight matching brackets
 
+    winMaximized*: bool # Whether the MainWindow is maximized on startup
+    VPanedPos*: int # Position of the VPaned, which splits
+                    # the sourceViewTabs and bottomPanelTabs
+                    
+    bottomPanelVisible*: bool # Whether the bottom panel is shown
+    
+
   MainWin* = object
     # Widgets
     w*: gtk2.PWindow
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
-    SourceViewTabs*: PNotebook
-    bottomBar*: PStatusBar
+    SourceViewTabs*: PNotebook # Tabs which hold the sourceView
+    bottomBar*: PStatusBar 
+    
+    bottomPanelTabs*: PNotebook
+    outputTextView*: PTextView
     
     findBar*: PHBox # findBar
     findEntry*: PEntry

@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango
+import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import settings, types, cfg
 {.push callConv:cdecl.}
 
@@ -17,20 +17,26 @@ win.Tabs = @[]
 # Load the settings
 try:
   win.settings = cfg.load()
-except EIO:
-  dialogs.error(win.w, "Could not load configuration file.")
-  quit(QuitFailure)
 except ECFGParse:
-  # Ask araq how to get the msg of the error
-  dialogs.error(win.w, "Error parsing the configuration file.")
-  quit(QuitFailure)
+  dialogs.warning(win.w, "Error parsing the configuration file: \"" &
+      getCurrentExceptionMsg() & "\", using default settings.")
+  win.settings = cfg.defaultSettings()
+except EIO:
+  win.settings = cfg.defaultSettings()
 
 # GTK Events
 # -- w(PWindow)
 proc destroy(widget: PWidget, data: pgpointer){.cdecl.} =
-  # First save the settings
+  # gather some settings
+  win.settings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
+
+  # save the settings
   win.settings.save()
+  # then quit
   main_quit()
+  
+proc windowState_Changed(widget: PWidget, event: PEventWindowState, user_data: pgpointer) =
+  win.settings.winMaximized = (event.newWindowState and WINDOW_STATE_MAXIMIZED) != 0
 
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
@@ -89,8 +95,7 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
     name = "Untitled *"
   else:
     win.Tabs[current].saved = False
-    name = splitFile(win.Tabs[current].filename).name &
-                    splitFile(win.Tabs[current].filename).ext & " *"
+    name = extractFilename(win.Tabs[current].filename) & " *"
   
   var cTab = win.sourceViewTabs.getNthPage(current)
   win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
@@ -135,7 +140,7 @@ proc addTab(name: string, filename: string) =
   if filename == "": nam.add(" *")
   elif filename != "" and name == "":
     # Get the name.ext of the filename, for the tabs title
-    nam = splitFile(filename).name & splitFile(filename).ext
+    nam = extractFilename(filename)
 
   # Init the sourceview
   var sourceView: PWidget
@@ -180,7 +185,7 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
       # We need to reset it, we also need to change
       # the tab label because it got changed.
       newTab.saved = True
-      var name = splitFile(newTab.filename).name & splitFile(newTab.filename).ext
+      var name = extractFilename(newTab.filename)
       var cTab = win.sourceViewTabs.getNthPage(win.Tabs.len()-1)
       win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
       
@@ -215,7 +220,7 @@ proc saveFile(menuItem: PMenuItem, user_data: pgpointer) =
           # Change the tab name and .Tabs.filename etc.
           win.Tabs[current].filename = path
           win.Tabs[current].saved = True
-          var name = splitFile(path).name & splitFile(path).ext
+          var name = extractFilename(path)
           
           var cTab = win.sourceViewTabs.getNthPage(current)
           win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
@@ -249,6 +254,25 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   
 proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   settings.showSettings(win)
+  
+proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
+  win.settings.bottomPanelVisible = menuitem.itemGetActive()
+  if win.settings.bottomPanelVisible:
+    win.bottomPanelTabs.show()
+  else:
+    win.bottomPanelTabs.hide()
+    
+proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  saveFile(nil, nil)
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  if win.Tabs[currentTab].filename != "":
+    # TODO: Make the compile & run command customizable(put in the settings)
+    var output = osProc.execProcess("nimrod c -r \"$1\"" % [win.Tabs[currentTab].filename])
+    if not win.settings.bottomPanelVisible:
+      win.bottomPanelTabs.show()
+      win.settings.bottomPanelVisible = true
+    win.outputTextView.getBuffer().setText(output, output.len())
+  
   
 # -- FindBar
 
@@ -479,8 +503,40 @@ proc initTopMenu(MainBox: PBox) =
   TopMenu.append(EditMenuItem)                        
   
   # View menu
+  var ViewMenu = menuNew()
+  
+  var BottomPanelMenuItem = check_menu_item_new("Bottom Panel") # Bottom Panel
+  PCheckMenuItem(BottomPanelMenuItem).itemSetActive(win.settings.bottomPanelVisible)
+  BottomPanelMenuItem.add_accelerator("activate", accGroup, 
+                  KEY_f9, CONTROL_MASK, ACCEL_VISIBLE) 
+  ViewMenu.append(BottomPanelMenuItem)
+  show(BottomPanelMenuItem)
+  discard signal_connect(BottomPanelMenuItem, "toggled", 
+                          SIGNAL_FUNC(aporia.viewBottomPanel_Toggled), nil)
+  
+  var ViewMenuItem = menuItemNewWithMnemonic("_View")
+
+  ViewMenuItem.setSubMenu(ViewMenu)
+  ViewMenuItem.show()
+  TopMenu.append(ViewMenuItem)       
+  
   
   # Tools menu
+  var ToolsMenu = menuNew()
+  
+  var CompileRunMenuItem = menu_item_new("Compile and Run") # compile and run
+  CompileRunMenuItem.add_accelerator("activate", accGroup, 
+                  KEY_f5, 0, ACCEL_VISIBLE) 
+  ToolsMenu.append(CompileRunMenuItem)
+  show(CompileRunMenuItem)
+  discard signal_connect(CompileRunMenuItem, "activate", 
+                          SIGNAL_FUNC(aporia.CompileRun_Activate), nil)
+  
+  var ToolsMenuItem = menuItemNewWithMnemonic("_Tools")
+  
+  ToolsMenuItem.setSubMenu(ToolsMenu)
+  ToolsMenuItem.show()
+  TopMenu.append(ToolsMenuItem)
   
   # Help menu
   
@@ -508,14 +564,50 @@ proc initToolBar(MainBox: PBox) =
   MainBox.packStart(TopBar, False, False, 0)
   TopBar.show()
   
-proc initTabs(MainBox: PBox) =
+proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
   win.SourceViewTabs.set_scrollable(True)
   
-  MainBox.packStart(win.SourceViewTabs, True, True, 0)
+  #MainBox.packStart(win.SourceViewTabs, True, True, 0)
   win.SourceViewTabs.show()
   addTab("", "")
   
+proc initBottomTabs() =
+  win.bottomPanelTabs = notebookNew()
+  if win.settings.bottomPanelVisible:
+    win.bottomPanelTabs.show()
+  
+  # Compiler tab
+  var tabLabel = labelNew("Compiler")
+  var compilerTab = vboxNew(False, 0)
+  discard win.bottomPanelTabs.appendPage(compilerTab, tabLabel)
+  # Compiler tabs, gtktextview
+  var outputScrolledWindow = scrolledwindowNew(nil, nil)
+  outputScrolledWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
+  compilerTab.packStart(outputScrolledWindow, true, true, 0)
+  outputScrolledWindow.show()
+  
+  win.outputTextView = textviewNew()
+  outputScrolledWindow.add(win.outputTextView)
+  win.outputTextView.show()
+  
+  compilerTab.show()
+
+proc initTAndBP(MainBox: PBox) =
+  # This init's the HPaned, which splits the sourceViewTabs
+  # and the BottomPanelTabs
+  
+  initSourceViewTabs()
+  initBottomTabs()
+  
+  var TAndBPVPaned = vpanedNew()
+  # yay @ named arguments :D
+  tandbpVPaned.pack1(win.sourceViewTabs, resize=True, shrink=False)
+  tandbpVPaned.pack2(win.bottomPanelTabs, resize=False, shrink=False)
+  MainBox.packStart(TAndBPVPaned, True, True, 0)
+  tandbpVPaned.setPosition(win.settings.VPanedPos)
+  TAndBPVPaned.show()
+
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container
   win.findBar = HBoxNew(False, 0)
@@ -633,7 +725,14 @@ proc initControls() =
   win.w = windowNew(gtk2.WINDOW_TOPLEVEL)
   win.w.setDefaultSize(800, 600)
   win.w.setTitle("Aporia IDE")
+  if win.settings.winMaximized: win.w.maximize()
+  # TODO: Save and restore the windows size.
+  win.w.show() # The window has to be shown before
+               # setting the position of the VPaned so that
+               # it gets set correctly, when the window is maximized.
+    
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(aporia.destroy), nil)
+  discard win.w.signalConnect("window-state-event", SIGNAL_FUNC(aporia.windowState_Changed), nil)
   
   # MainBox (vbox)
   var MainBox = vboxNew(False, 0)
@@ -643,14 +742,13 @@ proc initControls() =
   
   initToolBar(MainBox)
   
-  initTabs(MainBox)
+  initTAndBP(MainBox)
   
   initFindBar(MainBox)
   
   initStatusBar(MainBox)
   
   MainBox.show()
-  win.w.show()
   
   
   

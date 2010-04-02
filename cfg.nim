@@ -6,14 +6,26 @@
 #    See the file "copying.txt", included in this
 #    distribution, for details about the copyright.
 #
-import types, times, streams, parsecfg, strutils
+import types, times, streams, parsecfg, strutils, os
 
 type
   ECFGParse* = object of E_Base
 
+proc defaultSettings*(): TSettings =
+  result.search = "caseinsens"
+  result.font = "Monospace 9"
+  result.colorSchemeID = "classic"
+  result.indentWidth = 2
+  result.showLineNumbers = True
+  result.highlightMatchingBrackets = True
+
 proc save*(settings: TSettings) =
+  # If the directory doesn't exist, create it
+  if not os.existsDir(joinPath(os.getConfigDir(), "Aporia")):
+    os.createDir(joinPath(os.getConfigDir(), "Aporia"))
+  
   var f: TFile
-  if open(f, "aporia.ini", fmWrite):
+  if open(f, joinPath(os.getConfigDir(), "Aporia", "config.ini"), fmWrite):
     var confInfo = "; Aporia configuration file - Created on "
     confInfo.add($getTime())
     f.write(confInfo & "\n")
@@ -29,13 +41,19 @@ proc save*(settings: TSettings) =
     f.write("[other]\n")
     f.write("searchMethod = \"" & settings.search & "\"\n")
     
+    f.write("[silent]\n")
+    f.write("; Stuff which is saved automatically," & 
+        " like whether the window is maximized or not\n")
+    f.write("winMaximized = " & $settings.winMaximized & "\n")
+    f.write("VPanedPos = " & $settings.VPanedPos & "\n")
+    
     f.close()
 
 proc load*(): TSettings = 
-  var f = newFileStream("aporia.ini", fmRead)
+  var f = newFileStream(joinPath(os.getConfigDir(), "Aporia", "config.ini"), fmRead)
   if f != nil:
     var p: TCfgParser
-    open(p, f, "config.conf")
+    open(p, f, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
     while True:
       var e = next(p)
       case e.kind
@@ -55,6 +73,11 @@ proc load*(): TSettings =
           result.highlightMatchingBrackets = e.value == "true"
         of "searchMethod":
           result.search = e.value
+        of "winMaximized":
+          result.winMaximized = e.value == "true"
+        of "VPanedPos":
+          result.VPanedPos = e.value.parseInt()
+          
       of cfgError:
         raise newException(ECFGParse, e.msg)
       of cfgSectionStart, cfgOption:
@@ -66,10 +89,11 @@ when isMainModule:
 
   echo(load().showLineNumbers)
 
+  discard """
   var s: TSettings
   s.search = "caseinsens"
   s.font = "monospace 9"
   s.colorSchemeID = "cobalt"
 
-  save(s)
+  save(s)"""
   
