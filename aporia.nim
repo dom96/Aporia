@@ -8,6 +8,7 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
+import pegs, streams
 import settings, types, cfg
 {.push callConv:cdecl.}
 
@@ -261,17 +262,70 @@ proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
     win.bottomPanelTabs.show()
   else:
     win.bottomPanelTabs.hide()
-    
+
+var
+  pegLineError = peg"{[^(]*} '(' {\d+} ', ' \d+ ') Error:' \s* {.*}"
+  pegLineWarning = peg"{[^(]*} '(' {\d+} ', ' \d+ ') ' 'Warning:'/'Hint:' \s* {.*}"
+  pegOtherError = peg"'Error:' \s* {.*}"
+  pegSuccess = peg"'Hint: operation successful'.*"
+  pegOfInterest = pegLineError / pegLineWarning / pegOtherError / pegSuccess
+
 proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   saveFile(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[currentTab].filename != "":
+    # Clear the outputTextView
+    win.outputTextView.getBuffer().setText("", 0)
+    
     # TODO: Make the compile & run command customizable(put in the settings)
-    var output = osProc.execProcess("nimrod c -r \"$1\"" % [win.Tabs[currentTab].filename])
+    # Compile
+    var a = parseCmdLine("c \"$1\"" % [win.Tabs[currentTab].filename])
+    var p = startProcess(command="nimrod", args=a,
+                      options={poStdErrToStdOut, poUseShell})
+    var outp = p.outputStream
+    
+    # Colors
+    var normalTag = win.outputTextView.getBuffer().createTag(
+            "normalTag", "foreground", "#3d3d3d", nil)
+    var errorTag = win.outputTextView.getBuffer().createTag(
+            "errorTag", "foreground", "red", nil)
+    var warningTag = win.outputTextView.getBuffer().createTag(
+            "warningTag", "foreground", "darkorange", nil)
+    var successTag = win.outputTextView.getBuffer().createTag(
+            "successTag", "foreground", "darkgreen", nil)
+
+    var iter: TTextIter
+    while running(p) or not outp.atEnd(outp):
+      var x = outp.readLine()
+      if x =~ pegLineError / pegOtherError:
+        win.outputTextView.getBuffer().getEndIter(addr(iter))
+        x.add("\n")
+        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), errorTag)
+      elif x=~ pegSuccess:
+        win.outputTextView.getBuffer().getEndIter(addr(iter))
+        x.add("\n")
+        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), successTag)
+        
+        # Launch the process
+        var filename = win.Tabs[currentTab].filename
+        var output = "\n" & osProc.execProcess(splitFile(filename).dir /
+              splitFile(filename).name & ".exe")
+        win.outputTextView.getBuffer().getEndIter(addr(iter))
+        win.outputTextView.getBuffer().insert(addr(iter), output, len(output))
+        
+      elif x =~ pegLineWarning:
+        win.outputTextView.getBuffer().getEndIter(addr(iter))
+        x.add("\n")
+        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), warningTag)
+      else:
+        win.outputTextView.getBuffer().getEndIter(addr(iter))
+        x.add("\n")
+        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), normalTag)
+    
+    # Show the bottomPanelTabs
     if not win.settings.bottomPanelVisible:
       win.bottomPanelTabs.show()
       win.settings.bottomPanelVisible = true
-    win.outputTextView.getBuffer().setText(output, output.len())
   
   
 # -- FindBar
@@ -577,21 +631,21 @@ proc initBottomTabs() =
   if win.settings.bottomPanelVisible:
     win.bottomPanelTabs.show()
   
-  # Compiler tab
-  var tabLabel = labelNew("Compiler")
-  var compilerTab = vboxNew(False, 0)
-  discard win.bottomPanelTabs.appendPage(compilerTab, tabLabel)
+  # output tab
+  var tabLabel = labelNew("Output")
+  var outputTab = vboxNew(False, 0)
+  discard win.bottomPanelTabs.appendPage(outputTab, tabLabel)
   # Compiler tabs, gtktextview
   var outputScrolledWindow = scrolledwindowNew(nil, nil)
   outputScrolledWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
-  compilerTab.packStart(outputScrolledWindow, true, true, 0)
+  outputTab.packStart(outputScrolledWindow, true, true, 0)
   outputScrolledWindow.show()
   
   win.outputTextView = textviewNew()
   outputScrolledWindow.add(win.outputTextView)
   win.outputTextView.show()
   
-  compilerTab.show()
+  outputTab.show()
 
 proc initTAndBP(MainBox: PBox) =
   # This init's the HPaned, which splits the sourceViewTabs
