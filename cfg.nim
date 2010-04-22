@@ -18,6 +18,7 @@ proc defaultSettings*(): TSettings =
   result.indentWidth = 2
   result.showLineNumbers = True
   result.highlightMatchingBrackets = True
+  
 
 proc save*(settings: TSettings) =
   # If the directory doesn't exist, create it
@@ -37,15 +38,19 @@ proc save*(settings: TSettings) =
     f.write("showLineNumbers = " & $settings.showLineNumbers & "\n")
     f.write("highlightMatchingBrackets = " & 
         $settings.highlightMatchingBrackets & "\n")
+    f.write("rightMargin = " & $settings.rightMargin & "\n")
+    f.write("highlightCurrentLine = " & $settings.highlightCurrentLine & "\n")
     
     f.write("[other]\n")
     f.write("searchMethod = \"" & settings.search & "\"\n")
     
-    f.write("[silent]\n")
+    f.write("[auto]\n")
     f.write("; Stuff which is saved automatically," & 
         " like whether the window is maximized or not\n")
     f.write("winMaximized = " & $settings.winMaximized & "\n")
     f.write("VPanedPos = " & $settings.VPanedPos & "\n")
+    f.write("winWidth = " & $settings.winWidth & "\n")
+    f.write("winHeight = " & $settings.winHeight & "\n")
     
     f.close()
 
@@ -71,12 +76,21 @@ proc load*(): TSettings =
           result.showLineNumbers = e.value == "true"
         of "highlightMatchingBrackets":
           result.highlightMatchingBrackets = e.value == "true"
+        of "rightMargin":
+          result.rightMargin = e.value == "true"
+        of "highlightCurrentLine":
+          result.highlightCurrentLine = e.value == "true"
         of "searchMethod":
           result.search = e.value
         of "winMaximized":
           result.winMaximized = e.value == "true"
         of "VPanedPos":
           result.VPanedPos = e.value.parseInt()
+        of "winWidth":
+          result.winWidth = e.value.parseInt()
+        of "winHeight":
+          result.winHeight = e.value.parseInt()
+          
           
       of cfgError:
         raise newException(ECFGParse, e.msg)

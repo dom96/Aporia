@@ -93,7 +93,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   fontLabelHBox.packStart(fontLabel, False, False, 5)
   fontLabel.show()
   
-  # Entry (For the font name and size, for example 'monospace 9'
+  # Entry (For the font name and size, for example 'monospace 9')
   var fontEntryHBox = hboxNew(False, 0)
   fontsColorsVBox.packStart(fontEntryHBox, False, False, 0)
   fontEntryHBox.show()
@@ -127,7 +127,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTreeHBox.show()
   
   var schemeTree = treeviewNew()
-  schemeTree.setHeadersVisible(False) #Make the headers not visible
+  schemeTree.setHeadersVisible(False) #Make the headers invisible
   var selection = schemeTree.getSelection()
   discard selection.GSignalConnect("changed", 
     G_CALLBACK(schemesTreeView_onChanged), nil)
@@ -149,6 +149,114 @@ proc initFontsColors(settingsTabs: PNotebook) =
   discard schemeTree.appendColumn(column)
   # Add all the schemes available, to the TreeView
   schemeTree.addSchemes(schemeModel)
+
+# -- Editor settings
+proc showLineNums_Toggled(button: PToggleButton, user_data: pgpointer) =
+  win.settings.showLineNumbers = button.getActive()
+  
+  # Loop through each tab, and change the setting.
+  for i in items(win.Tabs):
+    PSourceView(i.sourceView).setShowLineNumbers(win.settings.showLineNumbers)
+    
+proc hlCurrLine_Toggled(button: PToggleButton, user_data: pgpointer) =
+  win.settings.highlightCurrentLine = button.getActive()
+  
+  # Loop through each tab, and change the setting.
+  for i in items(win.Tabs):
+    PSourceView(i.sourceView).setHighlightCurrentLine(win.settings.highlightCurrentLine)
+    
+proc showMargin_Toggled(button: PToggleButton, user_data: pgpointer) =
+  win.settings.rightMargin = button.getActive()
+  
+  # Loop through each tab, and change the setting.
+  for i in items(win.Tabs):
+    PSourceView(i.sourceView).setShowRightMargin(win.settings.rightMargin)
+
+proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
+  win.settings.highlightMatchingBrackets = button.getActive()
+  
+  # Loop through each tab, and change the setting.
+  for i in items(win.Tabs):
+    i.buffer.setHighlightMatchingBrackets(win.settings.highlightMatchingBrackets)
+
+proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
+  win.settings.indentWidth = int(spinbtn.getValue())
+  
+  # Loop through each tab, and change the setting.
+  for i in items(win.Tabs):
+    PSourceView(i.sourceView).setIndentWidth(win.settings.indentWidth)
+  
+
+proc initEditor(settingsTabs: PNotebook) =
+  var editorLabel = labelNew("Editor")
+  var editorVBox = vboxNew(False, 5)
+  discard settingsTabs.appendPage(editorVBox, editorLabel)
+  editorVBox.show()
+  
+  # indentWidth - SpinButton
+  var indentWidthHBox = hboxNew(False, 0)
+  editorVBox.packStart(indentWidthHBox, False, False, 5)
+  indentWidthHBox.show()
+  
+  var indentWidthLabel = labelNew("Indent width: ")
+  indentWidthHBox.packStart(indentWidthLabel, False, False, 20)
+  indentWidthLabel.show()
+  
+  var indentWidthSpinButton = spinButtonNew(1.0, 24.0, 1.0)
+  indentWidthSpinButton.setValue(win.settings.indentWidth.toFloat())
+  discard indentWidthSpinButton.GSignalConnect("value-changed", 
+    G_CALLBACK(indentWidth_changed), nil)
+  indentWidthHBox.packStart(indentWidthSpinButton, False, False, 0)
+  indentWidthSpinButton.show()
+  
+  # showLineNumbers - checkbox
+  var showLineNumsHBox = hboxNew(False, 0)
+  editorVBox.packStart(showLineNumsHBox, False, False, 0)
+  showLineNumsHBox.show()
+  
+  var showLineNumsCheckBox = checkButtonNew("Show line numbers")
+  showLineNumsCheckBox.setActive(win.settings.showLineNumbers)
+  discard showLineNumsCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(showLineNums_Toggled), nil)
+  showLineNumsHBox.packStart(showLineNumsCheckBox, False, False, 20)
+  showLineNumsCheckBox.show()
+  
+  # highlightCurrentLine - checkbox
+  var hlCurrLineHBox = hboxNew(False, 0)
+  editorVBox.packStart(hlCurrLineHBox, False, False, 0)
+  hlCurrLineHBox.show()
+  
+  var hlCurrLineCheckBox = checkButtonNew("Highlight selected line")
+  hlCurrLineCheckBox.setActive(win.settings.highlightCurrentLine)
+  discard hlCurrLineCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(hlCurrLine_Toggled), nil)
+  hlCurrLineHBox.packStart(hlCurrLineCheckBox, False, False, 20)
+  hlCurrLineCheckBox.show()
+  
+  # showRightMargin - checkbox
+  var showMarginHBox = hboxNew(False, 0)
+  editorVBox.packStart(showMarginHBox, False, False, 0)
+  showMarginHBox.show()
+  
+  var showMarginCheckBox = checkButtonNew("Show right margin")
+  showMarginCheckBox.setActive(win.settings.rightMargin)
+  discard showMarginCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(showMargin_Toggled), nil)
+  showMarginHBox.packStart(showMarginCheckBox, False, False, 20)
+  showMarginCheckBox.show()
+  
+  # bracketMatching - checkbox
+  var brackMatchHBox = hboxNew(False, 0)
+  editorVBox.packStart(brackMatchHBox, False, False, 0)
+  brackMatchHBox.show()
+  
+  var brackMatchCheckBox = checkButtonNew("Enable bracket matching")
+  brackMatchCheckBox.setActive(win.settings.highlightMatchingBrackets)
+  discard brackMatchCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(brackMatch_Toggled), nil)
+  brackMatchHBox.packStart(brackMatchCheckBox, False, False, 20)
+  brackMatchCheckBox.show()
+  
 
 var dialog: gtk2.PWindow
 proc closeDialog(widget: pWidget, user_data: pgpointer) =
@@ -202,6 +310,8 @@ proc showSettings*(aWin: var types.MainWin) =
   closeBtn.set_size_request(rq1.width + 10, rq1.height + 4)
   closeBtn.show()
   
+  initEditor(settingsTabs)
   initFontsColors(settingsTabs)
+  
   
   dialog.show()

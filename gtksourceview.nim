@@ -62,8 +62,14 @@ proc set_indent_width*(view: PSourceView, width: gint) {.cdecl, dynlib: lib,
 proc set_show_line_marks*(view: PSourceView, show: gboolean) {.cdecl, dynlib: lib,
   importc: "gtk_source_view_set_show_line_marks".}
   
+proc set_highlight_current_line*(view: PSourceView, show: gboolean) {.cdecl, dynlib: lib,
+  importc: "gtk_source_view_set_highlight_current_line".}
+  
 proc set_show_line_numbers*(view: PSourceView, show: gboolean) {.cdecl, dynlib: lib,
   importc: "gtk_source_view_set_show_line_numbers".}
+
+proc set_show_right_margin*(view: PSourceView, show: gboolean) {.cdecl, dynlib: lib,
+  importc: "gtk_source_view_set_show_right_margin".}
   
 proc source_buffer_new*(table: PTextTagTable): PSourceBuffer {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_new".}

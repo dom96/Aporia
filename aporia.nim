@@ -30,6 +30,8 @@ except EIO:
 proc destroy(widget: PWidget, data: pgpointer){.cdecl.} =
   # gather some settings
   win.settings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
+  win.settings.winWidth = win.w.allocation.width
+  win.settings.winHeight = win.w.allocation.height
 
   # save the settings
   win.settings.save()
@@ -116,6 +118,8 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   PSourceView(SourceView).setInsertSpacesInsteadOfTabs(True)
   PSourceView(SourceView).setIndentWidth(win.settings.indentWidth)
   PSourceView(SourceView).setShowLineNumbers(win.settings.showLineNumbers)
+  PSourceView(SourceView).setHighlightCurrentLine(win.settings.highlightCurrentLine)
+  PSourceView(SourceView).setShowRightMargin(win.settings.rightMargin)
 
   var font = font_description_from_string(win.settings.font)
   SourceView.modifyFont(font)
@@ -777,10 +781,10 @@ proc initControls() =
   
   # Window
   win.w = windowNew(gtk2.WINDOW_TOPLEVEL)
-  win.w.setDefaultSize(800, 600)
+  win.w.setDefaultSize(win.settings.winWidth, win.settings.winHeight)
   win.w.setTitle("Aporia IDE")
   if win.settings.winMaximized: win.w.maximize()
-  # TODO: Save and restore the windows size.
+  
   win.w.show() # The window has to be shown before
                # setting the position of the VPaned so that
                # it gets set correctly, when the window is maximized.
