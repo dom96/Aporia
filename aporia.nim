@@ -15,12 +15,16 @@ import settings, types, cfg
 var win: types.MainWin
 win.Tabs = @[]
 
+var lastSession: seq[string] = @[]
+
+var confParseFail = False # This gets set to true
+                          # When there is an error parsing the config
 # Load the settings
 try:
-  win.settings = cfg.load()
+  win.settings = cfg.load(lastSession)
 except ECFGParse:
-  dialogs.warning(win.w, "Error parsing the configuration file: \"" &
-      getCurrentExceptionMsg() & "\", using default settings.")
+  # TODO: Make the dialog show the exception
+  confParseFail = True
   win.settings = cfg.defaultSettings()
 except EIO:
   win.settings = cfg.defaultSettings()
@@ -34,7 +38,7 @@ proc destroy(widget: PWidget, data: pgpointer){.cdecl.} =
   win.settings.winHeight = win.w.allocation.height
 
   # save the settings
-  win.settings.save()
+  win.save()
   # then quit
   main_quit()
   
@@ -114,7 +118,7 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   scrollWindow.show()
   
   # SourceView(gtkSourceView)
-  SourceView = sourceViewNew()
+  SourceView = sourceViewNew(buffer)
   PSourceView(SourceView).setInsertSpacesInsteadOfTabs(True)
   PSourceView(SourceView).setIndentWidth(win.settings.indentWidth)
   PSourceView(SourceView).setShowLineNumbers(win.settings.showLineNumbers)
@@ -127,7 +131,6 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   scrollWindow.add(SourceView)
   SourceView.show()
   # -- Set the syntax highlighter language
-  buffer = PSourceBuffer(PTextView(SourceView).getBuffer())
   buffer.setHighlightMatchingBrackets(
       win.settings.highlightMatchingBrackets)
   
@@ -140,17 +143,25 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   buffer.setScheme(win.scheme)
 
 proc addTab(name: string, filename: string) =
+  ## Adds a tab, if filename is not "" reads the file. And sets
+  ## the tabs SourceViews text to that files contents.
+  var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
+
   var nam = name
   if nam == "": nam = "Untitled"
   if filename == "": nam.add(" *")
   elif filename != "" and name == "":
+    # Load the file.
+    var file: string = readFile(filename)
+    if file != nil:
+      buffer.set_text(file, len(file))
+      
     # Get the name.ext of the filename, for the tabs title
     nam = extractFilename(filename)
-
+  
   # Init the sourceview
   var sourceView: PWidget
   var scrollWindow: PScrolledWindow
-  var buffer: PSourceBuffer
   initSourceView(sourceView, scrollWindow, buffer)
   
   var TabLabel = createTabLabel(nam, scrollWindow)
@@ -160,7 +171,7 @@ proc addTab(name: string, filename: string) =
   var nTab: Tab
   nTab.buffer = buffer
   nTab.sourceView = sourceView
-  nTab.saved = False
+  nTab.saved = (filename == "")
   nTab.filename = filename
   win.tabs.add(nTab)
 
@@ -177,24 +188,11 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   var path = ChooseFileToOpen(win.w)
   
   if path != "":
-    var file: string = readFile(path)
-    if file != nil:
+    try:
       addTab("", path)
       # Switch to the newly created tab
       win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
-      # Set the TextBuffer's text.
-      var newTab = win.Tabs[win.Tabs.len()-1]
-      newTab.buffer.set_text(file, len(file))
-      # Change the saved state to True, 
-      # set_text(changed event) will change it to False
-      # We need to reset it, we also need to change
-      # the tab label because it got changed.
-      newTab.saved = True
-      var name = extractFilename(newTab.filename)
-      var cTab = win.sourceViewTabs.getNthPage(win.Tabs.len()-1)
-      win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
-      
-    else:
+    except EIO:
       error(win.w, "Unable to read from file")
 
 proc saveFile(menuItem: PMenuItem, user_data: pgpointer) =
@@ -626,9 +624,12 @@ proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
   win.SourceViewTabs.set_scrollable(True)
   
-  #MainBox.packStart(win.SourceViewTabs, True, True, 0)
   win.SourceViewTabs.show()
-  addTab("", "")
+  if lastSession.len() != 0:
+    for i in items(lastSession):
+      addTab("", i)
+  else:
+    addTab("", "")
   
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
@@ -808,6 +809,8 @@ proc initControls() =
   
   MainBox.show()
   
+  if confParseFail:
+    dialogs.warning(win.w, "Error parsing the configuration file, using default settings.")
   
   
 nimrod_init()

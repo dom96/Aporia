@@ -18,13 +18,17 @@ proc defaultSettings*(): TSettings =
   result.indentWidth = 2
   result.showLineNumbers = True
   result.highlightMatchingBrackets = True
-  
+  result.winWidth = 800
+  result.winHeight = 600
 
-proc save*(settings: TSettings) =
+proc save*(win: MainWin) =
+  var settings = win.settings
+
   # If the directory doesn't exist, create it
   if not os.existsDir(joinPath(os.getConfigDir(), "Aporia")):
     os.createDir(joinPath(os.getConfigDir(), "Aporia"))
   
+  # Save the settings to file.
   var f: TFile
   if open(f, joinPath(os.getConfigDir(), "Aporia", "config.ini"), fmWrite):
     var confInfo = "; Aporia configuration file - Created on "
@@ -52,9 +56,17 @@ proc save*(settings: TSettings) =
     f.write("winWidth = " & $settings.winWidth & "\n")
     f.write("winHeight = " & $settings.winHeight & "\n")
     
+    if win.Tabs.len() != 0:
+      f.write("[session]\n")
+      var tabs = "tabs = r\""
+      for i in items(win.Tabs):
+        if i.filename != "":
+          tabs.add(i.filename & ";")
+      f.write(tabs & "\"\n")
+    
     f.close()
 
-proc load*(): TSettings = 
+proc load*(lastSession: var seq[string]): TSettings = 
   var f = newFileStream(joinPath(os.getConfigDir(), "Aporia", "config.ini"), fmRead)
   if f != nil:
     var p: TCfgParser
@@ -90,7 +102,11 @@ proc load*(): TSettings =
           result.winWidth = e.value.parseInt()
         of "winHeight":
           result.winHeight = e.value.parseInt()
-          
+        of "tabs":
+          # Add the filepaths of the last session
+          for i in e.value.split(';'):
+            if i != "":
+              lastSession.add(i)
           
       of cfgError:
         raise newException(ECFGParse, e.msg)

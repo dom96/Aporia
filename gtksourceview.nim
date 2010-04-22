@@ -32,6 +32,9 @@ const
 proc source_view_new*(): PWidget {.cdecl, dynlib: lib,
   importc: "gtk_source_view_new".}
 
+proc source_view_new*(buffer: PSourceBuffer): PWidget {.cdecl, dynlib: lib,
+  importc: "gtk_source_view_new_with_buffer".}
+
 proc language_manager_get_default*(): PSourceLanguageManager {.cdecl, dynlib: lib,
   importc: "gtk_source_language_manager_get_default".}
 
@@ -74,7 +77,7 @@ proc set_show_right_margin*(view: PSourceView, show: gboolean) {.cdecl, dynlib: 
 proc source_buffer_new*(table: PTextTagTable): PSourceBuffer {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_new".}
   
-proc source_buffer_new_with_language*(language: PSourceLanguage): PSourceBuffer {.cdecl, dynlib: lib,
+proc source_buffer_new*(language: PSourceLanguage): PSourceBuffer {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_new_with_language".}
 
 proc set_highlight_matching_brackets*(view: PSourceBuffer, show: gboolean) {.cdecl, dynlib: lib,
