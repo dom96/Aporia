@@ -47,6 +47,9 @@ proc guess_language*(lm: PSourceLanguageManager, filename: cstring, contentType:
 proc get_language*(lm: PSourceLanguageManager, id: cstring): PSourceLanguage {.cdecl, dynlib: lib,
   importc: "gtk_source_language_manager_get_language".}
 
+proc set_search_path*(lm: PSourceLanguageManager, dirs: cstringarray) {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_manager_set_search_path".}
+
 proc set_language*(buffer: PSourceBuffer, language: PSourceLanguage) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_language".}
 
@@ -113,6 +116,9 @@ proc get_scheme_ids*(manager: PSourceStyleSchemeManager): cstringArray {.cdecl, 
 
 proc get_scheme*(manager: PSourceStyleSchemeManager, scheme_id: cstring): PSourceStyleScheme {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_manager_get_scheme".}
+
+proc set_search_path*(manager: PSourceStyleSchemeManager, dirs: cstringarray) {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_set_search_path".}
 
 proc get_name*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_get_name".}

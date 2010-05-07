@@ -88,10 +88,11 @@ proc createTabLabel(name: string, t_child: PWidget): PWidget =
   box.packEnd(closebtn, False, False, 0)
   box.showAll()
   return box
-  
+
 proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
+  # TODO: Fix this, this makes typing laggy.
   # Update the 'Line & Column'
-  updateStatusBar(buffer)
+  #updateStatusBar(buffer)
 
   # Change the tabs state to 'unsaved'
   # and add '*' to the Tab Name
@@ -106,7 +107,7 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
   
   var cTab = win.sourceViewTabs.getNthPage(current)
   win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
-  
+
 # Other(Helper) functions
 
 proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
@@ -115,6 +116,7 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   # Each tabs creates a new SourceView
   # SourceScrolledWindow(ScrolledWindow)
   scrollWindow = scrolledWindowNew(nil, nil)
+  scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
   scrollWindow.show()
   
   # SourceView(gtkSourceView)
@@ -257,6 +259,9 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   
 proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   settings.showSettings(win)
+
+proc view_activate(menuitem: PMenuItem, user_data: pcheckmenuitem) =
+  user_data.itemSetActive(win.settings.bottomPanelVisible)
   
 proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
   win.settings.bottomPanelVisible = menuitem.itemGetActive()
@@ -287,13 +292,29 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
     var outp = p.outputStream
     
     # Colors
-    var normalTag = win.outputTextView.getBuffer().createTag(
+    # Get the tag table
+    var tagTable = win.outputTextView.getBuffer().getTagTable()
+
+
+    var normalTag = tagTable.tableLookup("normalTag")
+    if normalTag == nil:
+      normalTag = win.outputTextView.getBuffer().createTag(
             "normalTag", "foreground", "#3d3d3d", nil)
-    var errorTag = win.outputTextView.getBuffer().createTag(
+
+    var errorTag = tagTable.tableLookup("errorTag")
+    if errorTag == nil:
+      errorTag = win.outputTextView.getBuffer().createTag(
             "errorTag", "foreground", "red", nil)
-    var warningTag = win.outputTextView.getBuffer().createTag(
+
+    var warningTag = tagTable.tableLookup("warningTag")
+    if warningTag == nil:
+      warningTag = win.outputTextView.getBuffer().createTag(
             "warningTag", "foreground", "darkorange", nil)
-    var successTag = win.outputTextView.getBuffer().createTag(
+
+
+    var successTag = tagTable.tableLookup("successTag")
+    if successTag == nil:
+      successTag = win.outputTextView.getBuffer().createTag(
             "successTag", "foreground", "darkgreen", nil)
 
     var iter: TTextIter
@@ -310,8 +331,11 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
         
         # Launch the process
         var filename = win.Tabs[currentTab].filename
-        var output = "\n" & osProc.execProcess(splitFile(filename).dir /
-              splitFile(filename).name & ".exe")
+        var execPath = splitFile(filename).dir / splitFile(filename).name
+        if os.ExeExt != "":
+            execPath = execPath & "." & os.ExeExt
+
+        var output = "\n" & osProc.execProcess(execPath)
         win.outputTextView.getBuffer().getEndIter(addr(iter))
         win.outputTextView.getBuffer().insert(addr(iter), output, len(output))
         
@@ -571,6 +595,8 @@ proc initTopMenu(MainBox: PBox) =
                           SIGNAL_FUNC(aporia.viewBottomPanel_Toggled), nil)
   
   var ViewMenuItem = menuItemNewWithMnemonic("_View")
+  discard gsignalConnect(ViewMenuItem, "activate",
+                          G_Callback(aporia.view_activate), BottomPanelMenuItem)
 
   ViewMenuItem.setSubMenu(ViewMenu)
   ViewMenuItem.show()
@@ -787,11 +813,17 @@ proc initStatusBar(MainBox: PBox) =
 proc initControls() =
   # Load up the language style
   var LangMan = languageManagerGetDefault()
+  var langpaths: array[0..1, cstring] = 
+          [cstring(os.getApplicationDir() / "share/gtksourceview-2.0/language-specs"), nil]
+  LangMan.setSearchPath(addr(langpaths))
   var nimLang = LangMan.getLanguage("nimrod")
   win.nimLang = nimLang
   
   # Load the scheme
   var schemeMan = schemeManagerGetDefault()
+  var schemepaths: array[0..1, cstring] =
+          [cstring(os.getApplicationDir() / "share/gtksourceview-2.0/styles"), nil]
+  schemeMan.setSearchPath(addr(schemepaths))
   win.scheme = schemeMan.getScheme(win.settings.colorSchemeID)
   
   # Window

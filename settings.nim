@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gdk2, glib2, pango
+import gtk2, gdk2, glib2, pango, os
 import gtksourceview, types
 {.push callConv:cdecl.}
 
@@ -17,6 +17,9 @@ var win: ptr types.MainWin
 
 proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
   var schemeMan = schemeManagerGetDefault()
+  var schemepaths: array[0..1, cstring] =
+          [cstring(os.getApplicationDir() / "share/gtksourceview-2.0/styles"), nil]
+  schemeMan.setSearchPath(addr(schemepaths))
   var schemes = cstringArrayToSeq(schemeMan.getSchemeIds())
   for i in countdown(schemes.len() - 1, 0):
     var iter: TTreeIter
@@ -42,6 +45,9 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
     win.settings.colorSchemeID = $value
 
     var schemeMan = schemeManagerGetDefault()
+    var schemepaths: array[0..1, cstring] =
+            [cstring(os.getApplicationDir() / "share/gtksourceview-2.0/styles"), nil]
+    schemeMan.setSearchPath(addr(schemepaths))
     win.scheme = schemeMan.getScheme(value)
     # Loop through each tab, and set the scheme
     for i in items(win.Tabs):
