@@ -334,7 +334,7 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
 
 proc findText(forward: bool) =
   # This proc get's called when the 'Next' or 'Prev' buttons
-  # are pressed, user_data is a boolean which is
+  # are pressed, forward is a boolean which is
   # True for Next and False for Previous
   
   var text = getText(win.findEntry)
@@ -627,7 +627,21 @@ proc initSourceViewTabs() =
   win.SourceViewTabs.show()
   if lastSession.len() != 0:
     for i in items(lastSession):
-      addTab("", i)
+      addTab("", i.split('|')[0])
+      
+      var iter: TTextIter
+      win.Tabs[win.Tabs.len()-1].buffer.getIterAtOffset(addr(iter),
+          i.split('|')[1].parseInt())
+      win.Tabs[win.Tabs.len()-1].buffer.moveMarkByName("insert",
+          addr(iter))
+      win.Tabs[win.Tabs.len()-1].buffer.moveMarkByName("selection_bound",
+            addr(iter))
+      var currentTab = win.SourceViewTabs.getCurrentPage()
+
+      # TODO: Fix this..... :(
+      discard PTextView(win.Tabs[currentTab].sourceView).
+          scrollToIter(addr(iter), 0.0, True, 0.5, 0.5)
+      
   else:
     addTab("", "")
   

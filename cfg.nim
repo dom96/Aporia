@@ -7,6 +7,7 @@
 #    distribution, for details about the copyright.
 #
 import types, times, streams, parsecfg, strutils, os
+from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter
 
 type
   ECFGParse* = object of E_Base
@@ -59,9 +60,14 @@ proc save*(win: MainWin) =
     if win.Tabs.len() != 0:
       f.write("[session]\n")
       var tabs = "tabs = r\""
+      # Save all the tabs that have a filename.
       for i in items(win.Tabs):
         if i.filename != "":
-          tabs.add(i.filename & ";")
+          var cursorIter: TTextIter
+          i.buffer.getIterAtMark(addr(cursorIter), i.buffer.getInsert())
+          var cursorPos = addr(cursorIter).getOffset()
+          # Kind of a messy way to save the cursor pos and filename.
+          tabs.add(i.filename & "|" & $cursorPos & ";")
       f.write(tabs & "\"\n")
     
     f.close()
