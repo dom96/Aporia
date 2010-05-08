@@ -39,6 +39,8 @@ type
     replaceBtn*: PButton
     replaceAllBtn*: PButton
     
+    viewBottomPanelMenuItem*: PMenuItem # view menu
+
     Tabs*: seq[Tab] # Other
     
     settings*: TSettings
@@ -46,5 +48,6 @@ type
   Tab* = object
     buffer*: PSourceBuffer
     sourceView*: PWidget
+    label*: PLabel
     saved*: bool
     filename*: string

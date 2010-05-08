@@ -29,9 +29,44 @@ except ECFGParse:
 except EIO:
   win.settings = cfg.defaultSettings()
 
+proc saveTab(tabNr: int) =
+ if tabNr != -1:
+    if not win.Tabs[tabNr].saved:
+      var path = ""
+      if win.Tabs[tabNr].filename == "":
+        path = ChooseFileToSave(win.w)
+      else: path = win.Tabs[tabNr].filename
+      
+      if path != "":
+        var buffer = PTextBuffer(win.Tabs[tabNr].buffer)
+        # Get the text from the TextView
+        var startIter: TTextIter
+        buffer.getStartIter(addr(startIter))
+        
+        var endIter: TTextIter
+        buffer.getEndIter(addr(endIter))
+        
+        var text = buffer.getText(addr(startIter), addr(endIter), False)
+        # Save it to a file
+        var f: TFile
+        if open(f, path, fmWrite):
+          f.write(text)
+          f.close()
+          
+          # Change the tab name and .Tabs.filename etc.
+          win.Tabs[tabNr].filename = path
+          win.Tabs[tabNr].saved = True
+          var name = extractFilename(path)
+          
+          var cTab = win.Tabs[tabNr]
+          cTab.label.setText(name)
+          
+        else:
+          error(win.w, "Unable to write to file")  
+
 # GTK Events
 # -- w(PWindow)
-proc destroy(widget: PWidget, data: pgpointer){.cdecl.} =
+proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
   # gather some settings
   win.settings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
   win.settings.winWidth = win.w.allocation.width
@@ -41,7 +76,38 @@ proc destroy(widget: PWidget, data: pgpointer){.cdecl.} =
   win.save()
   # then quit
   main_quit()
-  
+
+proc delete_event(widget: PWidget, event: PEvent, user_data:pgpointer): bool =
+  var quit = True
+  for i in low(win.Tabs)..len(win.Tabs)-1:
+    if win.Tabs[i].saved == False:
+      var askSave = dialogNewWithButtons("", win.w, 0,
+                            STOCK_SAVE, RESPONSE_ACCEPT, STOCK_CANCEL, RESPONSE_CANCEL,
+                            "Close without saving", RESPONSE_REJECT, nil)
+      askSave.setTransientFor(win.w)
+      # TODO: Make this dialog look more appealing..
+      var label = labelNew(win.Tabs[i].filename & " is unsaved, would you like to save it ?")
+      PBox(askSave.vbox).pack_start(label, False, False, 0)
+      label.show()
+
+      var resp = askSave.run()
+      gtk2.destroy(PWidget(askSave))
+      case resp
+      of RESPONSE_ACCEPT:
+        saveTab(i)
+        quit = True
+      of RESPONSE_CANCEL:
+        quit = False
+        break
+      of RESPONSE_REJECT:
+        quit = True
+      else:
+        quit = False
+        break
+
+  # If False is returned the window will close
+  return quit != True
+
 proc windowState_Changed(widget: PWidget, event: PEventWindowState, user_data: pgpointer) =
   win.settings.winMaximized = (event.newWindowState and WINDOW_STATE_MAXIMIZED) != 0
 
@@ -72,7 +138,7 @@ proc onCloseTab(btn: PButton, user_data: PWidget) =
 
     win.Tabs.delete(tab)
 
-proc createTabLabel(name: string, t_child: PWidget): PWidget =
+proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget, label: PLabel] =
   var box = hboxNew(False, 0)
   var label = labelNew(name)
   var closebtn = buttonNew()
@@ -87,7 +153,7 @@ proc createTabLabel(name: string, t_child: PWidget): PWidget =
   box.packStart(label, True, True, 0)
   box.packEnd(closebtn, False, False, 0)
   box.showAll()
-  return box
+  return (box, label)
 
 proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
   # TODO: Fix this, this makes typing laggy.
@@ -105,8 +171,8 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
     win.Tabs[current].saved = False
     name = extractFilename(win.Tabs[current].filename) & " *"
   
-  var cTab = win.sourceViewTabs.getNthPage(current)
-  win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
+  var cTab = win.Tabs[current]
+  cTab.label.setText(name)
 
 # Other(Helper) functions
 
@@ -166,14 +232,16 @@ proc addTab(name: string, filename: string) =
   var scrollWindow: PScrolledWindow
   initSourceView(sourceView, scrollWindow, buffer)
   
-  var TabLabel = createTabLabel(nam, scrollWindow)
+  var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
+
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
 
   var nTab: Tab
   nTab.buffer = buffer
   nTab.sourceView = sourceView
-  nTab.saved = (filename == "")
+  nTab.label = labelText
+  nTab.saved = (filename != "")
   nTab.filename = filename
   win.tabs.add(nTab)
 
@@ -197,41 +265,9 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
     except EIO:
       error(win.w, "Unable to read from file")
 
-proc saveFile(menuItem: PMenuItem, user_data: pgpointer) =
+proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
-  if current != -1:
-    if not win.Tabs[current].saved:
-      var path = ""
-      if win.Tabs[current].filename == "":
-        path = ChooseFileToSave(win.w)
-      else: path = win.Tabs[current].filename
-      
-      if path != "":
-        var buffer = PTextBuffer(win.Tabs[current].buffer)
-        # Get the text from the TextView
-        var startIter: TTextIter
-        buffer.getStartIter(addr(startIter))
-        
-        var endIter: TTextIter
-        buffer.getEndIter(addr(endIter))
-        
-        var text = buffer.getText(addr(startIter), addr(endIter), False)
-        # Save it to a file
-        var f: TFile
-        if open(f, path, fmWrite):
-          f.write(text)
-          f.close()
-          
-          # Change the tab name and .Tabs.filename etc.
-          win.Tabs[current].filename = path
-          win.Tabs[current].saved = True
-          var name = extractFilename(path)
-          
-          var cTab = win.sourceViewTabs.getNthPage(current)
-          win.sourceViewTabs.setTabLabel(cTab, createTabLabel(name, cTab))
-          
-        else:
-          error(win.w, "Unable to write to file")
+  saveTab(current)
 
 proc undo(menuItem: PMenuItem, user_data: pgpointer) = 
   var current = win.SourceViewTabs.getCurrentPage()
@@ -245,6 +281,7 @@ proc redo(menuItem: PMenuItem, user_data: pgpointer) =
     
 proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) = 
   win.findBar.show()
+  win.findEntry.grabFocus()
   win.replaceEntry.hide()
   win.replaceLabel.hide()
   win.replaceBtn.hide()
@@ -252,6 +289,7 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
 
 proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   win.findBar.show()
+  win.findEntry.grabFocus()
   win.replaceEntry.show()
   win.replaceLabel.show()
   win.replaceBtn.show()
@@ -259,9 +297,6 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   
 proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   settings.showSettings(win)
-
-proc view_activate(menuitem: PMenuItem, user_data: pcheckmenuitem) =
-  user_data.itemSetActive(win.settings.bottomPanelVisible)
   
 proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
   win.settings.bottomPanelVisible = menuitem.itemGetActive()
@@ -272,13 +307,13 @@ proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
 
 var
   pegLineError = peg"{[^(]*} '(' {\d+} ', ' \d+ ') Error:' \s* {.*}"
-  pegLineWarning = peg"{[^(]*} '(' {\d+} ', ' \d+ ') ' 'Warning:'/'Hint:' \s* {.*}"
+  pegLineWarning = peg"{[^(]*} '(' {\d+} ', ' \d+ ') ' ('Warning:'/'Hint:') \s* {.*}"
   pegOtherError = peg"'Error:' \s* {.*}"
   pegSuccess = peg"'Hint: operation successful'.*"
   pegOfInterest = pegLineError / pegLineWarning / pegOtherError / pegSuccess
 
 proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  saveFile(nil, nil)
+  saveFile_Activate(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[currentTab].filename != "":
     # Clear the outputTextView
@@ -352,8 +387,16 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
     if not win.settings.bottomPanelVisible:
       win.bottomPanelTabs.show()
       win.settings.bottomPanelVisible = true
-  
-  
+      PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
+
+      # Scroll to the end of the TextView
+      # STUPID MOTHERF*CKING SCROLL WON'T WORK
+      # I SWEAR I WILL KILL!
+      var endIter: TTextIter
+      win.outputTextView.getBuffer().getEndIter(addr(endIter))
+      echo win.outputTextView.
+          scrollToIter(addr(endIter), 0.0, False, 0.5, 0.5)
+
 # -- FindBar
 
 proc findText(forward: bool) =
@@ -514,7 +557,7 @@ proc initTopMenu(MainBox: PBox) =
   FileMenu.append(SaveMenuItem)
   show(SaveMenuItem)
   discard signal_connect(SaveMenuItem, "activate", 
-                          SIGNAL_FUNC(saveFile), nil)
+                          SIGNAL_FUNC(saveFile_activate), nil)
 
   var SaveAsMenuItem = menu_item_new("Save As...") # Save as...
   # CTRL + Shift + S no idea how to do this :(
@@ -585,18 +628,16 @@ proc initTopMenu(MainBox: PBox) =
   # View menu
   var ViewMenu = menuNew()
   
-  var BottomPanelMenuItem = check_menu_item_new("Bottom Panel") # Bottom Panel
-  PCheckMenuItem(BottomPanelMenuItem).itemSetActive(win.settings.bottomPanelVisible)
-  BottomPanelMenuItem.add_accelerator("activate", accGroup, 
+  win.viewBottomPanelMenuItem = check_menu_item_new("Bottom Panel") # Bottom Panel
+  PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(win.settings.bottomPanelVisible)
+  win.viewBottomPanelMenuItem.add_accelerator("activate", accGroup, 
                   KEY_f9, CONTROL_MASK, ACCEL_VISIBLE) 
-  ViewMenu.append(BottomPanelMenuItem)
-  show(BottomPanelMenuItem)
-  discard signal_connect(BottomPanelMenuItem, "toggled", 
+  ViewMenu.append(win.viewBottomPanelMenuItem)
+  show(win.viewBottomPanelMenuItem)
+  discard signal_connect(win.viewBottomPanelMenuItem, "toggled", 
                           SIGNAL_FUNC(aporia.viewBottomPanel_Toggled), nil)
   
   var ViewMenuItem = menuItemNewWithMnemonic("_View")
-  discard gsignalConnect(ViewMenuItem, "activate",
-                          G_Callback(aporia.view_activate), BottomPanelMenuItem)
 
   ViewMenuItem.setSubMenu(ViewMenu)
   ViewMenuItem.show()
@@ -636,7 +677,7 @@ proc initToolBar(MainBox: PBox) =
   var OpenItem = TopBar.insertStock(STOCK_OPEN, "Open",
                       "Open", SIGNAL_FUNC(aporia.openFile), nil, -1)
   var SaveItem = TopBar.insertStock(STOCK_SAVE, "Save",
-                      "Save", SIGNAL_FUNC(saveFile), nil, -1)
+                      "Save", SIGNAL_FUNC(saveFile_Activate), nil, -1)
   TopBar.appendSpace()
   var UndoItem = TopBar.insertStock(STOCK_UNDO, "Undo", 
                       "Undo", SIGNAL_FUNC(aporia.undo), nil, -1)
@@ -837,6 +878,7 @@ proc initControls() =
                # it gets set correctly, when the window is maximized.
     
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(aporia.destroy), nil)
+  discard win.w.signalConnect("delete_event", SIGNAL_FUNC(aporia.delete_event), nil)
   discard win.w.signalConnect("window-state-event", SIGNAL_FUNC(aporia.windowState_Changed), nil)
   
   # MainBox (vbox)
