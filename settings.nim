@@ -192,6 +192,12 @@ proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
   for i in items(win.Tabs):
     PSourceView(i.sourceView).setIndentWidth(win.settings.indentWidth)
   
+proc autoIndent_Toggled(button: PToggleButton, user_data: pgpointer) =
+  win.settings.autoIndent = button.getActive()
+  
+  # Loop through each tab, and change the setting.
+  for i in items(win.Tabs):
+    PSourceView(i.sourceView).setAutoIndent(win.settings.autoIndent)
 
 proc initEditor(settingsTabs: PNotebook) =
   var editorLabel = labelNew("Editor")
@@ -263,6 +269,17 @@ proc initEditor(settingsTabs: PNotebook) =
   brackMatchHBox.packStart(brackMatchCheckBox, False, False, 20)
   brackMatchCheckBox.show()
   
+  # autoIndent - checkbox
+  var autoIndentHBox = hboxNew(False, 0)
+  editorVBox.packStart(autoIndentHBox, False, False, 0)
+  autoIndentHBox.show()
+  
+  var autoIndentCheckBox = checkButtonNew("Enable auto indent")
+  autoIndentCheckBox.setActive(win.settings.autoIndent)
+  discard autoIndentCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(autoIndent_Toggled), nil)
+  autoIndentHBox.packStart(autoIndentCheckBox, False, False, 20)
+  autoIndentCheckBox.show()
 
 var dialog: gtk2.PWindow
 proc closeDialog(widget: pWidget, user_data: pgpointer) =

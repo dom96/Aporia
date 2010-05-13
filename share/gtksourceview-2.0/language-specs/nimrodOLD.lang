@@ -28,7 +28,6 @@
   </metadata>
 
   <styles>
-    <style id="module-handler"    _name="Module Handler"        map-to="def:preprocessor"/>
     <style id="keyword"           _name="Keyword"               map-to="def:keyword"/>
     <style id="multiline-string"  _name="Multiline string"      map-to="def:string"/>
     <style id="string"            _name="String"                map-to="def:string"/>
@@ -40,7 +39,6 @@
     <style id="floating-point"    _name="Floating point number" map-to="def:floating-point"/>
     <style id="decimal"           _name="Decimal number"        map-to="def:decimal"/>
     <style id="base-n-integer"    _name="Base-N number"         map-to="def:base-n-integer"/>
-    <style id="type"              _name="type"                  map-to="def:type"/>
   </styles>
 
   <definitions>
@@ -144,44 +142,6 @@
           <match>(?&lt;![\w\.])0[xX][0-9A-Fa-f]+(?![\w\.])(\%{numbersuffix})?</match>
         </context>
 
-        <context id="boolean" style-ref="boolean">
-          <keyword>(f|F)_*(a|A)_*(l|L)_*(s|S)_*(e|E)_*</keyword>
-          <keyword>(t|T)_*(r|R)_*(u|U)_*(e|E)_*</keyword>
-        </context>
-
-        <context id="module-handler" style-ref="module-handler">
-          <keyword>(i|I)_*(m|M)_*(p|P)_*(o|O)_*(r|R)_*(t|T)_*</keyword>
-          <keyword>(i|I)_*(n|N)_*(c|C)_*(l|L)_*(u|U)_*(d|D)_*(e|E)_*</keyword>
-        </context>
-
-        <context id="types" style-ref="type">
-            <keyword>(i|I)_*(n|N)_*(t|T)_*</keyword>
-            <keyword>(i|I)_*(n|N)_*(t|T)_*(8|8)_*</keyword>
-            <keyword>(i|I)_*(n|N)_*(t|T)_*(1|1)_*(6|6)_*</keyword>
-            <keyword>(i|I)_*(n|N)_*(t|T)_*(3|3)_*(2|2)_*</keyword>
-            <keyword>(i|I)_*(n|N)_*(t|T)_*(6|6)_*(4|4)_*</keyword>
-            <keyword>(f|F)_*(l|L)_*(o|O)_*(a|A)_*(t|T)_*</keyword>
-            <keyword>(f|F)_*(l|L)_*(o|O)_*(a|A)_*(t|T)_*(3|3)_*(2|2)_*</keyword>
-            <keyword>(f|F)_*(l|L)_*(o|O)_*(a|A)_*(t|T)_*(6|6)_*(4|4)_*</keyword>
-            <keyword>(b|B)_*(o|O)_*(o|O)_*(l|L)_*</keyword>
-            <keyword>(c|C)_*(h|H)_*(a|A)_*(r|R)_*</keyword>
-            <keyword>(s|S)_*(t|T)_*(r|R)_*(i|I)_*(n|N)_*(g|G)_*</keyword>
-            <keyword>(c|C)_*(s|S)_*(t|T)_*(r|R)_*(i|I)_*(n|N)_*(g|G)_*</keyword>
-            <keyword>(p|P)_*(o|O)_*(i|I)_*(n|N)_*(t|T)_*(e|E)_*(r|R)_*</keyword>
-            <keyword>(o|O)_*(r|R)_*(d|D)_*(i|I)_*(n|N)_*(a|A)_*(l|L)_*</keyword>
-            <keyword>(e|E)_*(x|X)_*(p|P)_*(r|R)_*</keyword>
-            <keyword>(s|S)_*(t|T)_*(m|M)_*(t|T)_*</keyword>
-            <keyword>(t|T)_*(y|Y)_*(p|P)_*(e|E)_*(d|D)_*(e|E)_*(s|S)_*(c|C)_*</keyword>
-            <keyword>(r|R)_*(a|A)_*(n|N)_*(g|G)_*(e|E)_*</keyword>
-            <!-- <keyword>(a|A)_*(r|R)_*(r|R)_*(a|A)_*(y|Y)_*</keyword>--> <!-- looks strange -->
-            <keyword>(o|O)_*(p|P)_*(e|E)_*(n|N)_*(a|A)_*(r|R)_*(r|R)_*(a|A)_*(y|Y)_*</keyword>
-            <!--<keyword>(s|S)_*(e|E)_*(q|Q)_*</keyword>--> <!-- looks strange too -->
-            <keyword>(b|B)_*(y|Y)_*(t|T)_*(e|E)_*</keyword>
-            <keyword>(n|N)_*(a|A)_*(t|T)_*(u|U)_*(r|R)_*(a|A)_*(l|L)_*</keyword>
-            <keyword>(p|P)_*(o|O)_*(s|S)_*(i|I)_*(t|T)_*(i|I)_*(v|V)_*(e|E)_*</keyword>
-
-        </context>
-
         <context id="keyword" style-ref="keyword">
           <keyword>(a|A)_*(d|D)_*(d|D)_*(r|R)_*</keyword>
           <keyword>(a|A)_*(n|N)_*(d|D)_*</keyword>
@@ -208,9 +168,9 @@
           <keyword>(g|G)_*(e|E)_*(n|N)_*(e|E)_*(r|R)_*(i|I)_*(c|C)_*</keyword>
           <keyword>(i|I)_*(f|F)_*</keyword>
           <keyword>(i|I)_*(m|M)_*(p|P)_*(l|L)_*(i|I)_*(e|E)_*(s|S)_*</keyword>
-          <!--<keyword>(i|I)_*(m|M)_*(p|P)_*(o|O)_*(r|R)_*(t|T)_*</keyword>-->
+          <keyword>(i|I)_*(m|M)_*(p|P)_*(o|O)_*(r|R)_*(t|T)_*</keyword>
           <keyword>(i|I)_*(n|N)_*</keyword>
-          <!--<keyword>(i|I)_*(n|N)_*(c|C)_*(l|L)_*(u|U)_*(d|D)_*(e|E)_*</keyword>-->
+          <keyword>(i|I)_*(n|N)_*(c|C)_*(l|L)_*(u|U)_*(d|D)_*(e|E)_*</keyword>
           <keyword>(i|I)_*(s|S)_*</keyword>
           <keyword>(i|I)_*(s|S)_*(n|N)_*(o|O)_*(t|T)_*</keyword>
           <keyword>(i|I)_*(t|T)_*(e|E)_*(r|R)_*(a|A)_*(t|T)_*(o|O)_*(r|R)_*</keyword>

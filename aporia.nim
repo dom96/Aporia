@@ -192,6 +192,7 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   PSourceView(SourceView).setShowLineNumbers(win.settings.showLineNumbers)
   PSourceView(SourceView).setHighlightCurrentLine(win.settings.highlightCurrentLine)
   PSourceView(SourceView).setShowRightMargin(win.settings.rightMargin)
+  PSourceView(SourceView).setAutoIndent(win.settings.autoIndent)
 
   var font = font_description_from_string(win.settings.font)
   SourceView.modifyFont(font)
@@ -515,6 +516,60 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
+when defined(win32): 
+  const
+    libGTK = "libgtk-win32-2.0-0.dll"
+    libGDK = "libgdk-win32-2.0-0.dll"
+elif defined(darwin): 
+  const 
+    libGTK = "gtk-x11-2.0"
+    libGDK = "gdk-x11-2.0"
+else: 
+  const 
+    libGTK = "libgtk-x11-2.0.so(|.0)"
+    libGDK = "libgdk-x11-2.0.so(|.0)"
+
+proc drag_dest_set*(widget: PWidget, flags: PDestDefaults, targets: PTargetEntry, n_targets: PGint,
+        actions: PDragAction): PWidget{.cdecl, dynlib: libGTK, importc: "gtk_drag_dest_set".}
+proc drag_status*(context: gdk2.PDragContext, action: int, time: guint32) {.cdecl, 
+    dynlib: libGDK, importc: "gdk_drag_status".}
+
+proc svTabs_DragDrop(widget: PWidget, drag_context: PDragContext, x, y: cint, time: guint32, user_data: pgpointer) =
+  echo("DRAG-DROP")
+  echo(drag_context.action)
+  echo(int(x), " ", int(y))
+
+  #var target = widget.dragDestFindTarget(drag_context, nil)
+  #widget.dragGetData(drag_context, target, time)
+
+proc svTabs_DragDataRecv(widget: PWidget, drag_context: PDragContext, x, y: guint32,
+        data: PSelectionData, info: PGuint, time: guint32, user_data: pgpointer) =
+  echo("DRAG_DAT_RECV")
+  echo(drag_context.action)
+  echo(data.length, " ", data.format)
+
+  var strSel = getText(data)
+  if strSel == nil:
+    drag_context.dragStatus(ACTION_DEFAULT, time)
+  else:
+    drag_context.dragStatus(drag_context.suggested_action, time)
+
+  dragContext.drag_finish(True, False, time)
+
+proc svTabs_DragMotion(widget: PWidget, context: PDragContext,
+        x, y: PGInt, time: guint32, user_data: pgpointer): bool =
+  echo("DRAGMOTION")
+  widget.dragHighlight()
+
+  var target = widget.dragDestFindTarget(context, nil)
+  
+  context.dragStatus(ACTION_MOVE, time)
+  
+  widget.dragGetData(context, target, time)
+  echo(context.action)
+
+
+  return True
 
 # GUI Initialization
 
@@ -689,6 +744,13 @@ proc initToolBar(MainBox: PBox) =
   
 proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
+  win.sourceViewTabs.dragDestSet(DEST_DEFAULT_DROP, nil, 0, ACTION_MOVE)
+  #discard win.SourceViewTabs.signalConnect(
+  #        "drag-drop", SIGNAL_FUNC(svTabs_DragDrop), nil)
+  #discard win.SourceViewTabs.signalConnect(
+  #        "drag-data-received", SIGNAL_FUNC(svTabs_DragDataRecv), nil)
+  #discard win.SourceViewTabs.signalConnect(
+  #        "drag-motion", SIGNAL_FUNC(svTabs_DragMotion), nil)
   win.SourceViewTabs.set_scrollable(True)
   
   win.SourceViewTabs.show()

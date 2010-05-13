@@ -21,6 +21,7 @@ proc defaultSettings*(): TSettings =
   result.highlightMatchingBrackets = True
   result.winWidth = 800
   result.winHeight = 600
+  result.autoIndent = True
 
 proc save*(win: MainWin) =
   var settings = win.settings
@@ -45,7 +46,8 @@ proc save*(win: MainWin) =
         $settings.highlightMatchingBrackets & "\n")
     f.write("rightMargin = " & $settings.rightMargin & "\n")
     f.write("highlightCurrentLine = " & $settings.highlightCurrentLine & "\n")
-    
+    f.write("autoIndent = " & $settings.autoIndent & "\n")
+
     f.write("[other]\n")
     f.write("searchMethod = \"" & settings.search & "\"\n")
     
@@ -98,6 +100,8 @@ proc load*(lastSession: var seq[string]): TSettings =
           result.rightMargin = e.value == "true"
         of "highlightCurrentLine":
           result.highlightCurrentLine = e.value == "true"
+        of "autoIndent":
+          result.autoIndent = e.value == "true"
         of "searchMethod":
           result.search = e.value
         of "winMaximized":

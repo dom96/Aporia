@@ -12,7 +12,8 @@ type
     highlightMatchingBrackets*: bool # whether to highlight matching brackets
     rightMargin*: bool # Whether to show the right margin
     highlightCurrentLine*: bool # Whether to highlight the current line
-    
+    autoIndent*: bool    
+
     winMaximized*: bool # Whether the MainWindow is maximized on startup
     VPanedPos*: int # Position of the VPaned, which splits
                     # the sourceViewTabs and bottomPanelTabs
