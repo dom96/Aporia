@@ -47,6 +47,9 @@ proc guess_language*(lm: PSourceLanguageManager, filename: cstring, contentType:
 proc get_language*(lm: PSourceLanguageManager, id: cstring): PSourceLanguage {.cdecl, dynlib: lib,
   importc: "gtk_source_language_manager_get_language".}
 
+proc get_default*(lm: PSourceLanguageManager): PSourceLanguage {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_manager_get_default".}
+
 proc set_search_path*(lm: PSourceLanguageManager, dirs: cstringarray) {.cdecl, dynlib: lib,
   importc: "gtk_source_language_manager_set_search_path".}
 

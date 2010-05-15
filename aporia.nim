@@ -138,6 +138,11 @@ proc onCloseTab(btn: PButton, user_data: PWidget) =
 
     win.Tabs.delete(tab)
 
+proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, user_data: pgpointer) =
+  echo(win.Tabs.len()-1," ", pageNum)
+  if win.Tabs.len()-1 >= pageNum:
+    win.w.setTitle("Aporia IDE - " & win.Tabs[pageNum].filename)
+
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget, label: PLabel] =
   var box = hboxNew(False, 0)
   var label = labelNew(name)
@@ -199,7 +204,7 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   
   scrollWindow.add(SourceView)
   SourceView.show()
-  # -- Set the syntax highlighter language
+
   buffer.setHighlightMatchingBrackets(
       win.settings.highlightMatchingBrackets)
   
@@ -208,13 +213,20 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
                          GCallback(aporia.cursorMoved), nil)
   discard gsignalConnect(buffer, "changed", GCallback(aporia.changed), nil)
 
-  buffer.setLanguage(win.nimLang)
+  # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
 proc addTab(name: string, filename: string) =
   ## Adds a tab, if filename is not "" reads the file. And sets
   ## the tabs SourceViews text to that files contents.
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
+
+  if filename != nil and filename != "":
+    var lang = win.langMan.guessLanguage(filename, nil)
+    if lang != nil:
+      buffer.setLanguage(lang)
+    else:
+      buffer.setHighlightSyntax(False)
 
   var nam = name
   if nam == "": nam = "Untitled"
@@ -234,7 +246,6 @@ proc addTab(name: string, filename: string) =
   initSourceView(sourceView, scrollWindow, buffer)
   
   var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
-
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
 
@@ -245,6 +256,8 @@ proc addTab(name: string, filename: string) =
   nTab.saved = (filename != "")
   nTab.filename = filename
   win.tabs.add(nTab)
+
+
 
   PTextView(SourceView).setBuffer(nTab.buffer)
 
@@ -281,6 +294,19 @@ proc redo(menuItem: PMenuItem, user_data: pgpointer) =
     win.Tabs[current].buffer.redo()
     
 proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) = 
+  # Get the selected text, and set the findEntry to it.
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var insertIter: TTextIter
+  win.Tabs[currentTab].buffer.getIterAtMark(addr(insertIter), win.Tabs[currentTab].buffer.getInsert())
+  var insertOffset = addr(insertIter).getOffset()
+  var selectIter: TTextIter
+  win.Tabs[currentTab].buffer.getIterAtMark(addr(selectIter), win.Tabs[currentTab].buffer.getSelectionBound())
+  var selectOffset = addr(selectIter).getOffset()
+  echo(insertOffset, selectOffset)
+  if insertOffset != selectOffset:
+    var text = win.Tabs[currentTab].buffer.getText(addr(insertIter), addr(selectIter), False)
+    win.findEntry.setText(text)
+
   win.findBar.show()
   win.findEntry.grabFocus()
   win.replaceEntry.hide()
@@ -289,6 +315,7 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   win.replaceAllBtn.hide()
 
 proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+
   win.findBar.show()
   win.findEntry.grabFocus()
   win.replaceEntry.show()
@@ -745,6 +772,8 @@ proc initToolBar(MainBox: PBox) =
 proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
   win.sourceViewTabs.dragDestSet(DEST_DEFAULT_DROP, nil, 0, ACTION_MOVE)
+  discard win.SourceViewTabs.signalConnect(
+          "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
   #discard win.SourceViewTabs.signalConnect(
   #        "drag-drop", SIGNAL_FUNC(svTabs_DragDrop), nil)
   #discard win.SourceViewTabs.signalConnect(
@@ -915,11 +944,11 @@ proc initStatusBar(MainBox: PBox) =
   
 proc initControls() =
   # Load up the language style
-  var LangMan = languageManagerGetDefault()
+  win.langMan = languageManagerGetDefault()
   var langpaths: array[0..1, cstring] = 
           [cstring(os.getApplicationDir() / "share/gtksourceview-2.0/language-specs"), nil]
-  LangMan.setSearchPath(addr(langpaths))
-  var nimLang = LangMan.getLanguage("nimrod")
+  win.langMan.setSearchPath(addr(langpaths))
+  var nimLang = win.langMan.getLanguage("nimrod")
   win.nimLang = nimLang
   
   # Load the scheme
