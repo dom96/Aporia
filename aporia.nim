@@ -30,7 +30,7 @@ except EIO:
   win.settings = cfg.defaultSettings()
 
 proc saveTab(tabNr: int) =
- if tabNr != -1:
+  if tabNr != -1:
     if not win.Tabs[tabNr].saved:
       var path = ""
       if win.Tabs[tabNr].filename == "":
@@ -106,7 +106,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data:pgpointer): bool =
         break
 
   # If False is returned the window will close
-  return quit != True
+  return not quit
 
 proc windowState_Changed(widget: PWidget, event: PEventWindowState, user_data: pgpointer) =
   win.settings.winMaximized = (event.newWindowState and WINDOW_STATE_MAXIMIZED) != 0
@@ -216,7 +216,7 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc addTab(name: string, filename: string) =
+proc addTab(name, filename: string) =
   ## Adds a tab, if filename is not "" reads the file. And sets
   ## the tabs SourceViews text to that files contents.
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
@@ -269,16 +269,20 @@ proc newFile(menuItem: PMenuItem, user_data: pgpointer) =
   win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
   
 proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
-  var path = ChooseFileToOpen(win.w)
-  
-  if path != "":
+  var startpath = ""
+  var currPage = win.SourceViewTabs.getCurrentPage()
+  if currPage <% win.tabs.len: 
+    startpath = os.splitFile(win.tabs[currPage].filename).dir
+
+  var files = ChooseFilesToOpen(win.w, startpath)
+  for f in items(files):
     try:
-      addTab("", path)
-      # Switch to the newly created tab
-      win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+      addTab("", f)
     except EIO:
       error(win.w, "Unable to read from file")
-
+  # Switch to the newly created tab
+  win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+  
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   saveTab(current)
@@ -338,8 +342,7 @@ var
   pegLineWarning = peg"{[^(]*} '(' {\d+} ', ' \d+ ') ' ('Warning:'/'Hint:') \s* {.*}"
   pegOtherError = peg"'Error:' \s* {.*}"
   pegSuccess = peg"'Hint: operation successful'.*"
-  pegOfInterest = pegLineError / pegLineWarning / pegOtherError / pegSuccess
-
+  
 proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   saveFile_Activate(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
