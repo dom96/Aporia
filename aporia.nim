@@ -29,12 +29,12 @@ except ECFGParse:
 except EIO:
   win.settings = cfg.defaultSettings()
 
-proc saveTab(tabNr: int) =
+proc saveTab(tabNr: int, startpath: string) =
   if tabNr != -1:
     if not win.Tabs[tabNr].saved:
       var path = ""
       if win.Tabs[tabNr].filename == "":
-        path = ChooseFileToSave(win.w)
+        path = ChooseFileToSave(win.w, startpath) # dialogs.nim STOCK_OPEN instead of STOCK_SAVE
       else: path = win.Tabs[tabNr].filename
       
       if path != "":
@@ -85,7 +85,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data:pgpointer): bool =
                             STOCK_SAVE, RESPONSE_ACCEPT, STOCK_CANCEL, RESPONSE_CANCEL,
                             "Close without saving", RESPONSE_REJECT, nil)
       askSave.setTransientFor(win.w)
-      # TODO: Make this dialog look more appealing..
+      # TODO: Make this dialog look better
       var label = labelNew(win.Tabs[i].filename & " is unsaved, would you like to save it ?")
       PBox(askSave.vbox).pack_start(label, False, False, 0)
       label.show()
@@ -94,7 +94,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data:pgpointer): bool =
       gtk2.destroy(PWidget(askSave))
       case resp
       of RESPONSE_ACCEPT:
-        saveTab(i)
+        saveTab(i, os.splitFile(win.tabs[i].filename).dir)
         quit = True
       of RESPONSE_CANCEL:
         quit = False
@@ -257,8 +257,6 @@ proc addTab(name, filename: string) =
   nTab.filename = filename
   win.tabs.add(nTab)
 
-
-
   PTextView(SourceView).setBuffer(nTab.buffer)
 
 # GTK Events Contd.
@@ -285,7 +283,19 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
-  saveTab(current)
+  saveTab(current, os.splitFile(win.tabs[current].filename).dir)
+
+proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pgpointer) =
+  var current = win.SourceViewTabs.getCurrentPage()
+  var (filename, saved) = (win.Tabs[current].filename, win.Tabs[current].saved)
+
+  win.Tabs[current].saved = False
+  win.Tabs[current].filename = ""
+  saveTab(current, os.splitFile(filename).dir)
+  # If the user cancels the save file dialog. Restore the previous filename and saved state
+  if win.Tabs[current].filename == "":
+    win.Tabs[current].filename = filename
+    win.Tabs[current].saved = saved
 
 proc undo(menuItem: PMenuItem, user_data: pgpointer) = 
   var current = win.SourceViewTabs.getCurrentPage()
@@ -342,7 +352,17 @@ var
   pegLineWarning = peg"{[^(]*} '(' {\d+} ', ' \d+ ') ' ('Warning:'/'Hint:') \s* {.*}"
   pegOtherError = peg"'Error:' \s* {.*}"
   pegSuccess = peg"'Hint: operation successful'.*"
-  
+
+proc addText(textView: PTextView, text: string, colorTag: PTextTag = nil) =
+  var iter: TTextIter
+  textView.getBuffer().getEndIter(addr(iter))
+
+  if colorTag == nil:
+    textView.getBuffer().insert(addr(iter), text, len(text))
+  else:
+    textView.getBuffer().insertWithTags(addr(iter), text, len(text), colorTag)
+    
+
 proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   saveFile_Activate(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
@@ -360,7 +380,6 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
     # Colors
     # Get the tag table
     var tagTable = win.outputTextView.getBuffer().getTagTable()
-
 
     var normalTag = tagTable.tableLookup("normalTag")
     if normalTag == nil:
@@ -383,36 +402,28 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
       successTag = win.outputTextView.getBuffer().createTag(
             "successTag", "foreground", "darkgreen", nil)
 
-    var iter: TTextIter
     while running(p) or not outp.atEnd(outp):
       var x = outp.readLine()
       if x =~ pegLineError / pegOtherError:
-        win.outputTextView.getBuffer().getEndIter(addr(iter))
         x.add("\n")
-        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), errorTag)
+        win.outputTextView.addText(x, errorTag)
       elif x=~ pegSuccess:
-        win.outputTextView.getBuffer().getEndIter(addr(iter))
         x.add("\n")
-        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), successTag)
+        win.outputTextView.addText(x, successTag)
         
         # Launch the process
         var filename = win.Tabs[currentTab].filename
-        var execPath = splitFile(filename).dir / splitFile(filename).name
-        if os.ExeExt != "":
-            execPath = execPath & "." & os.ExeExt
+        filename = addFileExt(filename, os.ExeExt)
 
-        var output = "\n" & osProc.execProcess(execPath)
-        win.outputTextView.getBuffer().getEndIter(addr(iter))
-        win.outputTextView.getBuffer().insert(addr(iter), output, len(output))
+        var output = "\n" & osProc.execProcess(filename)
+        win.outputTextView.addText(output)
         
       elif x =~ pegLineWarning:
-        win.outputTextView.getBuffer().getEndIter(addr(iter))
         x.add("\n")
-        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), warningTag)
+        win.outputTextView.addText(x, warningTag)
       else:
-        win.outputTextView.getBuffer().getEndIter(addr(iter))
         x.add("\n")
-        win.outputTextView.getBuffer().insertWithTags(addr(iter), x, len(x), normalTag)
+        win.outputTextView.addText(x, normalTag)
     
     # Show the bottomPanelTabs
     if not win.settings.bottomPanelVisible:
@@ -420,13 +431,14 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
       win.settings.bottomPanelVisible = true
       PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
 
-      # Scroll to the end of the TextView
-      # STUPID MOTHERF*CKING SCROLL WON'T WORK
-      # I SWEAR I WILL KILL!
-      var endIter: TTextIter
-      win.outputTextView.getBuffer().getEndIter(addr(endIter))
-      echo win.outputTextView.
-          scrollToIter(addr(endIter), 0.0, False, 0.5, 0.5)
+    # Scroll to the end of the TextView
+
+    # This is stupid, it works sometimes... it's random
+    var endIter: TTextIter
+    win.outputTextView.getBuffer().getEndIter(addr(endIter))
+
+    echo win.outputTextView.
+        scrollToIter(addr(endIter), 0.0, False, 0.5, 0.5)
 
 # -- FindBar
 
@@ -475,9 +487,39 @@ proc findText(forward: bool) =
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
 proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
 proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
-  #
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var start, theEnd: TTextIter
+  if not win.Tabs[currentTab].buffer.getSelectionBounds(
+        addr(start), addr(theEnd)):
+    # If no text is selected, try finding a match.
+    findText(True)
+    if not win.Tabs[currentTab].buffer.getSelectionBounds(
+          addr(start), addr(theEnd)):
+      # No match
+      return
+  
+  # Remove the text
+  win.Tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
+  # Insert the replacement
+  var text = getText(win.replaceEntry)
+  win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
+  
 proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
-  #
+  
+  # TODO: Make it faster, this slower version looks cool though heh
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var start, theEnd: TTextIter
+
+  findText(True)
+  while win.Tabs[currentTab].buffer.getSelectionBounds(
+          addr(start), addr(theEnd)):
+    # Remove the text
+    win.Tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
+    # Insert the replacement
+    var text = getText(win.replaceEntry)
+    win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
+
+    findText(True)
 
 proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = win.findBar.hide()
 
@@ -646,12 +688,12 @@ proc initTopMenu(MainBox: PBox) =
 
   var SaveAsMenuItem = menu_item_new("Save As...") # Save as...
   # CTRL + Shift + S no idea how to do this :(
-  SaveMenuItem.add_accelerator("activate", accGroup, 
+  SaveAsMenuItem.add_accelerator("activate", accGroup, 
                   KEY_s, CONTROL_MASK or gdk2.SHIFT_MASK, ACCEL_VISIBLE) 
   FileMenu.append(SaveAsMenuItem)
   show(SaveAsMenuItem)
-  #discard signal_connect(SaveAsMenuItem, "activate", 
-  #                        SIGNAL_FUNC(FileSaveClicked), nil)
+  discard signal_connect(SaveAsMenuItem, "activate", 
+                          SIGNAL_FUNC(saveFileAs_Activate), nil)
   
   var FileMenuItem = menuItemNewWithMnemonic("_File")
 
