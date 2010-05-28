@@ -103,7 +103,13 @@ proc can_undo*(buffer: PSourceBuffer): gboolean {.cdecl, dynlib: lib,
   
 proc can_redo*(buffer: PSourceBuffer): gboolean {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_can_redo".}
-  
+
+proc begin_not_undoable_action*(buffer: PSourceBuffer) {.cdecl, dynlib: lib,
+  importc: "gtk_source_buffer_begin_not_undoable_action".}
+
+proc end_not_undoable_action*(buffer: PSourceBuffer) {.cdecl, dynlib: lib,
+  importc: "gtk_source_buffer_end_not_undoable_action".}
+
 proc forward_search*(iter: PTextIter, str: cstring, flags: TTextSearchFlags, 
                      match_start: PTextIter, match_end: PTextIter, 
                      limit: PTextIter): gboolean {.cdecl, dynlib: lib,

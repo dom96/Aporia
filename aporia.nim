@@ -232,10 +232,16 @@ proc addTab(name, filename: string) =
   if nam == "": nam = "Untitled"
   if filename == "": nam.add(" *")
   elif filename != "" and name == "":
+    # Disable the undo/redo manager.
+    buffer.begin_not_undoable_action()
+  
     # Load the file.
     var file: string = readFile(filename)
     if file != nil:
       buffer.set_text(file, len(file))
+      
+    # Enable the undo/redo manager.
+    buffer.end_not_undoable_action()
       
     # Get the name.ext of the filename, for the tabs title
     nam = extractFilename(filename)
@@ -354,14 +360,21 @@ var
   pegSuccess = peg"'Hint: operation successful'.*"
 
 proc addText(textView: PTextView, text: string, colorTag: PTextTag = nil) =
-  var iter: TTextIter
-  textView.getBuffer().getEndIter(addr(iter))
+  if text != nil:
+    var iter: TTextIter
+    textView.getBuffer().getEndIter(addr(iter))
 
-  if colorTag == nil:
-    textView.getBuffer().insert(addr(iter), text, len(text))
-  else:
-    textView.getBuffer().insertWithTags(addr(iter), text, len(text), colorTag)
-    
+    if colorTag == nil:
+      textView.getBuffer().insert(addr(iter), text, len(text))
+    else:
+      textView.getBuffer().insertWithTags(addr(iter), text, len(text), colorTag)
+
+proc createColor(textView: PTextView, name, color: string): PTextTag =
+  var tagTable = textView.getBuffer().getTagTable()
+  result = tagTable.tableLookup(name)
+  if result == nil:
+    result = textView.getBuffer().createTag(
+            name, "foreground", color, nil)
 
 proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   saveFile_Activate(nil, nil)
@@ -372,58 +385,34 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
     
     # TODO: Make the compile & run command customizable(put in the settings)
     # Compile
-    var a = parseCmdLine("c \"$1\"" % [win.Tabs[currentTab].filename])
-    var p = startProcess(command="nimrod", args=a,
-                      options={poStdErrToStdOut, poUseShell})
-    var outp = p.outputStream
+    var outp = osProc.execProcess("nimrod c \"$1\"" % [win.Tabs[currentTab].filename])
     
     # Colors
-    # Get the tag table
-    var tagTable = win.outputTextView.getBuffer().getTagTable()
+    var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
 
-    var normalTag = tagTable.tableLookup("normalTag")
-    if normalTag == nil:
-      normalTag = win.outputTextView.getBuffer().createTag(
-            "normalTag", "foreground", "#3d3d3d", nil)
+    var errorTag = createColor(win.outputTextView, "errorTag", "red")
 
-    var errorTag = tagTable.tableLookup("errorTag")
-    if errorTag == nil:
-      errorTag = win.outputTextView.getBuffer().createTag(
-            "errorTag", "foreground", "red", nil)
+    var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
 
-    var warningTag = tagTable.tableLookup("warningTag")
-    if warningTag == nil:
-      warningTag = win.outputTextView.getBuffer().createTag(
-            "warningTag", "foreground", "darkorange", nil)
+    var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
 
-
-    var successTag = tagTable.tableLookup("successTag")
-    if successTag == nil:
-      successTag = win.outputTextView.getBuffer().createTag(
-            "successTag", "foreground", "darkgreen", nil)
-
-    while running(p) or not outp.atEnd(outp):
-      var x = outp.readLine()
+    for x in outp.splitLines():
       if x =~ pegLineError / pegOtherError:
-        x.add("\n")
-        win.outputTextView.addText(x, errorTag)
+        win.outputTextView.addText("\n" & x, errorTag)
       elif x=~ pegSuccess:
-        x.add("\n")
-        win.outputTextView.addText(x, successTag)
+        win.outputTextView.addText("\n" & x, successTag)
         
         # Launch the process
         var filename = win.Tabs[currentTab].filename
-        filename = addFileExt(filename, os.ExeExt)
+        filename = changeFileExt(filename, os.ExeExt)
 
         var output = "\n" & osProc.execProcess(filename)
         win.outputTextView.addText(output)
         
       elif x =~ pegLineWarning:
-        x.add("\n")
-        win.outputTextView.addText(x, warningTag)
+        win.outputTextView.addText("\n" & x, warningTag)
       else:
-        x.add("\n")
-        win.outputTextView.addText(x, normalTag)
+        win.outputTextView.addText("\n" & x, normalTag)
     
     # Show the bottomPanelTabs
     if not win.settings.bottomPanelVisible:
@@ -432,7 +421,6 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
       PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
 
     # Scroll to the end of the TextView
-
     # This is stupid, it works sometimes... it's random
     var endIter: TTextIter
     win.outputTextView.getBuffer().getEndIter(addr(endIter))
