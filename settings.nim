@@ -291,8 +291,8 @@ proc showSettings*(aWin: var types.MainWin) =
                     # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
-  dialog.setDefaultSize(300, 400)
-  dialog.setSizeRequest(300, 400)
+  dialog.setDefaultSize(330, 400)
+  dialog.setSizeRequest(330, 400)
   dialog.setTransientFor(win.w)
   dialog.setResizable(False)
   dialog.setTitle("Settings")

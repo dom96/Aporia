@@ -675,7 +675,7 @@ proc initTopMenu(MainBox: PBox) =
                           SIGNAL_FUNC(saveFile_activate), nil)
 
   var SaveAsMenuItem = menu_item_new("Save As...") # Save as...
-  # CTRL + Shift + S no idea how to do this :(
+
   SaveAsMenuItem.add_accelerator("activate", accGroup, 
                   KEY_s, CONTROL_MASK or gdk2.SHIFT_MASK, ACCEL_VISIBLE) 
   FileMenu.append(SaveAsMenuItem)
@@ -814,6 +814,7 @@ proc initSourceViewTabs() =
   #discard win.SourceViewTabs.signalConnect(
   #        "drag-motion", SIGNAL_FUNC(svTabs_DragMotion), nil)
   win.SourceViewTabs.set_scrollable(True)
+  
   
   win.SourceViewTabs.show()
   if lastSession.len() != 0:
