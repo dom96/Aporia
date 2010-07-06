@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (C) 2009 Chepi Gimenez
+ Copyright (C) 2007 GtkSourceView team
+ Authors: Paolo Maggi <paolo@gnome.org>
+          Paolo Borelli <pborelli@gnome.org>
+          Chepi Gimenez <chepi@moaidigital.com>
+         
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Library General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Library General Public License for more details.
+
+ You should have received a copy of the GNU Library General Public
+ License along with this library; if not, write to the
+ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ Boston, MA 02111-1307, USA.
+
+-->
+<style-scheme id="Ekini_Edit" _name="Ekini Edit" version="1.0">
+
+  <author>Wenbert Del Rosario <!--Work derived from Chepi Gimenez and the Paolos--></author>
+  <_description>A dark scheme with reduced glare and improved readability. Based on the Thankful Eyes scheme.</_description> 
+
+        <!-- 
+        Ekini Edit scheme editted by Wenbert Del Rosario <wenbert@gmail.com> 
+        Changed some colors for better readability.
+        * mold_green for comments
+        * ultra_black for current line
+        * orange_like for strings
+        * removed bold for strings
+        -->  
+        
+        <!-- based on the work of the colourlovers.com community. 
+        For colour info, visit -http://www.colourlovers.com/palette/938538/Cotton_Code - 
+        Some colours borrowed from the Tango palette. 
+        This colour scheme complies with W3C accesibility standards.  -->
+
+  <!-- Basic palette -->
+  <color name="cool_as_ice" value="#6c8b9f"/>
+  <color name="slate_blue" value="#4e5d62"/>
+  <color name="eggshell_cloud" value="#dee5e7"/>
+  <color name="krasna" value="#122B3B"/>
+  <color name="aluminium1" value="#fefeec"/>
+  <color name="scarletred2" value="#cc0000"/>
+  <color name="butter3" value="#c4a000"/>
+  <color name="go_get_it" value="#B2FD6D"/>
+  <color name="chilly" value="#A8E1FE"/>
+  <color name="unicorn" value="#faf6e4"/>
+  <color name="sandy" value="#F6DD62"/>
+  <color name="pink_merengue" value="#F696DB"/>
+  <color name="dune" value="#FFF0A6"/>  
+  <color name="backlit" value="#4DF4FF"/>
+  <color name="schrill" value="#ffb000"/>  
+  <color name="yellow" value="#fce94f"/>
+  <color name="mold_green" value="#6a9875"/>
+  <color name="ultra_black" value="#000709"/>
+  <color name="orange_like" value="#e1a230"/>
+  <color name="deep_hell" value="#2E3330"/>
+  <color name="heaven_sent" value="#C9C9BB"/>
+
+  
+  <!-- Global Settings -->
+  <style name="text" foreground="heaven_sent" background="deep_hell"/>
+  <style name="selection" foreground="aluminium1" background="cool_as_ice"/>
+  <style name="cursor" foreground="cool_as_ice"/>
+  <!-- <style name="current-line"                background="slate_blue"/> -->
+  <style name="current-line" background="ultra_black"/>
+  <style name="line-numbers" foreground="eggshell_cloud" background="#black"/>
+  <style name="search-match" foreground="aluminium1" background="scarletred2"/>
+
+  <!-- Bracket Matching -->
+  <style name="bracket-match" foreground="eggshell_cloud" background="butter3" bold="true"/>
+  <style name="bracket-mismatch" foreground="eggshell_cloud" background="scarletred2" bold="true"/>
+
+  <!-- Comments -->
+  <style name="def:comment" foreground="mold_green"/>
+  <style name="def:shebang" foreground="go_get_it" bold="true"/>
+  <style name="def:doc-comment-element" italic="true"/>
+
+  <!-- Constants -->
+  <style name="def:constant" foreground="pink_merengue" bold="true"/>   
+  <!-- <style name="def:string"                  foreground="dune"/> -->
+  <style name="def:string" foreground="orange_like"/>
+  <style name="def:special-char" foreground="backlit" bold="true"/>
+  <style name="def:special-constant" foreground="schrill" bold="true"/>
+  <style name="def:floating-point" foreground="backlit" bold="true"/>
+
+  <!-- Identifiers -->
+  <style name="def:identifier" foreground="chilly"/>
+
+  <!-- Statements -->
+  <style name="def:statement" foreground="sandy" bold="true"/>!!
+
+  <!-- Types -->
+  <style name="def:type" foreground="go_get_it"/>
+
+  <!-- Others -->
+  <style name="def:preprocessor" foreground="go_get_it" bold="true"/>
+  <style name="def:error" foreground="aluminium1" background="scarletred2" bold="true"/>
+  <style name="def:note" background="unicorn" foreground="slate_blue" bold="true"/>
+  <style name="def:underlined" italic="true" underline="true"/>
+ 
+</style-scheme>

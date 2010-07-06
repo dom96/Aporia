@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Author: Andreas Rumpf
+ Copyright (C) 2009 Andreas Rumpf, Dominik Picheta
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Library General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Library General Public License for more details.
+
+ You should have received a copy of the GNU Library General Public
+ License along with this library; if not, write to the
+ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ Boston, MA 02111-1307, USA.
+
+-->
+<language id="nael" _name="nael" version="2.0" _section="Sources">
+  <metadata>
+    <property name="mimetypes">text/x-nael</property>
+    <property name="globs">*.nael</property>
+    <property name="line-comment-start">#</property>
+  </metadata>
+
+  <styles>
+    <style id="module-handler"    _name="Module Handler"        map-to="def:preprocessor"/>
+    <style id="keyword"           _name="Keyword"               map-to="def:keyword"/>
+    <style id="multiline-string"  _name="Multiline string"      map-to="def:string"/>
+    <style id="string"            _name="String"                map-to="def:string"/>
+    <style id="escaped-char"      _name="Escaped Character"     map-to="def:special-char"/>
+    <style id="format"            _name="Format"                map-to="def:character"/>
+    <style id="string-conversion" _name="string-conversion"/>
+    <style id="special-variable"  _name="Special Variable"      map-to="def:identifier"/>
+    <style id="boolean"           _name="Boolean"               map-to="def:boolean"/>
+    <style id="floating-point"    _name="Floating point number" map-to="def:floating-point"/>
+    <style id="decimal"           _name="Decimal number"        map-to="def:decimal"/>
+    <style id="base-n-integer"    _name="Base-N number"         map-to="def:base-n-integer"/>
+    <style id="type"              _name="type"                  map-to="def:type"/>
+    <style id="builtin-constant"  _name="Builtin Constant"      map-to="def:special-constant"/>
+    <style id="builtin-function"  _name="Builtin Function"      map-to="def:builtin"/>
+  </styles>
+
+  <definitions>
+    <define-regex id="identifier">[_a-zA-Z][_a-zA-Z0-9]*</define-regex>
+    <define-regex id="number">[0-9][0-9]*</define-regex>
+
+    <context id="format" style-ref="format" extend-parent="false">
+      <match extended="true">
+        \$[^\$][A-Za-z_0-9]*
+      </match>
+    </context>
+
+    <context id="escaped-char" style-ref="escaped-char" extend-parent="true">
+      <match extended="true">
+        \\(                 # leading backslash
+        [\\'"NnRrCcLlFfEeAaBbVvTt] | # single escaped char
+        x[0-9A-Fa-f]{1,2} | # \xhh - character with hex value hh
+        [0-9]+              # \ooo - character with decimal value ooo
+        )
+      </match>
+    </context>
+
+    <context id="double-quoted-string" style-ref="string" end-at-line-end="true">
+      <start>"</start>
+      <end>"</end>
+      <include>
+        <context ref="format"/>
+        <context ref="escaped-char"/>
+      </include>
+    </context>
+
+    <context id="single-quoted-string" style-ref="string" end-at-line-end="true">
+      <start>'</start>
+      <end>'</end>
+      <include>
+        <context ref="format"/>
+        <context ref="escaped-char"/>
+      </include>
+    </context>
+
+    <context id="nael">
+      <include>
+        <context ref="def:shebang"/>
+        <context ref="def:shell-like-comment"/>
+
+        <context ref="double-quoted-string"/>
+        <context ref="single-quoted-string"/>
+
+        <context id="string-conversion" style-ref="string-conversion" end-at-line-end="true">
+          <start>`</start>
+          <end>`</end>
+          <include>
+            <context ref="nael"/>
+          </include>
+        </context>
+
+        <define-regex id="float" extended="true">
+          ( (\d+)?\.\d+ | \d+\. ) |
+          ( (\d+|(\d+)?\.\d+|\d+\.)[eE][+-]?\d+ )
+        </define-regex>
+
+        <context id="float" style-ref="floating-point">
+          <match>(?&lt;![\w\.])\%{float}(?![\w\.])</match>
+        </context>
+
+        <context id="decimal" style-ref="decimal">
+          <match>(?&lt;![\w\.])([0-9][0-9]*)[lL]?(?![\w\.])</match>
+        </context>
+
+        <context id="octal" style-ref="base-n-integer">
+          <match>(?&lt;![\w\.])0[oc][0-7]+(?![\w\.])</match>
+        </context>
+
+        <context id="hex" style-ref="base-n-integer">
+          <match>(?&lt;![\w\.])0[xX][0-9A-Fa-f]+(?![\w\.])</match>
+        </context>
+
+        <context id="boolean" style-ref="boolean">
+          <keyword>false</keyword>
+          <keyword>true</keyword>
+        </context>
+
+        <context id="module-handler" style-ref="module-handler">
+          <keyword>import</keyword>
+          <keyword>include</keyword>
+        </context>
+
+        <context id="types" style-ref="type">
+          <keyword>string</keyword>
+        </context>
+
+        <context id="builtin-function" style-ref="builtin-function">        
+          <keyword>get</keyword>
+        </context>
+
+        <context id="builtin-constant" style-ref="builtin-constant">
+          <keyword>nil</keyword>
+        </context>
+
+        <context id="keyword" style-ref="keyword">
+          <keyword>and</keyword>
+          <keyword>call</keyword>
+          <keyword>tuple</keyword>
+          <keyword>if</keyword>
+          <keyword>func</keyword>
+          <keyword>gen</keyword>
+          <keyword>del</keyword>
+          <keyword>try</keyword>
+          <keyword>!</keyword>
+          <keyword>or</keyword>
+          <keyword>print</keyword>
+          <keyword>raise</keyword>
+          <keyword>type</keyword>
+          <keyword>new</keyword>
+        </context>
+      </include>
+    </context>
+  </definitions>
+</language>
