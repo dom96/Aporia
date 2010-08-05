@@ -47,6 +47,8 @@ type
     
     settings*: TSettings
 
+  
+
   Tab* = object
     buffer*: PSourceBuffer
     sourceView*: PWidget

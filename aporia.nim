@@ -9,11 +9,13 @@
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import pegs, streams
-import settings, types, cfg
+import settings, types, cfg, search
 {.push callConv:cdecl.}
 
 var win: types.MainWin
 win.Tabs = @[]
+
+search.win = addr(win)
 
 var lastSession: seq[string] = @[]
 
@@ -139,7 +141,7 @@ proc onCloseTab(btn: PButton, user_data: PWidget) =
     win.Tabs.delete(tab)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, user_data: pgpointer) =
-  echo(win.Tabs.len()-1," ", pageNum)
+  echo("onSwitchTab ", win.Tabs.len()-1, " ", pageNum)
   if win.Tabs.len()-1 >= pageNum:
     win.w.setTitle("Aporia IDE - " & win.Tabs[pageNum].filename)
 
@@ -161,7 +163,6 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget, label: 
   return (box, label)
 
 proc changed(buffer: PTextBuffer, user_data: pgpointer){.cdecl.} =
-  # TODO: Fix this, this makes typing laggy.
   # Update the 'Line & Column'
   #updateStatusBar(buffer)
 
@@ -319,10 +320,11 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var insertIter: TTextIter
   win.Tabs[currentTab].buffer.getIterAtMark(addr(insertIter), win.Tabs[currentTab].buffer.getInsert())
   var insertOffset = addr(insertIter).getOffset()
+  
   var selectIter: TTextIter
   win.Tabs[currentTab].buffer.getIterAtMark(addr(selectIter), win.Tabs[currentTab].buffer.getSelectionBound())
   var selectOffset = addr(selectIter).getOffset()
-  echo(insertOffset, selectOffset)
+  
   if insertOffset != selectOffset:
     var text = win.Tabs[currentTab].buffer.getText(addr(insertIter), addr(selectIter), False)
     win.findEntry.setText(text)
@@ -384,6 +386,7 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
     win.outputTextView.getBuffer().setText("", 0)
     
     # TODO: Make the compile & run command customizable(put in the settings)
+    # TODO: Use gtk threads.
     # Compile
     var outp = osProc.execProcess("nimrod c \"$1\"" % [win.Tabs[currentTab].filename])
     
@@ -429,48 +432,6 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
         scrollToIter(addr(endIter), 0.0, False, 0.5, 0.5)
 
 # -- FindBar
-
-proc findText(forward: bool) =
-  # This proc get's called when the 'Next' or 'Prev' buttons
-  # are pressed, forward is a boolean which is
-  # True for Next and False for Previous
-  
-  var text = getText(win.findEntry)
-
-  # TODO: regex, pegs, style insensitive searching
-
-  # Get the current tab
-  var currentTab = win.SourceViewTabs.getCurrentPage()
-  
-  # Get the position where the cursor is
-  # Search based on that
-  var startSel, endSel: TTextIter
-  discard win.Tabs[currentTab].buffer.getSelectionBounds(
-      addr(startsel), addr(endsel))
-  
-  var startMatch, endMatch: TTextIter
-  var matchFound: gboolean
-  
-  var options: TTextSearchFlags
-  if win.settings.search == "caseinsens":
-    options = TEXT_SEARCH_TEXT_ONLY or 
-        TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE
-  else:
-    options = TEXT_SEARCH_TEXT_ONLY or 
-        TEXT_SEARCH_VISIBLE_ONLY
-  
-  if forward:
-    matchFound = gtksourceview.forwardSearch(addr(endSel), text, 
-        options, addr(startMatch), addr(endMatch), nil)
-  else:
-    matchFound = gtksourceview.backwardSearch(addr(startSel), text, 
-        options, addr(startMatch), addr(endMatch), nil)
-  
-  if matchFound:
-    win.Tabs[currentTab].buffer.moveMarkByName("insert", addr(startMatch))
-    win.Tabs[currentTab].buffer.moveMarkByName("selection_bound", addr(endMatch))
-    discard PTextView(win.Tabs[currentTab].sourceView).
-        scrollToIter(addr(startMatch), 0.0, True, 0.5, 0.5)
 
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
 proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
@@ -575,7 +536,7 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
     PCheckMenuItem(pegMenuItem).ItemSetActive(True)
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
-
+discard """
 when defined(win32): 
   const
     libGTK = "libgtk-win32-2.0-0.dll"
@@ -630,7 +591,7 @@ proc svTabs_DragMotion(widget: PWidget, context: PDragContext,
 
 
   return True
-
+"""
 # GUI Initialization
 
 proc initTopMenu(MainBox: PBox) =
@@ -821,15 +782,15 @@ proc initSourceViewTabs() =
     for i in items(lastSession):
       addTab("", i.split('|')[0])
       
+      var currentTab = win.SourceViewTabs.getCurrentPage() # Kinda' inefficient
       var iter: TTextIter
-      win.Tabs[win.Tabs.len()-1].buffer.getIterAtOffset(addr(iter),
+      win.Tabs[currentTab].buffer.getIterAtOffset(addr(iter),
           i.split('|')[1].parseInt())
-      win.Tabs[win.Tabs.len()-1].buffer.moveMarkByName("insert",
+      win.Tabs[currentTab].buffer.moveMarkByName("insert",
           addr(iter))
-      win.Tabs[win.Tabs.len()-1].buffer.moveMarkByName("selection_bound",
+      win.Tabs[currentTab].buffer.moveMarkByName("selection_bound",
             addr(iter))
-      var currentTab = win.SourceViewTabs.getCurrentPage()
-
+      
       # TODO: Fix this..... :(
       discard PTextView(win.Tabs[currentTab].sourceView).
           scrollToIter(addr(iter), 0.0, True, 0.5, 0.5)
