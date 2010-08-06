@@ -220,6 +220,7 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
 proc addTab(name, filename: string) =
   ## Adds a tab, if filename is not "" reads the file. And sets
   ## the tabs SourceViews text to that files contents.
+  assert(win.nimLang != nil)
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
 
   if filename != nil and filename != "":
@@ -251,7 +252,7 @@ proc addTab(name, filename: string) =
   var sourceView: PWidget
   var scrollWindow: PScrolledWindow
   initSourceView(sourceView, scrollWindow, buffer)
-  
+
   var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
@@ -262,7 +263,7 @@ proc addTab(name, filename: string) =
   nTab.label = labelText
   nTab.saved = (filename != "")
   nTab.filename = filename
-  win.tabs.add(nTab)
+  win.Tabs.add(nTab)
 
   PTextView(SourceView).setBuffer(nTab.buffer)
 
@@ -765,7 +766,7 @@ proc initToolBar(MainBox: PBox) =
   
 proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
-  win.sourceViewTabs.dragDestSet(DEST_DEFAULT_DROP, nil, 0, ACTION_MOVE)
+  #win.sourceViewTabs.dragDestSet(DEST_DEFAULT_DROP, nil, 0, ACTION_MOVE)
   discard win.SourceViewTabs.signalConnect(
           "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
   #discard win.SourceViewTabs.signalConnect(
@@ -779,24 +780,29 @@ proc initSourceViewTabs() =
   
   win.SourceViewTabs.show()
   if lastSession.len() != 0:
-    for i in items(lastSession):
-      addTab("", i.split('|')[0])
+    for i in 0 .. len(lastSession)-1:
+      var splitUp = lastSession[i].split('|')
+      var (filename, offset) = (splitUp[0], splitUp[1])
+      addTab("", filename)
       
-      var currentTab = win.SourceViewTabs.getCurrentPage() # Kinda' inefficient
       var iter: TTextIter
-      win.Tabs[currentTab].buffer.getIterAtOffset(addr(iter),
-          i.split('|')[1].parseInt())
-      win.Tabs[currentTab].buffer.moveMarkByName("insert",
+      win.Tabs[i].buffer.getIterAtOffset(addr(iter),
+          offset.parseInt())
+      win.Tabs[i].buffer.moveMarkByName("insert",
           addr(iter))
-      win.Tabs[currentTab].buffer.moveMarkByName("selection_bound",
+      win.Tabs[i].buffer.moveMarkByName("selection_bound",
             addr(iter))
       
       # TODO: Fix this..... :(
-      discard PTextView(win.Tabs[currentTab].sourceView).
-          scrollToIter(addr(iter), 0.0, True, 0.5, 0.5)
+      discard PTextView(win.Tabs[i].sourceView).
+          scrollToIter(addr(iter), 0.25, False, 0.0, 0.0)
       
   else:
     addTab("", "")
+  
+  # This doesn't work :\
+  win.Tabs[0].sourceView.grabFocus()
+
   
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
