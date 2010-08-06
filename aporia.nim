@@ -117,8 +117,11 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState, user_data: p
 
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
-  if win.bottomBar != nil:  # Incase this event gets fired before
-                            # bottomBar is initialized
+  # Incase this event gets fired before
+  # bottomBar is initialized
+  if win.bottomBar != nil and 
+      not win.tempStuff.stopSBUpdates:  
+                            
     var row, col: gint
     var iter: TTextIter
     
@@ -469,21 +472,9 @@ proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
   win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
   
 proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
-  
-  # TODO: Make it faster, this slower version looks cool though heh
-  var currentTab = win.SourceViewTabs.getCurrentPage()
-  var start, theEnd: TTextIter
-
-  findText(True)
-  while win.Tabs[currentTab].buffer.getSelectionBounds(
-          addr(start), addr(theEnd)):
-    # Remove the text
-    win.Tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
-    # Insert the replacement
-    var text = getText(win.replaceEntry)
-    win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
-
-    findText(True)
+  var find = getText(win.findEntry)
+  var replace = getText(win.replaceEntry)
+  echo(replaceAll(find, replace), " occurences replaced.")
 
 proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = win.findBar.hide()
 

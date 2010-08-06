@@ -92,6 +92,9 @@ proc source_buffer_new*(language: PSourceLanguage): PSourceBuffer {.cdecl, dynli
 proc set_highlight_matching_brackets*(view: PSourceBuffer, show: gboolean) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_highlight_matching_brackets".}
 
+proc get_highlight_matching_brackets*(view: PSourceBuffer): gboolean {.cdecl, dynlib: lib,
+  importc: "gtk_source_buffer_get_highlight_matching_brackets".}
+
 proc undo*(buffer: PSourceBuffer) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_undo".}
   

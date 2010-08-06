@@ -51,6 +51,7 @@ type
 
   Temp = object
     lastSaveDir*: string # Last saved directory
+    stopSBUpdates*: Bool
 
   Tab* = object
     buffer*: PSourceBuffer
