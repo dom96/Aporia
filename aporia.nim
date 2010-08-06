@@ -389,14 +389,16 @@ proc createColor(textView: PTextView, name, color: string): PTextTag =
   if result == nil:
     result = textView.getBuffer().createTag(
             name, "foreground", color, nil)
-
+var compileRunMutex: PGMutex = nil
 proc compileRunThread(data: gpointer): gboolean =
+
   saveFile_Activate(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
+
   if win.Tabs[currentTab].filename != "":
     # Clear the outputTextView
     win.outputTextView.getBuffer().setText("", 0)
-    
+
     # TODO: Make the compile & run command customizable(put in the settings)
     # TODO: Use gtk threads.
     # Compile
@@ -410,7 +412,6 @@ proc compileRunThread(data: gpointer): gboolean =
     var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
 
     var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
-
     for x in outp.splitLines():
       if x =~ pegLineError / pegOtherError:
         win.outputTextView.addText("\n" & x, errorTag)
@@ -423,7 +424,6 @@ proc compileRunThread(data: gpointer): gboolean =
 
         var output = "\n" & osProc.execProcess(filename)
         win.outputTextView.addText(output)
-        
       elif x =~ pegLineWarning:
         win.outputTextView.addText("\n" & x, warningTag)
       else:
@@ -442,12 +442,15 @@ proc compileRunThread(data: gpointer): gboolean =
 
     echo win.outputTextView.
         scrollToIter(addr(endIter), 0.25, False, 0.0, 0.0)
+
   return False
   
 proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   # Threads :O *worships*
   # Doesn't work :\
-  echo("Thread started - ", idleAdd(compileRunThread, nil))
+  #echo("Thread started - ", idleAdd(compileRunThread, nil))
+  var err: pointer
+  discard gThreadCreate(compileRunThread, nil, False, nil)
 
 # -- FindBar
 
@@ -997,10 +1000,11 @@ proc initControls() =
   if confParseFail:
     dialogs.warning(win.w, "Error parsing the configuration file, using default settings.")
  
-# gThreadInit(nil)
-#threadsInit()
-#threadsEnter()
+gThreadInit(nil)
+threadsInit()
 nimrod_init()
+#compileRunMutex = gMutexNew()
 initControls()
+threadsEnter()
 main()
-#threadsLeave()
+threadsLeave()
