@@ -45,9 +45,12 @@ type
 
     Tabs*: seq[Tab] # Other
     
+    tempStuff*: Temp # Just things to remember.
+    
     settings*: TSettings
 
-  
+  Temp = object
+    lastSaveDir*: string # Last saved directory
 
   Tab* = object
     buffer*: PSourceBuffer

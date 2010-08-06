@@ -55,6 +55,8 @@ proc saveTab(tabNr: int, startpath: string) =
           f.write(text)
           f.close()
           
+          win.tempStuff.lastSaveDir = splitFile(path).dir
+          
           # Change the tab name and .Tabs.filename etc.
           win.Tabs[tabNr].filename = path
           win.Tabs[tabNr].saved = True
@@ -253,6 +255,7 @@ proc addTab(name, filename: string) =
   var scrollWindow: PScrolledWindow
   initSourceView(sourceView, scrollWindow, buffer)
 
+  # Tuple unpacking ftw
   var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
@@ -280,14 +283,19 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   if currPage <% win.tabs.len: 
     startpath = os.splitFile(win.tabs[currPage].filename).dir
 
+  if startpath == "":
+    # Use lastSavePath as the startpath
+    startpath = win.tempStuff.lastSaveDir
+
   var files = ChooseFilesToOpen(win.w, startpath)
-  for f in items(files):
-    try:
-      addTab("", f)
-    except EIO:
-      error(win.w, "Unable to read from file")
-  # Switch to the newly created tab
-  win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+  if files.len() > 0:
+    for f in items(files):
+      try:
+        addTab("", f)
+      except EIO:
+        error(win.w, "Unable to read from file")
+    # Switch to the newly created tab
+    win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
   
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
@@ -379,7 +387,7 @@ proc createColor(textView: PTextView, name, color: string): PTextTag =
     result = textView.getBuffer().createTag(
             name, "foreground", color, nil)
 
-proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc compileRunThread(data: gpointer): gboolean =
   saveFile_Activate(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[currentTab].filename != "":
@@ -430,7 +438,13 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
     win.outputTextView.getBuffer().getEndIter(addr(endIter))
 
     echo win.outputTextView.
-        scrollToIter(addr(endIter), 0.0, False, 0.5, 0.5)
+        scrollToIter(addr(endIter), 0.25, False, 0.0, 0.0)
+  return False
+  
+proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  # Threads :O *worships*
+  # Doesn't work :\
+  echo("Thread started - ", idleAdd(compileRunThread, nil))
 
 # -- FindBar
 
@@ -991,8 +1005,11 @@ proc initControls() =
   
   if confParseFail:
     dialogs.warning(win.w, "Error parsing the configuration file, using default settings.")
-  
-  
+ 
+# gThreadInit(nil)
+#threadsInit()
+#threadsEnter()
 nimrod_init()
 initControls()
 main()
+#threadsLeave()
