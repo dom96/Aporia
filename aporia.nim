@@ -449,8 +449,9 @@ proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   # Threads :O *worships*
   # Doesn't work :\
   #echo("Thread started - ", idleAdd(compileRunThread, nil))
-  var err: pointer
-  discard gThreadCreate(compileRunThread, nil, False, nil)
+  #var err: pointer
+  #discard gThreadCreate(compileRunThread, nil, False, nil)
+  discard compileRunThread(nil)
 
 # -- FindBar
 

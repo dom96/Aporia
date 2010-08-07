@@ -1,4 +1,4 @@
-import gtk2, glib2, gtksourceview, gdk2
+import gtk2, glib2, gtksourceview, gdk2, pegs, re
 import types
 {.push callConv:cdecl.}
 
@@ -9,9 +9,40 @@ proc getSearchOptions(): TTextSearchFlags =
   if win.settings.search == "caseinsens":
     result = TEXT_SEARCH_TEXT_ONLY or 
         TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE
-  else:
+  elif win.settings.search == "casesens":
     result = TEXT_SEARCH_TEXT_ONLY or 
         TEXT_SEARCH_VISIBLE_ONLY
+
+proc findRegex*(pattern: TRegex, forward: bool, startIter: PTextIter, buffer: PTextBuffer): 
+    tuple[startMatch, endMatch: TTextIter, found: bool] =
+  var text: cstring
+  var iter: TTextIter
+  if forward:
+    buffer.getEndIter(addr(iter))
+    text = startIter.getText(addr(iter))
+  else:
+    buffer.getStartIter(addr(iter))
+    text = addr(iter).getText(startIter)
+    
+  var matches: array[0..re.MaxSubpatterns, string]
+  var match = find($text, pattern, matches)
+  var startMatch, endMatch: TTextIter
+  
+  echo(match, " ", matches.len())
+  if match != -1:
+    if forward:
+      buffer.getIterAtOffset(addr(startMatch), startIter.getOffset() + match)
+      buffer.getIterAtOffset(addr(endMatch), startIter.getOffset() + match + 
+          matches[0].len())
+    else:
+      buffer.getIterAtOffset(addr(startMatch), addr(iter).getOffset() + match)
+      buffer.getIterAtOffset(addr(endMatch), addr(iter).getOffset() + match +
+          matches[0].len())
+          
+    return (startMatch, endMatch, True)
+  else:
+    return (startMatch, endMatch, False)
+  
 
 proc findText*(forward: bool) =
   # This proc get's called when the 'Next' or 'Prev' buttons
@@ -34,18 +65,26 @@ proc findText*(forward: bool) =
   var startMatch, endMatch: TTextIter
   var matchFound: gboolean
   
-  var options = getSearchOptions()
+  var buffer = win.Tabs[currentTab].buffer
   
-  if forward:
-    matchFound = gtksourceview.forwardSearch(addr(endSel), text, 
-        options, addr(startMatch), addr(endMatch), nil)
+  if win.settings.search == "caseinsens" or win.settings.search == "casesens":
+    var options = getSearchOptions()
+    if forward:
+      matchFound = gtksourceview.forwardSearch(addr(endSel), text, 
+          options, addr(startMatch), addr(endMatch), nil)
+    else:
+      matchFound = gtksourceview.backwardSearch(addr(startSel), text, 
+          options, addr(startMatch), addr(endMatch), nil)
   else:
-    matchFound = gtksourceview.backwardSearch(addr(startSel), text, 
-        options, addr(startMatch), addr(endMatch), nil)
+    if win.settings.search == "regex":
+      var ret = findRegex(re("(" & $text & ")"), forward, addr(endSel), buffer)
+      startMatch = ret[0]
+      endMatch = ret[1]
+      matchFound = ret[2]
   
   if matchFound:
-    win.Tabs[currentTab].buffer.moveMarkByName("insert", addr(startMatch))
-    win.Tabs[currentTab].buffer.moveMarkByName("selection_bound", addr(endMatch))
+    buffer.moveMarkByName("insert", addr(startMatch))
+    buffer.moveMarkByName("selection_bound", addr(endMatch))
     discard PTextView(win.Tabs[currentTab].sourceView).
         scrollToIter(addr(startMatch), 0.2, False, 0.0, 0.0)
     
