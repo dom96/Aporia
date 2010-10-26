@@ -389,7 +389,7 @@ proc createColor(textView: PTextView, name, color: string): PTextTag =
   if result == nil:
     result = textView.getBuffer().createTag(
             name, "foreground", color, nil)
-var compileRunMutex: PGMutex = nil
+#var compileRunMutex: PGMutex = nil
 proc compileRunThread(data: gpointer): gboolean =
 
   saveFile_Activate(nil, nil)
@@ -1001,11 +1001,11 @@ proc initControls() =
   if confParseFail:
     dialogs.warning(win.w, "Error parsing the configuration file, using default settings.")
  
-gThreadInit(nil)
-threadsInit()
+#gThreadInit(nil)
+#threadsInit()
 nimrod_init()
 #compileRunMutex = gMutexNew()
 initControls()
-threadsEnter()
+#threadsEnter()
 main()
-threadsLeave()
+#threadsLeave()
