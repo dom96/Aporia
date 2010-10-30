@@ -6,6 +6,7 @@
 #    See the file "copying.txt", included in this
 #    distribution, for details about the copyright.
 #
+
 import types, times, streams, parsecfg, strutils, os
 from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter
 
@@ -26,9 +27,8 @@ proc defaultSettings*(): TSettings =
 proc save*(win: MainWin) =
   var settings = win.settings
 
-  # If the directory doesn't exist, create it
-  if not os.existsDir(joinPath(os.getConfigDir(), "Aporia")):
-    os.createDir(joinPath(os.getConfigDir(), "Aporia"))
+  if not os.existsDir(os.getConfigDir() / "Aporia"):
+    os.createDir(os.getConfigDir() / "Aporia")
   
   # Save the settings to file.
   var f: TFile
@@ -75,65 +75,54 @@ proc save*(win: MainWin) =
     f.close()
 
 proc load*(lastSession: var seq[string]): TSettings = 
-  var f = newFileStream(joinPath(os.getConfigDir(), "Aporia", "config.ini"), fmRead)
-  if f != nil:
-    var p: TCfgParser
-    open(p, f, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
-    while True:
-      var e = next(p)
-      case e.kind
-      of cfgEof:
-        break
-      of cfgKeyValuePair:
-        case e.key
-        of "font":
-          result.font = e.value
-        of "scheme":
-          result.colorSchemeID = e.value
-        of "indentWidth":
-          result.indentWidth = e.value.parseInt()
-        of "showLineNumbers":
-          result.showLineNumbers = e.value == "true"
-        of "highlightMatchingBrackets":
-          result.highlightMatchingBrackets = e.value == "true"
-        of "rightMargin":
-          result.rightMargin = e.value == "true"
-        of "highlightCurrentLine":
-          result.highlightCurrentLine = e.value == "true"
-        of "autoIndent":
-          result.autoIndent = e.value == "true"
-        of "searchMethod":
-          result.search = e.value
-        of "winMaximized":
-          result.winMaximized = e.value == "true"
-        of "VPanedPos":
-          result.VPanedPos = e.value.parseInt()
-        of "winWidth":
-          result.winWidth = e.value.parseInt()
-        of "winHeight":
-          result.winHeight = e.value.parseInt()
-        of "tabs":
-          # Add the filepaths of the last session
-          for i in e.value.split(';'):
-            if i != "":
-              lastSession.add(i)
-          
-      of cfgError:
-        raise newException(ECFGParse, e.msg)
-      of cfgSectionStart, cfgOption:
-        #
-  else:
-    raise newException(EIO, "Could not open configuration file.")
+  var f = newFileStream(os.getConfigDir() / "Aporia" / "config.ini", fmRead)
+  if f == nil: raise newException(EIO, "Could not open configuration file.")
+  var p: TCfgParser
+  open(p, f, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
+  while True:
+    var e = next(p)
+    case e.kind
+    of cfgEof:
+      break
+    of cfgKeyValuePair:
+      case e.key
+      of "font":
+        result.font = e.value
+      of "scheme":
+        result.colorSchemeID = e.value
+      of "indentWidth":
+        result.indentWidth = e.value.parseInt()
+      of "showLineNumbers":
+        result.showLineNumbers = e.value == "true"
+      of "highlightMatchingBrackets":
+        result.highlightMatchingBrackets = e.value == "true"
+      of "rightMargin":
+        result.rightMargin = e.value == "true"
+      of "highlightCurrentLine":
+        result.highlightCurrentLine = e.value == "true"
+      of "autoIndent":
+        result.autoIndent = e.value == "true"
+      of "searchMethod":
+        result.search = e.value
+      of "winMaximized":
+        result.winMaximized = e.value == "true"
+      of "VPanedPos":
+        result.VPanedPos = e.value.parseInt()
+      of "winWidth":
+        result.winWidth = e.value.parseInt()
+      of "winHeight":
+        result.winHeight = e.value.parseInt()
+      of "tabs":
+        # Add the filepaths of the last session
+        for i in e.value.split(';'):
+          if i != "":
+            lastSession.add(i)
+        
+    of cfgError:
+      raise newException(ECFGParse, e.msg)
+    of cfgSectionStart, cfgOption:
+      nil
 
 when isMainModule:
-
   echo(load().showLineNumbers)
 
-  discard """
-  var s: TSettings
-  s.search = "caseinsens"
-  s.font = "monospace 9"
-  s.colorSchemeID = "cobalt"
-
-  save(s)"""
-  

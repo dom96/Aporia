@@ -1,3 +1,12 @@
+#
+#
+#            Aporia - Nimrod IDE
+#        (c) Copyright 2010 Dominik Picheta
+#
+#    See the file "copying.txt", included in this
+#    distribution, for details about the copyright.
+#
+
 import gtk2, glib2
 
 when defined(windows):

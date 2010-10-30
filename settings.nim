@@ -9,7 +9,12 @@
 
 import gtk2, gdk2, glib2, pango, os
 import gtksourceview, types
+
 {.push callConv:cdecl.}
+
+const
+  langSpecs* = "share/gtksourceview-2.0/language-specs"
+  styles* = "share/gtksourceview-2.0/styles"
 
 var win: ptr types.MainWin
 
@@ -18,7 +23,7 @@ var win: ptr types.MainWin
 proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
   var schemeMan = schemeManagerGetDefault()
   var schemepaths: array[0..1, cstring] =
-          [cstring(os.getApplicationDir() / "share/gtksourceview-2.0/styles"), nil]
+          [cstring(os.getApplicationDir() / styles), nil]
   schemeMan.setSearchPath(addr(schemepaths))
   var schemes = cstringArrayToSeq(schemeMan.getSchemeIds())
   for i in countdown(schemes.len() - 1, 0):
@@ -30,7 +35,8 @@ proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
     var name = $scheme.getName()
     var desc = $scheme.getDescription()
     # Set the TreeIter's values
-    schemeModel.set(addr(iter), 0, schemes[i], 1, "<b>" & name & "</b> - " & desc, -1)
+    schemeModel.set(addr(iter), 0, schemes[i], 1, "<b>" & name & "</b> - " &
+        desc, -1)
 
     if schemes[i] == win.settings.colorSchemeID:
       schemeTree.getSelection.selectIter(addr(iter))
@@ -46,7 +52,7 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
 
     var schemeMan = schemeManagerGetDefault()
     var schemepaths: array[0..1, cstring] =
-            [cstring(os.getApplicationDir() / "share/gtksourceview-2.0/styles"), nil]
+            [cstring(os.getApplicationDir() / styles), nil]
     schemeMan.setSearchPath(addr(schemepaths))
     win.scheme = schemeMan.getScheme(value)
     # Loop through each tab, and set the scheme
@@ -55,6 +61,7 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
       
 proc fontDialog_OK(widget: PWidget, user_data: PFontSelectionDialog) =
   PDialog(userData).response(RESPONSE_OK)
+  
 proc fontDialog_Canc(widget: PWidget, user_data: PFontSelectionDialog) =
   PDialog(userData).response(RESPONSE_CANCEL)
 
@@ -151,7 +158,8 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTree.show()
   
   var renderer = cellRendererTextNew()
-  var column = treeViewColumnNewWithAttributes("Schemes", renderer, "markup", 1, nil)
+  var column = treeViewColumnNewWithAttributes("Schemes", 
+                                               renderer, "markup", 1, nil)
   discard schemeTree.appendColumn(column)
   # Add all the schemes available, to the TreeView
   schemeTree.addSchemes(schemeModel)
@@ -169,7 +177,8 @@ proc hlCurrLine_Toggled(button: PToggleButton, user_data: pgpointer) =
   
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    PSourceView(i.sourceView).setHighlightCurrentLine(win.settings.highlightCurrentLine)
+    PSourceView(i.sourceView).setHighlightCurrentLine(
+        win.settings.highlightCurrentLine)
     
 proc showMargin_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.rightMargin = button.getActive()
@@ -183,7 +192,8 @@ proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
   
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    i.buffer.setHighlightMatchingBrackets(win.settings.highlightMatchingBrackets)
+    i.buffer.setHighlightMatchingBrackets(
+        win.settings.highlightMatchingBrackets)
 
 proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
   win.settings.indentWidth = int(spinbtn.getValue())
@@ -335,6 +345,5 @@ proc showSettings*(aWin: var types.MainWin) =
   
   initEditor(settingsTabs)
   initFontsColors(settingsTabs)
-  
-  
+    
   dialog.show()

@@ -1,9 +1,19 @@
+#
+#
+#            Aporia - Nimrod IDE
+#        (c) Copyright 2010 Dominik Picheta
+#
+#    See the file "copying.txt", included in this
+#    distribution, for details about the copyright.
+#
+
 import gtk2, glib2, gtksourceview, gdk2, pegs, re
 import types
+
 {.push callConv:cdecl.}
 
-# yay, you can export variables!
-var win*: ptr types.MainWin
+var
+  win*: ptr types.MainWin
 
 proc getSearchOptions(): TTextSearchFlags =
   if win.settings.search == "caseinsens":
@@ -13,7 +23,8 @@ proc getSearchOptions(): TTextSearchFlags =
     result = TEXT_SEARCH_TEXT_ONLY or 
         TEXT_SEARCH_VISIBLE_ONLY
 
-proc findRegex*(pattern: TRegex, forward: bool, startIter: PTextIter, buffer: PTextBuffer): 
+proc findRegex*(pattern: TRegex, forward: bool, startIter: PTextIter, 
+                buffer: PTextBuffer): 
     tuple[startMatch, endMatch: TTextIter, found: bool] =
   var text: cstring
   var iter: TTextIter
@@ -48,7 +59,6 @@ proc findText*(forward: bool) =
   # This proc get's called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
   # True for Next and False for Previous
-  
   var text = getText(win.findEntry)
 
   # TODO: regex, pegs, style insensitive searching
@@ -124,10 +134,8 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.beginUserAction()
   
   # Replace all
-  var found = True
-  
-  while found:
-    found = gtksourceview.forwardSearch(addr(iter), find, 
+  while true:
+    var found = gtksourceview.forwardSearch(addr(iter), find, 
         options, addr(startMatch), addr(endMatch), nil)
   
     if found:

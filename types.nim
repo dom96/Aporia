@@ -1,18 +1,26 @@
-import gtk2, gtksourceview
-type
+#
+#
+#            Aporia - Nimrod IDE
+#        (c) Copyright 2010 Dominik Picheta
+#
+#    See the file "copying.txt", included in this
+#    distribution, for details about the copyright.
+#
 
+import gtk2, gtksourceview
+
+type
   TSettings* = object
-  
     search*: string
     
     font*: string # font used by the sourceview
     colorSchemeID*: string # color scheme used by the sourceview
-    indentWidth*: int # how many spaces used for indenting code(in the sourceview)
+    indentWidth*: int # how many spaces used for indenting code (in sourceview)
     showLineNumbers*: bool # whether to show line numbers in the sourceview
     highlightMatchingBrackets*: bool # whether to highlight matching brackets
     rightMargin*: bool # Whether to show the right margin
     highlightCurrentLine*: bool # Whether to highlight the current line
-    autoIndent*: bool    
+    autoIndent*: bool
 
     winMaximized*: bool # Whether the MainWindow is maximized on startup
     VPanedPos*: int # Position of the VPaned, which splits
@@ -21,7 +29,6 @@ type
                     
     bottomPanelVisible*: bool # Whether the bottom panel is shown
     
-
   MainWin* = object
     # Widgets
     w*: gtk2.PWindow
