@@ -149,11 +149,6 @@
           <keyword>(t|T)_*(r|R)_*(u|U)_*(e|E)_*</keyword>
         </context>
 
-        <context id="module-handler" style-ref="module-handler">
-          <keyword>(i|I)_*(m|M)_*(p|P)_*(o|O)_*(r|R)_*(t|T)_*</keyword>
-          <keyword>(i|I)_*(n|N)_*(c|C)_*(l|L)_*(u|U)_*(d|D)_*(e|E)_*</keyword>
-        </context>
-
         <context id="types" style-ref="type">
             <keyword>(i|I)_*(n|N)_*(t|T)_*</keyword>
             <keyword>(i|I)_*(n|N)_*(t|T)_*(8|8)_*</keyword>
@@ -209,9 +204,9 @@
           <keyword>(g|G)_*(e|E)_*(n|N)_*(e|E)_*(r|R)_*(i|I)_*(c|C)_*</keyword>
           <keyword>(i|I)_*(f|F)_*</keyword>
           <keyword>(i|I)_*(m|M)_*(p|P)_*(l|L)_*(i|I)_*(e|E)_*(s|S)_*</keyword>
-          <!--<keyword>(i|I)_*(m|M)_*(p|P)_*(o|O)_*(r|R)_*(t|T)_*</keyword>-->
+          <keyword>(i|I)_*(m|M)_*(p|P)_*(o|O)_*(r|R)_*(t|T)_*</keyword>
           <keyword>(i|I)_*(n|N)_*</keyword>
-          <!--<keyword>(i|I)_*(n|N)_*(c|C)_*(l|L)_*(u|U)_*(d|D)_*(e|E)_*</keyword>-->
+          <keyword>(i|I)_*(n|N)_*(c|C)_*(l|L)_*(u|U)_*(d|D)_*(e|E)_*</keyword>
           <keyword>(i|I)_*(s|S)_*</keyword>
           <keyword>(i|I)_*(s|S)_*(n|N)_*(o|O)_*(t|T)_*</keyword>
           <keyword>(i|I)_*(t|T)_*(e|E)_*(r|R)_*(a|A)_*(t|T)_*(o|O)_*(r|R)_*</keyword>

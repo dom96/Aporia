@@ -66,6 +66,7 @@
   <style name="doc-comment" foreground="cyan" italic="true" />
 
   <style name="def:keyword" foreground="white" bold="true"/>
+  <style name="def:module-handler" foreground="white" bold="true"/>
   <style name="def:statement" foreground="white" bold="true"/>
   <style name="def:function" foreground="white" bold="true"/>
   <style name="def:preprocessor" foreground="yellow"/>
