@@ -89,6 +89,41 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
     
   gtk2.POBject(fontDialog).destroy()
 
+proc addTextEdit(parent: PVBox, labelText, value: string): PEntry = 
+  var label = labelNew("")
+  label.setMarkup("<b>" & labelText & "</b>")
+  
+  var HBox = hboxNew(false, 0)
+  parent.packStart(HBox, false, false, 0)
+  HBox.show()
+  
+  HBox.packStart(Label, false, false, 5)
+  Label.show()
+  
+  var EntryHBox = hboxNew(false, 0)
+  parent.packStart(EntryHBox, false, false, 0)
+  EntryHBox.show()
+  
+  var entry = entryNew()
+  entry.setEditable(True)
+  entry.setText(value)
+  entryHBox.packStart(entry, false, false, 20)
+  entry.show()
+  result = entry
+
+var
+  nimrodEdit, custom1Edit, custom2Edit, custom3Edit: PEntry
+
+proc initTools(settingsTabs: PNotebook) =
+  var t = vboxNew(false, 5)
+  discard settingsTabs.appendPage(t, labelNew("Tools"))
+  t.show()
+  
+  nimrodEdit = addTextEdit(t, "Nimrod", win.settings.nimrodCmd)
+  custom1Edit = addTextEdit(t, "Custom Command 1", win.settings.customCmd1)
+  custom2Edit = addTextEdit(t, "Custom Command 2", win.settings.customCmd2)
+  custom3Edit = addTextEdit(t, "Custom Command 3", win.settings.customCmd3)
+
 
 proc initFontsColors(settingsTabs: PNotebook) =
   var fontsColorsLabel = labelNew("Fonts and colors")
@@ -167,14 +202,12 @@ proc initFontsColors(settingsTabs: PNotebook) =
 # -- Editor settings
 proc showLineNums_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.showLineNumbers = button.getActive()
-  
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     PSourceView(i.sourceView).setShowLineNumbers(win.settings.showLineNumbers)
     
 proc hlCurrLine_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.highlightCurrentLine = button.getActive()
-  
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     PSourceView(i.sourceView).setHighlightCurrentLine(
@@ -182,14 +215,12 @@ proc hlCurrLine_Toggled(button: PToggleButton, user_data: pgpointer) =
     
 proc showMargin_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.rightMargin = button.getActive()
-  
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     PSourceView(i.sourceView).setShowRightMargin(win.settings.rightMargin)
 
 proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.highlightMatchingBrackets = button.getActive()
-  
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     i.buffer.setHighlightMatchingBrackets(
@@ -197,14 +228,12 @@ proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
 
 proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
   win.settings.indentWidth = int(spinbtn.getValue())
-  
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     PSourceView(i.sourceView).setIndentWidth(win.settings.indentWidth)
   
 proc autoIndent_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.autoIndent = button.getActive()
-  
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     PSourceView(i.sourceView).setAutoIndent(win.settings.autoIndent)
@@ -291,8 +320,15 @@ proc initEditor(settingsTabs: PNotebook) =
   autoIndentHBox.packStart(autoIndentCheckBox, False, False, 20)
   autoIndentCheckBox.show()
 
-var dialog: gtk2.PWindow
+var
+  dialog: gtk2.PWindow
+
 proc closeDialog(widget: pWidget, user_data: pgpointer) =
+  win.settings.nimrodCmd = $nimrodEdit.getText()
+  win.settings.customCmd1 = $custom1Edit.getText()
+  win.settings.customCmd2 = $custom2Edit.getText()
+  win.settings.customCmd3 = $custom3Edit.getText()
+
   gtk2.PObject(dialog).destroy()
 
 proc showSettings*(aWin: var types.MainWin) =
@@ -345,5 +381,6 @@ proc showSettings*(aWin: var types.MainWin) =
   
   initEditor(settingsTabs)
   initFontsColors(settingsTabs)
-    
+  initTools(settingsTabs)
+  
   dialog.show()

@@ -28,6 +28,10 @@ type
     winWidth*, winHeight*: int # The size of the window.
                     
     bottomPanelVisible*: bool # Whether the bottom panel is shown
+    nimrodCmd*: string  # command template to use to exec the Nimrod compiler
+    customCmd1*: string # command template to use to exec a custom command
+    customCmd2*: string # command template to use to exec a custom command
+    customCmd3*: string # command template to use to exec a custom command
     
   MainWin* = object
     # Widgets

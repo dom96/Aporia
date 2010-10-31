@@ -13,6 +13,9 @@ import settings, types, cfg, search
 
 {.push callConv:cdecl.}
 
+const
+  NimrodProjectExt = ".nimprj"
+
 var win: types.MainWin
 win.Tabs = @[]
 
@@ -32,6 +35,10 @@ except ECFGParse:
   win.settings = cfg.defaultSettings()
 except EIO:
   win.settings = cfg.defaultSettings()
+
+proc getProjectTab(): int = 
+  for i in 0..high(win.tabs): 
+    if win.tabs[i].filename.endswith(NimrodProjectExt): return i
 
 proc saveTab(tabNr: int, startpath: string) =
   if tabNr < 0: return
@@ -71,6 +78,10 @@ proc saveTab(tabNr: int, startpath: string) =
     else:
       error(win.w, "Unable to write to file")  
 
+proc saveAllTabs() =
+  for i in 0..high(win.tabs): 
+    saveTab(i, os.splitFile(win.tabs[i].filename).dir)
+
 # GTK Events
 # -- w(PWindow)
 proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
@@ -87,7 +98,7 @@ proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
 proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
   var quit = True
   for i in low(win.Tabs)..len(win.Tabs)-1:
-    if win.Tabs[i].saved == False:
+    if not win.Tabs[i].saved:
       var askSave = dialogNewWithButtons("", win.w, 0,
                             STOCK_SAVE, RESPONSE_ACCEPT, STOCK_CANCEL, 
                             RESPONSE_CANCEL,
@@ -203,7 +214,8 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   PSourceView(SourceView).setInsertSpacesInsteadOfTabs(True)
   PSourceView(SourceView).setIndentWidth(win.settings.indentWidth)
   PSourceView(SourceView).setShowLineNumbers(win.settings.showLineNumbers)
-  PSourceView(SourceView).setHighlightCurrentLine(win.settings.highlightCurrentLine)
+  PSourceView(SourceView).setHighlightCurrentLine(
+               win.settings.highlightCurrentLine)
   PSourceView(SourceView).setShowRightMargin(win.settings.rightMargin)
   PSourceView(SourceView).setAutoIndent(win.settings.autoIndent)
 
@@ -260,7 +272,6 @@ proc addTab(name, filename: string) =
   var scrollWindow: PScrolledWindow
   initSourceView(sourceView, scrollWindow, buffer)
 
-  # Tuple unpacking ftw
   var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
@@ -288,9 +299,11 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   if currPage <% win.tabs.len: 
     startpath = os.splitFile(win.tabs[currPage].filename).dir
 
-  if startpath == "":
+  if startpath.len == 0:
     # Use lastSavePath as the startpath
     startpath = win.tempStuff.lastSaveDir
+    if startpath.len == 0:
+      startpath = os.getHomeDir()
 
   var files = ChooseFilesToOpen(win.w, startpath)
   if files.len() > 0:
@@ -313,7 +326,8 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   win.Tabs[current].saved = False
   win.Tabs[current].filename = ""
   saveTab(current, os.splitFile(filename).dir)
-  # If the user cancels the save file dialog. Restore the previous filename and saved state
+  # If the user cancels the save file dialog. Restore the previous filename
+  # and saved state
   if win.Tabs[current].filename == "":
     win.Tabs[current].filename = filename
     win.Tabs[current].saved = saved
@@ -343,7 +357,7 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   
   if insertOffset != selectOffset:
     var text = win.Tabs[currentTab].buffer.getText(addr(insertIter), 
-                                                   addr(selectIter), False)
+                                                   addr(selectIter), false)
     win.findEntry.setText(text)
 
   win.findBar.show()
@@ -385,7 +399,8 @@ proc addText(textView: PTextView, text: string, colorTag: PTextTag = nil) =
     if colorTag == nil:
       textView.getBuffer().insert(addr(iter), text, len(text))
     else:
-      textView.getBuffer().insertWithTags(addr(iter), text, len(text), colorTag)
+      textView.getBuffer().insertWithTags(addr(iter), text, len(text), colorTag,
+                                          nil)
 
 proc createColor(textView: PTextView, name, color: string): PTextTag =
   var tagTable = textView.getBuffer().getTagTable()
@@ -404,67 +419,92 @@ when not defined(os.findExe):
       if ExistsFile(x): return x
     result = ""
 
-var nimrodExe = findExe("nimrod")
-if nimrodExe.len == 0: nimrodExe = "nimrod"
+proc GetCmd(cmd, filename: string): string = 
+  var f = quoteIfContainsWhite(filename)
+  if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
+    var exe = quoteIfContainsWhite(findExe(matches[0]))
+    if exe.len == 0: exe = matches[0]
+    result = exe & " " & matches[1] % f
+  else:
+    result = cmd % f
 
-proc compileRunThread(data: gpointer): gboolean =
-  saveFile_Activate(nil, nil)
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+proc showBottomPanel() =
+  if not win.settings.bottomPanelVisible:
+    win.bottomPanelTabs.show()
+    win.settings.bottomPanelVisible = true
+    PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
+  # Scroll to the end of the TextView
+  # This is stupid, it works sometimes... it's random
+  var endIter: TTextIter
+  win.outputTextView.getBuffer().getEndIter(addr(endIter))
+  discard win.outputTextView.scrollToIter(
+    addr(endIter), 0.25, False, 0.0, 0.0)
 
-  if win.Tabs[currentTab].filename != "":
-    # Clear the outputTextView
-    win.outputTextView.getBuffer().setText("", 0)
+proc compileRun(currentTab: int, shouldRun: bool) =
+  if win.Tabs[currentTab].filename.len == 0: return
+  # Clear the outputTextView
+  win.outputTextView.getBuffer().setText("", 0)
 
-    # TODO: Make the compile & run command customizable (put in the settings)
-    # TODO: Use gtk threads.
-    # Compile
-    var outp = osProc.execProcess(nimrodExe & " c \"$1\"" % 
-                                  win.Tabs[currentTab].filename)
-    
-    # Colors
-    var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
-    var errorTag = createColor(win.outputTextView, "errorTag", "red")
-    var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
-    var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
-    for x in outp.splitLines():
-      if x =~ pegLineError / pegOtherError:
-        win.outputTextView.addText("\n" & x, errorTag)
-      elif x=~ pegSuccess:
-        win.outputTextView.addText("\n" & x, successTag)
-        
-        # Launch the process
-        var filename = win.Tabs[currentTab].filename
-        filename = changeFileExt(filename, os.ExeExt)
-
+  var outp = osProc.execProcess(GetCmd(win.settings.nimrodCmd,
+                                win.Tabs[currentTab].filename))
+  # Colors
+  var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
+  var errorTag = createColor(win.outputTextView, "errorTag", "red")
+  var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
+  var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
+  for x in outp.splitLines():
+    if x =~ pegLineError / pegOtherError:
+      win.outputTextView.addText("\n" & x, errorTag)
+    elif x=~ pegSuccess:
+      win.outputTextView.addText("\n" & x, successTag)
+      
+      # Launch the process
+      if shouldRun:
+        var filename = changeFileExt(win.Tabs[currentTab].filename, os.ExeExt)
         var output = "\n" & osProc.execProcess(filename)
         win.outputTextView.addText(output)
-      elif x =~ pegLineWarning:
-        win.outputTextView.addText("\n" & x, warningTag)
-      else:
-        win.outputTextView.addText("\n" & x, normalTag)
-    
-    # Show the bottomPanelTabs
-    if not win.settings.bottomPanelVisible:
-      win.bottomPanelTabs.show()
-      win.settings.bottomPanelVisible = true
-      PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
+    elif x =~ pegLineWarning:
+      win.outputTextView.addText("\n" & x, warningTag)
+    else:
+      win.outputTextView.addText("\n" & x, normalTag)
+  showBottomPanel()
 
-    # Scroll to the end of the TextView
-    # This is stupid, it works sometimes... it's random
-    var endIter: TTextIter
-    win.outputTextView.getBuffer().getEndIter(addr(endIter))
-
-    discard win.outputTextView.scrollToIter(
-      addr(endIter), 0.25, False, 0.0, 0.0)
-  result = false
+proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  saveFile_Activate(nil, nil)
+  compileRun(win.SourceViewTabs.getCurrentPage(), false)
   
-proc CompileRun_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  # Threads :O *worships*
-  # Doesn't work :\
-  #echo("Thread started - ", idleAdd(compileRunThread, nil))
-  #var err: pointer
-  #discard gThreadCreate(compileRunThread, nil, False, nil)
-  discard compileRunThread(nil)
+proc CompileRunCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  saveFile_Activate(nil, nil)
+  compileRun(win.SourceViewTabs.getCurrentPage(), true)
+
+proc CompileProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  saveAllTabs()
+  compileRun(getProjectTab(), false)
+  
+proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  saveAllTabs()
+  compileRun(getProjectTab(), true)
+
+proc RunCustomCommand(cmd: string) = 
+  saveFile_Activate(nil, nil)
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  if win.Tabs[currentTab].filename.len == 0 or cmd.len == 0: return
+  # Clear the outputTextView
+  win.outputTextView.getBuffer().setText("", 0)
+  var outp = osProc.execProcess(GetCmd(cmd, win.Tabs[currentTab].filename))
+  var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
+  for x in outp.splitLines():
+    win.outputTextView.addText("\n" & x, normalTag)
+  showBottomPanel()
+
+proc RunCustomCommand1(menuitem: PMenuItem, user_data: pgpointer) =
+  RunCustomCommand(win.settings.customCmd1)
+
+proc RunCustomCommand2(menuitem: PMenuItem, user_data: pgpointer) =
+  RunCustomCommand(win.settings.customCmd2)
+
+proc RunCustomCommand3(menuitem: PMenuItem, user_data: pgpointer) =
+  RunCustomCommand(win.settings.customCmd3)
 
 # -- FindBar
 
@@ -494,7 +534,8 @@ proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
   var replace = getText(win.replaceEntry)
   discard replaceAll(find, replace)
   
-proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = win.findBar.hide()
+proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = 
+  win.findBar.hide()
 
 proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
   win.settings.search = "casesens"
@@ -562,6 +603,20 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
 
 # GUI Initialization
 
+proc createAccelMenuItem(toolsMenu: PMenu, accGroup: PAccelGroup, 
+                         label: string, acc: gint,
+                         action: proc (i: PMenuItem, p: pgpointer)) = 
+  var result = menu_item_new(label)
+  result.addAccelerator("activate", accGroup, acc, 0, ACCEL_VISIBLE)
+  ToolsMenu.append(result)
+  show(result)
+  discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
+
+proc createSeparator(menu: PMenu) =
+  var sep = separator_menu_item_new()
+  menu.append(sep)
+  sep.show()
+
 proc initTopMenu(MainBox: PBox) =
   # Create a accelerator group, used for shortcuts
   # like CTRL + S in SaveMenuItem
@@ -580,9 +635,7 @@ proc initTopMenu(MainBox: PBox) =
   discard signal_connect(NewMenuItem, "activate", 
                           SIGNAL_FUNC(newFile), nil)
 
-  var sep1 = separator_menu_item_new()
-  FileMenu.append(sep1)
-  sep1.show()
+  createSeparator(FileMenu)
 
   var OpenMenuItem = menu_item_new("Open...") # Open...
   # CTRL + O
@@ -632,9 +685,7 @@ proc initTopMenu(MainBox: PBox) =
   discard signal_connect(RedoMenuItem, "activate", 
                           SIGNAL_FUNC(aporia.redo), nil)
 
-  var editSep = separator_menu_item_new()
-  EditMenu.append(editSep)
-  editSep.show()
+  createSeparator(EditMenu)
   
   var FindMenuItem = menu_item_new("Find") # Find
   FindMenuItem.add_accelerator("activate", accGroup, 
@@ -652,9 +703,7 @@ proc initTopMenu(MainBox: PBox) =
   discard signal_connect(ReplaceMenuItem, "activate", 
                           SIGNAL_FUNC(aporia.replace_Activate), nil)
 
-  var editSep1 = separator_menu_item_new()
-  EditMenu.append(editSep1)
-  editSep1.show()
+  createSeparator(EditMenu)
   
   var SettingsMenuItem = menu_item_new("Settings...") # Settings
   EditMenu.append(SettingsMenuItem)
@@ -666,7 +715,7 @@ proc initTopMenu(MainBox: PBox) =
 
   EditMenuItem.setSubMenu(EditMenu)
   EditMenuItem.show()
-  TopMenu.append(EditMenuItem)                        
+  TopMenu.append(EditMenuItem)
   
   # View menu
   var ViewMenu = menuNew()
@@ -690,14 +739,23 @@ proc initTopMenu(MainBox: PBox) =
   
   # Tools menu
   var ToolsMenu = menuNew()
-  
-  var CompileRunMenuItem = menu_item_new("Compile and Run")
-  CompileRunMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_f5, 0, ACCEL_VISIBLE) 
-  ToolsMenu.append(CompileRunMenuItem)
-  show(CompileRunMenuItem)
-  discard signal_connect(CompileRunMenuItem, "activate", 
-                          SIGNAL_FUNC(aporia.CompileRun_Activate), nil)
+
+  createAccelMenuItem(ToolsMenu, accGroup, "Compile current file", 
+                      KEY_F4, aporia.CompileCurrent_Activate)
+  createAccelMenuItem(ToolsMenu, accGroup, "Compile & run current file", 
+                      KEY_F5, aporia.CompileRunCurrent_Activate)
+  createSeparator(ToolsMenu)
+  createAccelMenuItem(ToolsMenu, accGroup, "Compile project", 
+                      KEY_F8, aporia.CompileProject_Activate)
+  createAccelMenuItem(ToolsMenu, accGroup, "Compile & run project", 
+                      KEY_F9, aporia.CompileRunProject_Activate)
+  createSeparator(ToolsMenu)
+  createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 1", 
+                      KEY_F1, aporia.RunCustomCommand1)
+  createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 2", 
+                      KEY_F2, aporia.RunCustomCommand2)
+  createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 3", 
+                      KEY_F3, aporia.RunCustomCommand3)
   
   var ToolsMenuItem = menuItemNewWithMnemonic("_Tools")
   
@@ -744,23 +802,20 @@ proc initSourceViewTabs() =
   win.SourceViewTabs.set_scrollable(True)
   
   win.SourceViewTabs.show()
-  if lastSession.len() != 0:
+  if lastSession.len != 0:
     for i in 0 .. len(lastSession)-1:
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       addTab("", filename)
       
       var iter: TTextIter
-      win.Tabs[i].buffer.getIterAtOffset(addr(iter),
-          offset.parseInt())
-      win.Tabs[i].buffer.moveMarkByName("insert",
-          addr(iter))
-      win.Tabs[i].buffer.moveMarkByName("selection_bound",
-            addr(iter))
+      win.Tabs[i].buffer.getIterAtOffset(addr(iter), offset.parseInt())
+      win.Tabs[i].buffer.moveMarkByName("insert", addr(iter))
+      win.Tabs[i].buffer.moveMarkByName("selection_bound", addr(iter))
       
       # TODO: Fix this..... :(
       discard PTextView(win.Tabs[i].sourceView).
-          scrollToIter(addr(iter), 0.25, False, 0.0, 0.0)
+          scrollToIter(addr(iter), 0.25, true, 0.0, 0.0)
   else:
     addTab("", "")
   
