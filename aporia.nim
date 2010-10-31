@@ -404,6 +404,9 @@ when not defined(os.findExe):
       if ExistsFile(x): return x
     result = ""
 
+var nimrodExe = findExe("nimrod")
+if nimrodExe.len == 0: nimrodExe = "nimrod"
+
 proc compileRunThread(data: gpointer): gboolean =
   saveFile_Activate(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
@@ -415,7 +418,7 @@ proc compileRunThread(data: gpointer): gboolean =
     # TODO: Make the compile & run command customizable (put in the settings)
     # TODO: Use gtk threads.
     # Compile
-    var outp = osProc.execProcess("nimrod c \"$1\"" % 
+    var outp = osProc.execProcess(nimrodExe & " c \"$1\"" % 
                                   win.Tabs[currentTab].filename)
     
     # Colors
