@@ -302,7 +302,7 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   if startpath.len == 0:
     # Use lastSavePath as the startpath
     startpath = win.tempStuff.lastSaveDir
-    if startpath.len == 0:
+    if isNil(startpath) or startpath.len == 0:
       startpath = os.getHomeDir()
 
   var files = ChooseFilesToOpen(win.w, startpath)
@@ -1012,7 +1012,7 @@ proc initControls() =
   MainBox.show()
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
- 
+  
 nimrod_init()
 initControls()
 main()
