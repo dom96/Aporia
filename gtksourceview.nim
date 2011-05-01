@@ -12,7 +12,7 @@ import gtk2, glib2
 when defined(windows):
   const lib = "libgtksourceview-2.0-0.dll"
 elif defined(macosx):
-  const lib = "libgtksourceview-2.0-0.dylib"
+  const lib = "libgtksourceview-2.0(|-0).dylib"
 else:
   const lib = "libgtksourceview-2.0.so(|.0)"
 
@@ -38,10 +38,10 @@ type
 const
   TEXT_SEARCH_CASE_INSENSITIVE* = 1 shl 2
   
-proc source_view_new*(): PWidget {.cdecl, dynlib: lib,
+proc source_view_new*(): PSourceView {.cdecl, dynlib: lib,
   importc: "gtk_source_view_new".}
 
-proc source_view_new*(buffer: PSourceBuffer): PWidget {.cdecl, dynlib: lib,
+proc source_view_new*(buffer: PSourceBuffer): PSourceView {.cdecl, dynlib: lib,
   importc: "gtk_source_view_new_with_buffer".}
 
 proc language_manager_get_default*(): PSourceLanguageManager {.cdecl, dynlib: lib,

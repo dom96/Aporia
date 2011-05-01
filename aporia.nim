@@ -9,7 +9,7 @@
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import pegs, streams
-import settings, types, cfg, search
+import settings, types, cfg, search, suggest
 
 {.push callConv:cdecl.}
 
@@ -107,7 +107,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
       # TODO: Make this dialog look better
       var label = labelNew(win.Tabs[i].filename & 
           " is unsaved, would you like to save it ?")
-      PBox(askSave.vbox).pack_start(label, False, False, 0)
+      askSave.vbox.pack_start(label, False, False, 0)
       label.show()
 
       var resp = askSave.run()
@@ -132,6 +132,18 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState,
                          user_data: pgpointer) =
   win.settings.winMaximized = (event.newWindowState and 
                                WINDOW_STATE_MAXIMIZED) != 0
+
+proc window_configureEvent(widget: PWidget, event: PEventConfigure,
+                           ud: pgpointer): gboolean =
+  if win.suggest.dialog.getRealized():
+    var current = win.SourceViewTabs.getCurrentPage()
+    var tab     = win.Tabs[current]
+    var start: TTextIter
+    # Get the iter at the cursor position.
+    tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
+    moveSuggest(win, addr(start), tab)
+
+  return False
 
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
@@ -198,9 +210,49 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer) =
   var cTab = win.Tabs[current]
   cTab.label.setText(name)
 
+proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
+                          userData: pgpointer): bool =
+  var key = $keyval_name(event.keyval)
+  case key.toLower()
+  of "period":
+    var current = win.SourceViewTabs.getCurrentPage()
+    var tab     = win.Tabs[current]
+    var start: TTextIter
+    # Get the iter at the cursor position.
+    tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
+    if win.populateSuggest(addr(start), tab):
+      win.suggest.dialog.show()
+      moveSuggest(win, addr(start), tab)
+      win.Tabs[current].sourceView.grabFocus()
+      win.w.present()
+      assert(win.Tabs[current].sourceView.isFocus())
+  of "down":
+    if win.suggest.dialog.getRealized():
+      var selection = win.suggest.treeview.getSelection()
+      var selectedIter: TTreeIter
+      if selection.getSelected(cast[PPGtkTreeModel](addr(win.suggest.listStore)),
+                               addr(selectedIter)):
+        assert win.suggest.listStore.iterNext(addr(selectedIter))
+        selection.selectIter(addr(selectedIter))
+        var p = win.suggest.listStore.getStringFromIter(addr(selectedIter))
+        var column = win.suggest.treeview.getColumn(0)
+        echo(p)
+        assert(win.suggest.treeview != nil)
+        assert(path != nil)
+        assert(column != nil)
+        win.suggest.treeview.scroll_to_cell(p, column, True, 0.5, 0.5)
+      else:
+        # No iter selected, select the first one.
+        selection.selectPath(tree_path_new_first())
+        
+  else:
+    echo("Key released: ", key)
+
+  return False
+
 # Other(Helper) functions
 
-proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
+proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWindow,
                     buffer: var PSourceBuffer) =
   # This gets called by addTab
   # Each tabs creates a new SourceView
@@ -211,13 +263,13 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   
   # SourceView(gtkSourceView)
   SourceView = sourceViewNew(buffer)
-  PSourceView(SourceView).setInsertSpacesInsteadOfTabs(True)
-  PSourceView(SourceView).setIndentWidth(win.settings.indentWidth)
-  PSourceView(SourceView).setShowLineNumbers(win.settings.showLineNumbers)
-  PSourceView(SourceView).setHighlightCurrentLine(
+  SourceView.setInsertSpacesInsteadOfTabs(True)
+  SourceView.setIndentWidth(win.settings.indentWidth)
+  SourceView.setShowLineNumbers(win.settings.showLineNumbers)
+  SourceView.setHighlightCurrentLine(
                win.settings.highlightCurrentLine)
-  PSourceView(SourceView).setShowRightMargin(win.settings.rightMargin)
-  PSourceView(SourceView).setAutoIndent(win.settings.autoIndent)
+  SourceView.setShowRightMargin(win.settings.rightMargin)
+  SourceView.setAutoIndent(win.settings.autoIndent)
 
   var font = font_description_from_string(win.settings.font)
   SourceView.modifyFont(font)
@@ -232,6 +284,9 @@ proc initSourceView(SourceView: var PWidget, scrollWindow: var PScrolledWindow,
   discard gsignalConnect(buffer, "mark-set", 
                          GCallback(aporia.cursorMoved), nil)
   discard gsignalConnect(buffer, "changed", GCallback(aporia.changed), nil)
+
+  discard gsignalConnect(sourceView, "key-release-event", 
+                         GCallback(SourceViewKeyRelease), nil)
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
@@ -268,7 +323,7 @@ proc addTab(name, filename: string) =
     nam = extractFilename(filename)
   
   # Init the sourceview
-  var sourceView: PWidget
+  var sourceView: PSourceView
   var scrollWindow: PScrolledWindow
   initSourceView(sourceView, scrollWindow, buffer)
 
@@ -407,17 +462,6 @@ proc createColor(textView: PTextView, name, color: string): PTextTag =
   result = tagTable.tableLookup(name)
   if result == nil:
     result = textView.getBuffer().createTag(name, "foreground", color, nil)
-
-when not defined(os.findExe): 
-  proc findExe(exe: string): string = 
-    ## returns "" if the exe cannot be found
-    result = addFileExt(exe, os.exeExt)
-    if ExistsFile(result): return
-    var path = os.getEnv("PATH")
-    for candidate in split(path, pathSep): 
-      var x = candidate / result
-      if ExistsFile(x): return x
-    result = ""
 
 proc GetCmd(cmd, filename: string): string = 
   var f = quoteIfContainsWhite(filename)
@@ -602,6 +646,53 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
 # GUI Initialization
+
+proc createSuggestDialog() =
+  ## Creates the suggest dialog, it does not show it.
+  
+  # Slight hack, can't use 'gtk_window_set_skip_taskbar_hint'
+  win.suggest.dialog = dialogNew()
+
+  # TODO: Destroy actionArea?
+  # Destroy the separator, don't need it.
+  win.suggest.dialog.separator.destroy()
+  win.suggest.dialog.separator = nil
+  win.suggest.dialog.actionArea.hide()
+ 
+  # Properties
+  win.suggest.dialog.setDefaultSize(250, 150)
+  
+  win.suggest.dialog.setTransientFor(win.w)
+  win.suggest.dialog.setDecorated(False)
+  
+  # TreeView & TreeModel
+  # -- ListStore
+  var textRenderer = cellRendererTextNew()
+  var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
+                     "markup", TextAttr, "foreground", ColorAttr, nil)
+  
+  var types: array[0..int(NColumns)-1, GType] = [GTypeString, GTypeString]
+  win.suggest.listStore = listStoreNewV(int(NColumns), addr(types[0]))
+  assert(win.suggest.listStore != nil)
+  # -- ScrolledWindow
+  var scrollWindow = scrolledWindowNew(nil, nil)
+  scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
+  win.suggest.dialog.vbox.packStart(scrollWindow, True, True, 0)
+  scrollWindow.show()
+  # -- TreeView
+  win.suggest.treeView = treeViewNew(PTreeModel(win.suggest.listStore))
+  assert(win.suggest.treeView.appendColumn(textColumn) == 1)
+  
+  scrollWindow.add(win.suggest.treeView)
+  win.suggest.treeView.show()
+  
+  # -- Append some items.
+  #win.addSuggestItem("<b>Tes</b>t!")
+  #win.addSuggestItem("Test2!", "#ff0000")
+  #win.addSuggestItem("Test3!")
+  win.suggest.items = @[]
+  #win.suggest.dialog.show()
+
 
 proc createAccelMenuItem(toolsMenu: PMenu, accGroup: PAccelGroup, 
                          label: string, acc: gint,
@@ -790,15 +881,8 @@ proc initToolBar(MainBox: PBox) =
   
 proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
-  #win.sourceViewTabs.dragDestSet(DEST_DEFAULT_DROP, nil, 0, ACTION_MOVE)
   discard win.SourceViewTabs.signalConnect(
           "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
-  #discard win.SourceViewTabs.signalConnect(
-  #        "drag-drop", SIGNAL_FUNC(svTabs_DragDrop), nil)
-  #discard win.SourceViewTabs.signalConnect(
-  #        "drag-data-received", SIGNAL_FUNC(svTabs_DragDataRecv), nil)
-  #discard win.SourceViewTabs.signalConnect(
-  #        "drag-motion", SIGNAL_FUNC(svTabs_DragMotion), nil)
   win.SourceViewTabs.set_scrollable(True)
   
   win.SourceViewTabs.show()
@@ -880,16 +964,14 @@ proc initFindBar(MainBox: PBox) =
   win.findEntry.set_size_request(190, rq.height)
   
   # Add a Label 'Replace' 
-  # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceLabel = labelNew("Replace:")
   win.findBar.packStart(win.replaceLabel, False, False, 0)
-  #replaceLabel.show()
   
   # Add a (replace) text entry 
-  # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceEntry = entryNew()
   win.findBar.packStart(win.replaceEntry, False, False, 0)
-  #win.replaceEntry.show()
   var rq1: TRequisition 
   win.replaceEntry.sizeRequest(addr(rq1))
 
@@ -913,20 +995,18 @@ proc initFindBar(MainBox: PBox) =
   prevBtn.show()
   
   # Replace button
-  # - This Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceBtn = buttonNew("Replace")
   win.findBar.packStart(win.replaceBtn, false, false, 0)
   discard win.replaceBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.replaceBtn_Clicked), nil)
-  #replaceBtn.show()
 
   # Replace all button
-  # - this Is only shown, when the 'Search & Replace'(CTRL + H) is shown
+  # - this Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceAllBtn = buttonNew("Replace All")
   win.findBar.packStart(win.replaceAllBtn, false, false, 0)
   discard win.replaceAllBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.replaceAllBtn_Clicked), nil)
-  #replaceAllBtn.show()
   
   # Right side ...
   
@@ -998,6 +1078,11 @@ proc initControls() =
     SIGNAL_FUNC(aporia.delete_event), nil)
   discard win.w.signalConnect("window-state-event", 
     SIGNAL_FUNC(aporia.windowState_Changed), nil)
+  discard win.w.signalConnect("configure-event", 
+    SIGNAL_FUNC(window_configureEvent), nil)
+  
+  # Suggest dialog
+  createSuggestDialog()
   
   # MainBox (vbox)
   var MainBox = vboxNew(False, 0)

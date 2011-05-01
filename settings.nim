@@ -204,20 +204,20 @@ proc showLineNums_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.showLineNumbers = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    PSourceView(i.sourceView).setShowLineNumbers(win.settings.showLineNumbers)
+    i.sourceView.setShowLineNumbers(win.settings.showLineNumbers)
     
 proc hlCurrLine_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.highlightCurrentLine = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    PSourceView(i.sourceView).setHighlightCurrentLine(
+    i.sourceView.setHighlightCurrentLine(
         win.settings.highlightCurrentLine)
     
 proc showMargin_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.rightMargin = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    PSourceView(i.sourceView).setShowRightMargin(win.settings.rightMargin)
+    i.sourceView.setShowRightMargin(win.settings.rightMargin)
 
 proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.highlightMatchingBrackets = button.getActive()
@@ -230,13 +230,13 @@ proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
   win.settings.indentWidth = int(spinbtn.getValue())
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    PSourceView(i.sourceView).setIndentWidth(win.settings.indentWidth)
+    i.sourceView.setIndentWidth(win.settings.indentWidth)
   
 proc autoIndent_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.autoIndent = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    PSourceView(i.sourceView).setAutoIndent(win.settings.autoIndent)
+    i.sourceView.setAutoIndent(win.settings.autoIndent)
 
 proc initEditor(settingsTabs: PNotebook) =
   var editorLabel = labelNew("Editor")

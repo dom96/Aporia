@@ -36,6 +36,7 @@ type
   MainWin* = object
     # Widgets
     w*: gtk2.PWindow
+    suggest*: TSuggestDialog
     langMan*: PSourceLanguageManager
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
@@ -60,13 +61,27 @@ type
     
     settings*: TSettings
 
+  TSuggestDialog* = object
+    dialog*: gtk2.PDialog
+    treeView*: PTreeView
+    listStore*: PListStore
+    items*: seq[TSuggestItem]
+
+  TSuggestColumnAttr* = enum
+    TextAttr, ColorAttr, NColumns
+
   Temp = object
     lastSaveDir*: string # Last saved directory
     stopSBUpdates*: Bool
 
   Tab* = object
     buffer*: PSourceBuffer
-    sourceView*: PWidget
+    sourceView*: PSourceView
     label*: PLabel
     saved*: bool
     filename*: string
+    
+  TSuggestItem* = object
+    nodeType*, name*, nimType*, file*: string
+    line*, col*: int
+    
