@@ -134,8 +134,9 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.beginUserAction()
   
   # Replace all
-  while true:
-    var found = gtksourceview.forwardSearch(addr(iter), find, 
+  var found = False
+  while found:
+    found = gtksourceview.forwardSearch(addr(iter), find, 
         options, addr(startMatch), addr(endMatch), nil)
   
     if found:

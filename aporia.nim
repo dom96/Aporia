@@ -15,6 +15,7 @@ import settings, types, cfg, search, suggest
 
 const
   NimrodProjectExt = ".nimprj"
+  GTKVerReq = (2, 2, 0) # Version of GTK required for Aporia to run.
 
 var win: types.MainWin
 win.Tabs = @[]
@@ -46,7 +47,6 @@ proc saveTab(tabNr: int, startpath: string) =
   var path = ""
   if win.Tabs[tabNr].filename == "":
     path = ChooseFileToSave(win.w, startpath) 
-    # dialogs.nim STOCK_OPEN instead of STOCK_SAVE
   else: 
     path = win.Tabs[tabNr].filename
   
@@ -210,7 +210,7 @@ proc changed(buffer: PTextBuffer, user_data: pgpointer) =
   var cTab = win.Tabs[current]
   cTab.label.setText(name)
 
-proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
+proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
   var key = $keyval_name(event.keyval)
   case key.toLower()
@@ -224,31 +224,55 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       win.suggest.dialog.show()
       moveSuggest(win, addr(start), tab)
       win.Tabs[current].sourceView.grabFocus()
-      win.w.present()
       assert(win.Tabs[current].sourceView.isFocus())
-  of "down":
+      win.w.present()
+  of "up", "down":
     if win.suggest.dialog.getRealized():
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
-      if selection.getSelected(cast[PPGtkTreeModel](addr(win.suggest.listStore)),
+      var TreeModel = win.suggest.TreeView.getModel()
+      if selection.getSelected(cast[PPGtkTreeModel](addr(TreeModel)),
                                addr(selectedIter)):
-        assert win.suggest.listStore.iterNext(addr(selectedIter))
-        selection.selectIter(addr(selectedIter))
-        var p = win.suggest.listStore.getStringFromIter(addr(selectedIter))
-        var column = win.suggest.treeview.getColumn(0)
-        echo(p)
-        assert(win.suggest.treeview != nil)
-        assert(path != nil)
-        assert(column != nil)
-        win.suggest.treeview.scroll_to_cell(p, column, True, 0.5, 0.5)
+        var selectedPath = TreeModel.getPath(addr(selectedIter))
+
+        var moved = False
+        if key.toLower() == "up":
+          moved = prev(selectedPath)
+        elif key.toLower() == "down":
+          moved = True
+          next(selectedPath)
+        if moved:
+          # selectedPath is now the next or prev path.
+          selection.selectPath(selectedPath)
+          win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
       else:
-        # No iter selected, select the first one.
+        # No item selected, select the first one.
         selection.selectPath(tree_path_new_first())
+      
+      # Return true to stop this event from moving the cursor down in the
+      # source view.
+      return True
+  of "return", "space", "tab":
+    if win.suggest.dialog.getRealized():
+      var selection = win.suggest.treeview.getSelection()
+      var selectedIter: TTreeIter
+      var TreeModel = win.suggest.TreeView.getModel()
+      if selection.getSelected(cast[PPGtkTreeModel](addr(TreeModel)),
+                               addr(selectedIter)):
+        var selectedPath = TreeModel.getPath(addr(selectedIter))
+        var index = selectedPath.getIndices()[]
+        var name = win.suggest.items[index].name
+        # We have the name of the item. Now insert it into the TextBuffer.
+        var currentTab = win.SourceViewTabs.getCurrentPage()
+        win.Tabs[currentTab].buffer.insertAtCursor(name, len(name))
         
+        # Now hide the suggest dialog and clear the items.
+        win.suggest.dialog.hide()
+        win.suggest.clear()
+        
+        return True
   else:
     echo("Key released: ", key)
-
-  return False
 
 # Other(Helper) functions
 
@@ -284,9 +308,8 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   discard gsignalConnect(buffer, "mark-set", 
                          GCallback(aporia.cursorMoved), nil)
   discard gsignalConnect(buffer, "changed", GCallback(aporia.changed), nil)
-
-  discard gsignalConnect(sourceView, "key-release-event", 
-                         GCallback(SourceViewKeyRelease), nil)
+  discard gsignalConnect(sourceView, "key-press-event", 
+                         GCallback(SourceViewKeyPress), nil)
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
@@ -650,45 +673,57 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
 proc createSuggestDialog() =
   ## Creates the suggest dialog, it does not show it.
   
-  # Slight hack, can't use 'gtk_window_set_skip_taskbar_hint'
-  win.suggest.dialog = dialogNew()
+  # I need 'gtk_window_set_skip_taskbar_hint'. Without it I have to make
+  # a bit of a hack... which I uncommented for now. The suggest dialog will be
+  # in the taskbar though.
+  #win.suggest.dialog = dialogNew()
+  win.suggest.dialog = windowNew(0)
+
+  var vbox = vboxNew(False, 0)
+  win.suggest.dialog.add(vbox)
+  vbox.show()
 
   # TODO: Destroy actionArea?
   # Destroy the separator, don't need it.
-  win.suggest.dialog.separator.destroy()
-  win.suggest.dialog.separator = nil
-  win.suggest.dialog.actionArea.hide()
- 
+  #win.suggest.dialog.separator.destroy()
+  #win.suggest.dialog.separator = nil
+  #win.suggest.dialog.actionArea.hide()
+  #win.suggest.dialog.vbox.remove(win.suggest.dialog.actionArea)
+  #echo(win.suggest.dialog.vbox.spacing)
+  
   # Properties
   win.suggest.dialog.setDefaultSize(250, 150)
   
   win.suggest.dialog.setTransientFor(win.w)
   win.suggest.dialog.setDecorated(False)
+  win.suggest.dialog.setSkipTaskbarHint(True)
   
   # TreeView & TreeModel
-  # -- ListStore
-  var textRenderer = cellRendererTextNew()
-  var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
-                     "markup", TextAttr, "foreground", ColorAttr, nil)
-  
-  var types: array[0..int(NColumns)-1, GType] = [GTypeString, GTypeString]
-  win.suggest.listStore = listStoreNewV(int(NColumns), addr(types[0]))
-  assert(win.suggest.listStore != nil)
   # -- ScrolledWindow
   var scrollWindow = scrolledWindowNew(nil, nil)
   scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
-  win.suggest.dialog.vbox.packStart(scrollWindow, True, True, 0)
+  vbox.packStart(scrollWindow, True, True, 0)
   scrollWindow.show()
   # -- TreeView
-  win.suggest.treeView = treeViewNew(PTreeModel(win.suggest.listStore))
-  assert(win.suggest.treeView.appendColumn(textColumn) == 1)
-  
+  win.suggest.treeView = treeViewNew()
+  win.suggest.treeView.setHeadersVisible(False)
   scrollWindow.add(win.suggest.treeView)
+  
+  var textRenderer = cellRendererTextNew()
+  # Renderer is number 0. That's why we count from 1.
+  var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
+                     "markup", 1, "foreground", 2, nil)
+  discard win.suggest.treeView.appendColumn(textColumn)
+  # -- ListStore
+  # There are 3 attributes. The renderer is counted.
+  var listStore = listStoreNew(3, TypeString, TypeString, TypeString)
+  assert(listStore != nil)
+  win.suggest.treeview.setModel(liststore)
   win.suggest.treeView.show()
   
   # -- Append some items.
-  #win.addSuggestItem("<b>Tes</b>t!")
-  #win.addSuggestItem("Test2!", "#ff0000")
+  #win.addSuggestItem("Test!", "<b>Tes</b>t!")
+  #win.addSuggestItem("Test2!", "Test2!", "#ff0000")
   #win.addSuggestItem("Test3!")
   win.suggest.items = @[]
   #win.suggest.dialog.show()
@@ -1097,7 +1132,13 @@ proc initControls() =
   MainBox.show()
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
-  
+
+var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
+if versionReply != nil:
+  # Incorrect GTK version.
+  quit("Aporia requires GTK $#.$#.$#. Call to check_version failed with: $#" %
+       [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
+
 nimrod_init()
 initControls()
 main()

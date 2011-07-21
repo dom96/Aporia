@@ -62,13 +62,9 @@ type
     settings*: TSettings
 
   TSuggestDialog* = object
-    dialog*: gtk2.PDialog
+    dialog*: gtk2.PWindow
     treeView*: PTreeView
-    listStore*: PListStore
     items*: seq[TSuggestItem]
-
-  TSuggestColumnAttr* = enum
-    TextAttr, ColorAttr, NColumns
 
   Temp = object
     lastSaveDir*: string # Last saved directory

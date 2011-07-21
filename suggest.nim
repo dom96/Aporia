@@ -14,27 +14,26 @@ when not defined(os.findExe):
       if ExistsFile(x): return x
     result = ""
 
-proc addSuggestItem*(win: MainWin, item: String, color: String = "#000000") =
+proc addSuggestItem*(win: MainWin, name: string, markup: String,
+                     color: String = "#000000") =
   var iter: TTreeIter
-  win.suggest.listStore.append(addr(iter))
-  win.suggest.listStore.set(addr(iter), TextAttr, item, ColorAttr, color, -1)
+  var listStore = cast[PListStore](win.suggest.TreeView.getModel())
+  listStore.append(addr(iter))
+  listStore.set(addr(iter), 0, name, 1, markup, 2, color, -1)
 
 proc moveSuggest*(win: MainWin, start: PTextIter, tab: Tab) =
-  echo("Offset: $1. Line: $2" % @[$start.getLineOffset(), $start.getLine()])
   
   # Calculate the location of the suggest dialog.
   var iterLoc: TRectangle
   tab.sourceView.getIterLocation(start, addr(iterLoc))
-  echo("Buffer: $1, $2: $3, $4" % @[$iterLoc.x, $iterLoc.y, $iterLoc.width, $iterLoc.height])
+
   var winX, winY: gint
   tab.sourceView.bufferToWindowCoords(TEXT_WINDOW_WIDGET, iterLoc.x, iterLoc.y,
                                      addr(winX), addr(winY))
-  echo("Window: $1, $2" % @[$winX, $winY])
   
   var mainGWin = tab.sourceView.getWindow(TEXT_WINDOW_WIDGET)
   var mainLocX, mainLocY: gint
   discard mainGWin.getOrigin(addr(mainLocX), addr(mainLocY))
-  echo("Location: $1, $2" % @[$mainLocX, $mainLocY])
   
   # - Get the size of the left window(Line numbers) too.
   var leftGWin = tab.sourceView.getWindow(TEXT_WINDOW_LEFT)
@@ -42,9 +41,6 @@ proc moveSuggest*(win: MainWin, start: PTextIter, tab: Tab) =
   {.warning: "get_size is deprecated, get_width should be used".}
   # TODO: This is deprecated, GTK version 2.4 has get_width/get_height
   leftGWin.getSize(addr(leftWidth), addr(leftHeight))
-  
-  echo("Setting location to: $1, $2" % @[$(mainLocX + leftWidth + iterLoc.x),
-                                         $(mainLocY + iterLoc.height)])
   
   win.suggest.dialog.move(mainLocX + leftWidth + iterLoc.x,
                           mainLocY + winY + iterLoc.height)
@@ -54,10 +50,10 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
   result = @[]
   echo(findExe("nimrod") & 
                 " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
-                @[file, $line, $column, getTempDir(), addToPath])
+                @[file, $(line+1), $column, getTempDir(), addToPath])
   var output = execProcess(findExe("nimrod") & 
                 " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
-                @[file, $(line + 1), $column, getTempDir(), addToPath])
+                @[file, $(line+1), $column, getTempDir(), addToPath])
 
   for line in splitLines(output):
     if line.startswith("sug\t"):
@@ -110,9 +106,15 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   #removeFile(file)
   
   for i in items(win.suggest.items):
-    win.addSuggestItem("<b>$1</b>" % @[i.name])
+    win.addSuggestItem(i.name, "<b>$1</b>" % @[i.name])
 
   return True
+
+proc clear*(suggest: var TSuggestDialog) =
+  var TreeModel = suggest.TreeView.getModel()
+  # TODO: Why do I have to cast it? Why can't I just do PListStore(TreeModel)?
+  cast[PListStore](TreeModel).clear()
+  suggest.items = @[]
 
 when isMainModule:
   var result = execNimSuggest("aporia.nim", 633, 7)

@@ -175,7 +175,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTreeHBox.show()
   
   var schemeTree = treeviewNew()
-  schemeTree.setHeadersVisible(False) #Make the headers invisible
+  schemeTree.setHeadersVisible(False) # Make the headers invisible
   var selection = schemeTree.getSelection()
   discard selection.GSignalConnect("changed", 
     G_CALLBACK(schemesTreeView_onChanged), nil)
@@ -184,6 +184,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTreeScrolled.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
   # Add a border
   schemeTreeScrolled.setShadowType(SHADOW_IN)
+  
   schemeTreeScrolled.add(schemeTree)
   schemeTreeHBox.packStart(schemeTreeScrolled, True, True, 20)
   schemeTreeScrolled.show()
