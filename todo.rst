@@ -5,4 +5,4 @@ Aporia's Todo list
 - Drag and Drop.
 - Search and replace for regex, pegs and style insensitive searching.
 - Investigate line and cursor position as well as scrolling when restoring a session.
-
+- Read cmd line args to check for file paths.

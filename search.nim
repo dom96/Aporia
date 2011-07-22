@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, glib2, gtksourceview, gdk2, pegs, re
+import gtk2, glib2, gtksourceview, gdk2, pegs, re, strutils
 import types
 
 {.push callConv:cdecl.}
@@ -26,20 +26,56 @@ proc getSearchOptions(): TTextSearchFlags =
   else:
     assert(false)
 
+proc styleInsensitive(s: string): string = 
+  template addx: stmt = 
+    result.add(s[i])
+    inc(i)
+  result = ""
+  var i = 0
+  var brackets = 0
+  while i < s.len:
+    case s[i]
+    of 'A'..'Z', 'a'..'z', '0'..'9': 
+      addx()
+      if brackets == 0: result.add("_?")
+    of '_':
+      addx()
+      result.add('?')
+    of '[':
+      addx()
+      inc(brackets)
+    of ']':
+      addx()
+      if brackets > 0: dec(brackets)
+    of '?':
+      addx()
+      if s[i] == '<':
+        addx()
+        while s[i] != '>' and s[i] != '\0': addx()
+    of '\\':
+      addx()
+      if s[i] in strutils.digits: 
+        while s[i] in strutils.digits: addx()
+      else:
+        addx()
+    else: addx()
+
 proc findBoundsGen(text, pattern: string,
-                   rePattern: bool, start: int = 0): 
+                   rePattern: bool, reOptions: system.set[TRegExFlag],
+                   start: int = 0): 
     tuple[first: int, last: int] =
   
   if rePattern:
-    return re.findBounds(text, re(pattern), start)
+    return re.findBounds(text, re(pattern, reOptions), start)
   else:
     var matches: array[0..re.MaxSubpatterns-1, string]
     return pegs.findBounds(text, peg(pattern), matches, start)
 
 proc findRePeg(forward: bool, startIter: PTextIter, buffer: PTextBuffer,
-               pattern: string, rePattern: bool): 
+               pattern: string, rePattern: bool,
+               reOptions = {reExtended, reStudy}): 
     tuple[startMatch, endMatch: TTextIter, found: bool] =
-  
+  # TODO: Clean this function up. It's way too cluttered. ( Too many params )
   var text: cstring
   var iter: TTextIter # If forward then this points to the end
                       # otherwise to the beginning.
@@ -53,13 +89,13 @@ proc findRePeg(forward: bool, startIter: PTextIter, buffer: PTextBuffer,
   var matches: array[0..re.MaxSubpatterns, string]
   var match = (-1, 0)
   if forward:
-    match = findBoundsGen($text, pattern, rePattern)
+    match = findBoundsGen($text, pattern, rePattern, reOptions)
   else: # Backward search.
     # Loop until there is no match to find the last match.
     # Yeah. I know inefficient, but that's the only way I know how to do this.
     var newMatch = (-1, 0)
     while True:
-      newMatch = findBoundsGen($text, pattern, rePattern, match[1]+1)
+      newMatch = findBoundsGen($text, pattern, rePattern, reOptions, match[1]+1)
       if newMatch != (-1, 0): match = newMatch
       else: break
 
@@ -83,15 +119,13 @@ proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
   # True for Next and False for Previous
-  var pattern = getText(win.findEntry) # Text to search for.
-
-  # TODO: regex, pegs, style insensitive searching
+  var pattern = $(getText(win.findEntry)) # Text to search for.
 
   # Get the current tab
   var currentTab = win.SourceViewTabs.getCurrentPage()
   
-  # Get the position where the cursor is
-  # Search based on that
+  # Get the position where the cursor is,
+  # Search based on that.
   var startSel, endSel: TTextIter
   discard win.Tabs[currentTab].buffer.getSelectionBounds(
       addr(startsel), addr(endsel))
@@ -110,18 +144,23 @@ proc findText*(forward: bool) =
     else:
       matchFound = gtksourceview.backwardSearch(addr(startSel), pattern, 
           options, addr(startMatch), addr(endMatch), nil)
-  of SearchRegex, SearchPeg:
+  
+  of SearchRegex, SearchPeg, SearchStyleInsens:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
     var regex = win.settings.search == SearchRegex
+    var reOptions = {reExtended, reStudy}
+    if win.settings.search == SearchStyleInsens:
+      # Style insensitive search. We use case insensitive regex here.
+      regex = True
+      pattern = styleInsensitive(pattern)
+      reOptions = reOptions + {reIgnoreCase}
     if forward:
-      ret = findRePeg(forward, addr(endSel), buffer, $pattern, regex)
+      ret = findRePeg(forward, addr(endSel), buffer, pattern, regex, reOptions)
     else:
-      ret = findRePeg(forward, addr(startSel), buffer, $pattern, regex)
+      ret = findRePeg(forward, addr(startSel), buffer, pattern, regex, reOptions)
     startMatch = ret[0]
     endMatch = ret[1]
     matchFound = ret[2]
-  else:
-    assert(false)
   
   if matchFound:
     buffer.moveMarkByName("insert", addr(startMatch))
