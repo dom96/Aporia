@@ -599,7 +599,8 @@ proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
 proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
-  discard replaceAll(find, replace)
+  var count = replaceAll(find, replace)
+  echo("Replaced $1 matches." % $count)
   
 proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = 
   win.findBar.hide()

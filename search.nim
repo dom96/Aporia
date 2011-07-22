@@ -71,11 +71,9 @@ proc findBoundsGen(text, pattern: string,
     var matches: array[0..re.MaxSubpatterns-1, string]
     return pegs.findBounds(text, peg(pattern), matches, start)
 
-proc findRePeg(forward: bool, startIter: PTextIter, buffer: PTextBuffer,
-               pattern: string, rePattern: bool,
-               reOptions = {reExtended, reStudy}): 
+proc findRePeg(forward: bool, startIter: PTextIter,
+               buffer: PTextBuffer, pattern: string): 
     tuple[startMatch, endMatch: TTextIter, found: bool] =
-  # TODO: Clean this function up. It's way too cluttered. ( Too many params )
   var text: cstring
   var iter: TTextIter # If forward then this points to the end
                       # otherwise to the beginning.
@@ -85,17 +83,26 @@ proc findRePeg(forward: bool, startIter: PTextIter, buffer: PTextBuffer,
   else:
     buffer.getStartIter(addr(iter))
     text = addr(iter).getText(startIter)
+  
+  # Set up some options.
+  var isRegex = win.settings.search == SearchRegex
+  var reOptions = {reExtended, reStudy}
+  var newPattern = pattern
+  if win.settings.search == SearchStyleInsens:
+    reOptions = reOptions + {reIgnoreCase}
+    newPattern = styleInsensitive(newPattern)
+    isRegex = True  
     
   var matches: array[0..re.MaxSubpatterns, string]
   var match = (-1, 0)
   if forward:
-    match = findBoundsGen($text, pattern, rePattern, reOptions)
+    match = findBoundsGen($text, newPattern, isRegex, reOptions)
   else: # Backward search.
     # Loop until there is no match to find the last match.
     # Yeah. I know inefficient, but that's the only way I know how to do this.
     var newMatch = (-1, 0)
     while True:
-      newMatch = findBoundsGen($text, pattern, rePattern, reOptions, match[1]+1)
+      newMatch = findBoundsGen($text, newPattern, isRegex, reOptions, match[1]+1)
       if newMatch != (-1, 0): match = newMatch
       else: break
 
@@ -147,17 +154,10 @@ proc findText*(forward: bool) =
   
   of SearchRegex, SearchPeg, SearchStyleInsens:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
-    var regex = win.settings.search == SearchRegex
-    var reOptions = {reExtended, reStudy}
-    if win.settings.search == SearchStyleInsens:
-      # Style insensitive search. We use case insensitive regex here.
-      regex = True
-      pattern = styleInsensitive(pattern)
-      reOptions = reOptions + {reIgnoreCase}
     if forward:
-      ret = findRePeg(forward, addr(endSel), buffer, pattern, regex, reOptions)
+      ret = findRePeg(forward, addr(endSel), buffer, pattern)
     else:
-      ret = findRePeg(forward, addr(startSel), buffer, pattern, regex, reOptions)
+      ret = findRePeg(forward, addr(startSel), buffer, pattern)
     startMatch = ret[0]
     endMatch = ret[1]
     matchFound = ret[2]
@@ -204,10 +204,17 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.beginUserAction()
   
   # Replace all
-  var found = False
+  var found = True
   while found:
-    found = gtksourceview.forwardSearch(addr(iter), find, 
-        options, addr(startMatch), addr(endMatch), nil)
+    case win.settings.search
+    of SearchCaseInsens, SearchCaseSens:
+      found = gtksourceview.forwardSearch(addr(iter), find, 
+          options, addr(startMatch), addr(endMatch), nil)
+    of SearchRegex, SearchPeg, SearchStyleInsens:
+      var ret = findRePeg(true, addr(iter), buffer, $find)
+      startMatch = ret[0]
+      endMatch = ret[1]
+      found = ret[2]
   
     if found:
       inc(count)
@@ -221,7 +228,7 @@ proc replaceAll*(find, replace: cstring): Int =
   # Re-Enable bracket matching and status bar updates
   win.tempStuff.stopSBUpdates = False
   buffer.setHighlightMatchingBrackets(win.settings.highlightMatchingBrackets)
-  
+
   return count
   
   
