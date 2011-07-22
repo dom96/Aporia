@@ -1,3 +1,12 @@
+#
+#
+#            Aporia - Nimrod IDE
+#        (c) Copyright 2011 Dominik Picheta
+#
+#    See the file "copying.txt", included in this
+#    distribution, for details about the copyright.
+#
+
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,

@@ -1,7 +1,7 @@
 #
 #
 #            Aporia - Nimrod IDE
-#        (c) Copyright 2010 Dominik Picheta
+#        (c) Copyright 2011 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
 #    distribution, for details about the copyright.
@@ -23,11 +23,23 @@ proc getSearchOptions(): TTextSearchFlags =
     result = TEXT_SEARCH_TEXT_ONLY or 
         TEXT_SEARCH_VISIBLE_ONLY
 
-proc findRegex*(pattern: TRegex, forward: bool, startIter: PTextIter, 
-                buffer: PTextBuffer): 
+proc findBoundsGen(text, pattern: string,
+                   rePattern: bool, start: int = 0): 
+    tuple[first: int, last: int] =
+  
+  if rePattern:
+    return re.findBounds(text, re(pattern), start)
+  else:
+    var matches: array[0..re.MaxSubpatterns-1, string]
+    return pegs.findBounds(text, peg(pattern), matches, start)
+
+proc findRePeg(forward: bool, startIter: PTextIter, buffer: PTextBuffer,
+               pattern: string, rePattern: bool): 
     tuple[startMatch, endMatch: TTextIter, found: bool] =
+  
   var text: cstring
-  var iter: TTextIter
+  var iter: TTextIter # If forward then this points to the end
+                      # otherwise to the beginning.
   if forward:
     buffer.getEndIter(addr(iter))
     text = startIter.getText(addr(iter))
@@ -36,30 +48,41 @@ proc findRegex*(pattern: TRegex, forward: bool, startIter: PTextIter,
     text = addr(iter).getText(startIter)
     
   var matches: array[0..re.MaxSubpatterns, string]
-  var match = find($text, pattern, matches)
+  var match = (-1, 0)
+  if forward:
+    match = findBoundsGen($text, pattern, rePattern)
+  else: # Backward search.
+    # Loop until there is no match to find the last match.
+    # Yeah. I know inefficient, but that's the only way I know how to do this.
+    var newMatch = (-1, 0)
+    while True:
+      newMatch = findBoundsGen($text, pattern, rePattern, match[1]+1)
+      if newMatch != (-1, 0):
+        match = newMatch
+        echo(match)
+      else: break
+
   var startMatch, endMatch: TTextIter
   
-  echo(match, " ", matches.len())
-  if match != -1:
+  if match != (-1, 0):
     if forward:
-      buffer.getIterAtOffset(addr(startMatch), startIter.getOffset() + match)
-      buffer.getIterAtOffset(addr(endMatch), startIter.getOffset() + match + 
-          matches[0].len())
+      buffer.getIterAtOffset(addr(startMatch), startIter.getOffset() + match[0])
+      buffer.getIterAtOffset(addr(endMatch), startIter.getOffset() + 
+          match[1] + 1)
     else:
-      buffer.getIterAtOffset(addr(startMatch), addr(iter).getOffset() + match)
-      buffer.getIterAtOffset(addr(endMatch), addr(iter).getOffset() + match +
-          matches[0].len())
+      buffer.getIterAtOffset(addr(startMatch), addr(iter).getOffset() + match[0])
+      buffer.getIterAtOffset(addr(endMatch), addr(iter).getOffset() +
+          match[1] + 1)
           
     return (startMatch, endMatch, True)
   else:
     return (startMatch, endMatch, False)
   
-
 proc findText*(forward: bool) =
-  # This proc get's called when the 'Next' or 'Prev' buttons
+  # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
   # True for Next and False for Previous
-  var text = getText(win.findEntry)
+  var pattern = getText(win.findEntry) # Text to search for.
 
   # TODO: regex, pegs, style insensitive searching
 
@@ -80,17 +103,21 @@ proc findText*(forward: bool) =
   if win.settings.search == "caseinsens" or win.settings.search == "casesens":
     var options = getSearchOptions()
     if forward:
-      matchFound = gtksourceview.forwardSearch(addr(endSel), text, 
+      matchFound = gtksourceview.forwardSearch(addr(endSel), pattern, 
           options, addr(startMatch), addr(endMatch), nil)
     else:
-      matchFound = gtksourceview.backwardSearch(addr(startSel), text, 
+      matchFound = gtksourceview.backwardSearch(addr(startSel), pattern, 
           options, addr(startMatch), addr(endMatch), nil)
-  else:
-    if win.settings.search == "regex":
-      var ret = findRegex(re("(" & $text & ")"), forward, addr(endSel), buffer)
-      startMatch = ret[0]
-      endMatch = ret[1]
-      matchFound = ret[2]
+  elif win.settings.search == "regex" or win.settings.search == "peg":
+    var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
+    var regex = win.settings.search == "regex"
+    if forward:
+      ret = findRePeg(forward, addr(endSel), buffer, $pattern, regex)
+    else:
+      ret = findRePeg(forward, addr(startSel), buffer, $pattern, regex)
+    startMatch = ret[0]
+    endMatch = ret[1]
+    matchFound = ret[2]
   
   if matchFound:
     buffer.moveMarkByName("insert", addr(startMatch))
@@ -104,9 +131,9 @@ proc findText*(forward: bool) =
   else:
     # Change the findEntry color to red
     var red: Gdk2.TColor
-    assert(colorParse("#ff6666", addr(red)) == 1)
+    discard colorParse("#ff6666", addr(red))
     var white: Gdk2.TColor
-    assert(colorParse("white", addr(white)) == 1)
+    discard colorParse("white", addr(white))
     
     win.findEntry.modifyBase(STATE_NORMAL, addr(red))
     win.findEntry.modifyText(STATE_NORMAL, addr(white))
