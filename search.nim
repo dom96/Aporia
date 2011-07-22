@@ -16,12 +16,15 @@ var
   win*: ptr types.MainWin
 
 proc getSearchOptions(): TTextSearchFlags =
-  if win.settings.search == "caseinsens":
+  case win.settings.search
+  of SearchCaseInsens:
     result = TEXT_SEARCH_TEXT_ONLY or 
         TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE
-  elif win.settings.search == "casesens":
+  of SearchCaseSens:
     result = TEXT_SEARCH_TEXT_ONLY or 
         TEXT_SEARCH_VISIBLE_ONLY
+  else:
+    assert(false)
 
 proc findBoundsGen(text, pattern: string,
                    rePattern: bool, start: int = 0): 
@@ -57,9 +60,7 @@ proc findRePeg(forward: bool, startIter: PTextIter, buffer: PTextBuffer,
     var newMatch = (-1, 0)
     while True:
       newMatch = findBoundsGen($text, pattern, rePattern, match[1]+1)
-      if newMatch != (-1, 0):
-        match = newMatch
-        echo(match)
+      if newMatch != (-1, 0): match = newMatch
       else: break
 
   var startMatch, endMatch: TTextIter
@@ -100,7 +101,8 @@ proc findText*(forward: bool) =
   
   var buffer = win.Tabs[currentTab].buffer
   
-  if win.settings.search == "caseinsens" or win.settings.search == "casesens":
+  case win.settings.search
+  of SearchCaseInsens, SearchCaseSens:
     var options = getSearchOptions()
     if forward:
       matchFound = gtksourceview.forwardSearch(addr(endSel), pattern, 
@@ -108,9 +110,9 @@ proc findText*(forward: bool) =
     else:
       matchFound = gtksourceview.backwardSearch(addr(startSel), pattern, 
           options, addr(startMatch), addr(endMatch), nil)
-  elif win.settings.search == "regex" or win.settings.search == "peg":
+  of SearchRegex, SearchPeg:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
-    var regex = win.settings.search == "regex"
+    var regex = win.settings.search == SearchRegex
     if forward:
       ret = findRePeg(forward, addr(endSel), buffer, $pattern, regex)
     else:
@@ -118,6 +120,8 @@ proc findText*(forward: bool) =
     startMatch = ret[0]
     endMatch = ret[1]
     matchFound = ret[2]
+  else:
+    assert(false)
   
   if matchFound:
     buffer.moveMarkByName("insert", addr(startMatch))

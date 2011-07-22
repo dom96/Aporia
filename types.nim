@@ -11,7 +11,7 @@ import gtk2, gtksourceview
 
 type
   TSettings* = object
-    search*: string
+    search*: TSearchEnum # Search mode.
     
     font*: string # font used by the sourceview
     colorSchemeID*: string # color scheme used by the sourceview
@@ -80,4 +80,6 @@ type
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*: string
     line*, col*: int
-    
+  
+  TSearchEnum* = enum
+    SearchCaseSens, SearchCaseInsens, SearchStyleInsens, SearchRegex, SearchPeg

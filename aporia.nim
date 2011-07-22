@@ -605,15 +605,15 @@ proc closeBtn_Clicked(button: PButton, user_data: pgpointer) =
   win.findBar.hide()
 
 proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = "casesens"
+  win.settings.search = SearchCaseSens
 proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = "caseinsens"
+  win.settings.search = SearchCaseInsens
 proc style_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = "style"
+  win.settings.search = SearchStyleInsens
 proc regex_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = "regex"
+  win.settings.search = SearchRegex
 proc peg_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = "peg"
+  win.settings.search = SearchPeg
 
 proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   var extraMenu = menuNew()
@@ -655,15 +655,15 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   
   # Make the correct radio button active
   case win.settings.search
-  of "casesens":
+  of SearchCaseSens:
     PCheckMenuItem(caseSensMenuItem).ItemSetActive(True)
-  of "caseinsens":
+  of SearchCaseInsens:
     PCheckMenuItem(caseInSensMenuItem).ItemSetActive(True)
-  of "style":
+  of SearchStyleInsens:
     PCheckMenuItem(styleMenuItem).ItemSetActive(True)
-  of "regex":
+  of SearchRegex:
     PCheckMenuItem(regexMenuItem).ItemSetActive(True)
-  of "peg":
+  of SearchPeg:
     PCheckMenuItem(pegMenuItem).ItemSetActive(True)
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())

@@ -14,7 +14,7 @@ type
   ECFGParse* = object of E_Base
 
 proc defaultSettings*(): TSettings =
-  result.search = "caseinsens"
+  result.search = SearchCaseInsens
   result.font = "Monospace 10"
   result.colorSchemeID = "classic"
   result.indentWidth = 2
@@ -71,7 +71,7 @@ proc save*(win: MainWin) =
     f.writeKeyVal("autoIndent", $settings.autoIndent)
 
     f.writeSection("other")
-    f.writeKeyVal("searchMethod", settings.search)
+    f.writeKeyVal("searchMethod", $int(settings.search))
     
     f.writeSection("auto")
     f.write("; Stuff which is saved automatically," & 
@@ -123,13 +123,13 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "font": result.font = e.value
       of "scheme": result.colorSchemeID = e.value
       of "indentwidth": result.indentWidth = e.value.parseInt()
-      of "showlinenumbers": result.showLineNumbers = e.value == "true"
+      of "showlinenumbers": result.showLineNumbers = isTrue(e.value)
       of "highlightmatchingbrackets": 
         result.highlightMatchingBrackets = isTrue(e.value)
       of "rightmargin": result.rightMargin = isTrue(e.value)
       of "highlightcurrentline": result.highlightCurrentLine = isTrue(e.value)
       of "autoindent": result.autoIndent = isTrue(e.value)
-      of "searchmethod": result.search = e.value
+      of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
       of "winmaximized": result.winMaximized = isTrue(e.value)
       of "vpanedpos": result.VPanedPos = e.value.parseInt()
       of "winwidth": result.winWidth = e.value.parseInt()
