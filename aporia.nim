@@ -345,7 +345,7 @@ proc addTab(name, filename: string) =
       var file: string = readFile(filename)
       buffer.set_text(file, len(file))
     except EIO:
-      echo("Can't open ", filename)
+      raise
       
     # Enable the undo/redo manager.
     buffer.end_not_undoable_action()
@@ -394,12 +394,23 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   var files = ChooseFilesToOpen(win.w, startpath)
   if files.len() > 0:
     for f in items(files):
-      try:
-        addTab("", f)
-      except EIO:
-        error(win.w, "Unable to read from file")
-    # Switch to the newly created tab
-    win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+      # Check for other tabs with the same filename.
+      var alreadyOpened = -1
+      for i in 0..win.tabs.len()-1:
+        if win.Tabs[i].filename == f: 
+          alreadyOpened = i
+          break
+      
+      if alreadyOpened == -1:
+        try:
+          addTab("", f)
+        except EIO:
+          error(win.w, "Unable to read from file")
+        # Switch to the newly created tab
+        win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+      else:
+        win.sourceViewTabs.setCurrentPage(alreadyOpened)
+    
   
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
