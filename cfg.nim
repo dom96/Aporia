@@ -69,6 +69,7 @@ proc save*(win: MainWin) =
     f.writeKeyVal("rightMargin", $settings.rightMargin)
     f.writeKeyVal("highlightCurrentLine", $settings.highlightCurrentLine)
     f.writeKeyVal("autoIndent", $settings.autoIndent)
+    f.writeKeyVal("suggestFeature", $settings.suggestFeature)
 
     f.writeSection("other")
     f.writeKeyVal("searchMethod", $int(settings.search))
@@ -129,6 +130,7 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "rightmargin": result.rightMargin = isTrue(e.value)
       of "highlightcurrentline": result.highlightCurrentLine = isTrue(e.value)
       of "autoindent": result.autoIndent = isTrue(e.value)
+      of "suggestfeature": result.suggestFeature = isTrue(e.value)
       of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
       of "winmaximized": result.winMaximized = isTrue(e.value)
       of "vpanedpos": result.VPanedPos = e.value.parseInt()

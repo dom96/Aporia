@@ -239,6 +239,9 @@ proc autoIndent_Toggled(button: PToggleButton, user_data: pgpointer) =
   for i in items(win.Tabs):
     i.sourceView.setAutoIndent(win.settings.autoIndent)
 
+proc suggestFeature_Toggled(button: PToggleButton, user_data: pgpointer) =
+  win.settings.suggestFeature = button.getActive()
+
 proc initEditor(settingsTabs: PNotebook) =
   var editorLabel = labelNew("Editor")
   var editorVBox = vboxNew(False, 5)
@@ -320,6 +323,18 @@ proc initEditor(settingsTabs: PNotebook) =
     G_CALLBACK(autoIndent_Toggled), nil)
   autoIndentHBox.packStart(autoIndentCheckBox, False, False, 20)
   autoIndentCheckBox.show()
+
+  # suggestFeature - checkbox
+  var suggestFeatureHBox = hboxNew(False, 0)
+  editorVBox.packStart(suggestFeatureHBox, False, False, 0)
+  suggestFeatureHBox.show()
+  
+  var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature")
+  suggestFeatureCheckBox.setActive(win.settings.suggestFeature)
+  discard suggestFeatureCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(suggestFeature_Toggled), nil)
+  suggestFeatureHBox.packStart(suggestFeatureCheckBox, False, False, 20)
+  suggestFeatureCheckBox.show()
 
 var
   dialog: gtk2.PWindow

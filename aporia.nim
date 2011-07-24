@@ -220,19 +220,20 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
   var key = $keyval_name(event.keyval)
   case key.toLower()
   of "period":
-    var current = win.SourceViewTabs.getCurrentPage()
-    var tab     = win.Tabs[current]
-    var start: TTextIter
-    # Get the iter at the cursor position.
-    tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
-    if win.populateSuggest(addr(start), tab):
-      win.suggest.dialog.show()
-      moveSuggest(win, addr(start), tab)
-      win.Tabs[current].sourceView.grabFocus()
-      assert(win.Tabs[current].sourceView.isFocus())
-      win.w.present()
+    if win.settings.suggestFeature:
+      var current = win.SourceViewTabs.getCurrentPage()
+      var tab     = win.Tabs[current]
+      var start: TTextIter
+      # Get the iter at the cursor position.
+      tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
+      if win.populateSuggest(addr(start), tab):
+        win.suggest.dialog.show()
+        moveSuggest(win, addr(start), tab)
+        win.Tabs[current].sourceView.grabFocus()
+        assert(win.Tabs[current].sourceView.isFocus())
+        win.w.present()
   of "up", "down":
-    if widgetRealized(win.suggest.dialog):
+    if win.settings.suggestFeature and widgetRealized(win.suggest.dialog):
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
@@ -258,7 +259,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       # source view.
       return True
   of "return", "space", "tab":
-    if widgetRealized(win.suggest.dialog):
+    if win.settings.suggestFeature and widgetRealized(win.suggest.dialog):
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
@@ -277,7 +278,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         
         return True
   else:
-    echo("Key released: ", key)
+    echod("Key pressed: ", key)
 
 # Other(Helper) functions
 
