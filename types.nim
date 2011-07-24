@@ -57,7 +57,7 @@ type
 
     Tabs*: seq[Tab] # Other
     
-    tempStuff*: Temp # Just things to remember.
+    tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
     
     settings*: TSettings
 
@@ -65,10 +65,17 @@ type
     dialog*: gtk2.PWindow
     treeView*: PTreeView
     items*: seq[TSuggestItem]
-
+  
+  ExecThrParams* = tuple[cmd: string, execMode: TExecMode]
+  TExecMode* = enum
+    ExecNone, ExecNimrod, ExecRun, ExecCustom
   Temp = object
     lastSaveDir*: string # Last saved directory
     stopSBUpdates*: Bool
+    
+    procExecRunning*: bool
+    ifSuccess*: string
+    procExecThread*: TThread[tuple[cmd: string, execMode: TExecMode]]
 
   Tab* = object
     buffer*: PSourceBuffer

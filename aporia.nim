@@ -15,7 +15,7 @@ import settings, types, cfg, search, suggest
 
 const
   NimrodProjectExt = ".nimprj"
-  GTKVerReq = (2, 2, 0) # Version of GTK required for Aporia to run.
+  GTKVerReq = (2, 12, 0) # Version of GTK required for Aporia to run.
 
 var win: types.MainWin
 win.Tabs = @[]
@@ -37,6 +37,11 @@ except ECFGParse:
 except EIO:
   win.settings = cfg.defaultSettings()
 
+proc echod[T](s: openarray[T]) =
+  when defined(debug):
+    for i in items(s): stdout.write(i)
+    echo()
+    
 proc getProjectTab(): int = 
   for i in 0..high(win.tabs): 
     if win.tabs[i].filename.endswith(NimrodProjectExt): return i
@@ -135,7 +140,7 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState,
 
 proc window_configureEvent(widget: PWidget, event: PEventConfigure,
                            ud: pgpointer): gboolean =
-  if win.suggest.dialog.getRealized():
+  if widgetRealized(win.suggest.dialog):
     var current = win.SourceViewTabs.getCurrentPage()
     var tab     = win.Tabs[current]
     var start: TTextIter
@@ -227,7 +232,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       assert(win.Tabs[current].sourceView.isFocus())
       win.w.present()
   of "up", "down":
-    if win.suggest.dialog.getRealized():
+    if widgetRealized(win.suggest.dialog):
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
@@ -253,7 +258,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       # source view.
       return True
   of "return", "space", "tab":
-    if win.suggest.dialog.getRealized():
+    if widgetRealized(win.suggest.dialog):
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
@@ -335,9 +340,11 @@ proc addTab(name, filename: string) =
     buffer.begin_not_undoable_action()
   
     # Load the file.
-    var file: string = readFile(filename)
-    if file != nil:
+    try:
+      var file: string = readFile(filename)
       buffer.set_text(file, len(file))
+    except EIO:
+      echo("Can't open ", filename)
       
     # Enable the undo/redo manager.
     buffer.end_not_undoable_action()
@@ -469,7 +476,8 @@ var
   pegOtherError = peg"'Error:' \s* {.*}"
   pegSuccess = peg"'Hint: operation successful'.*"
 
-proc addText(textView: PTextView, text: string, colorTag: PTextTag = nil) =
+proc addText(textView: PTextView, text: string,
+             colorTag: PTextTag = nil, scroll: bool = true) =
   if text != nil:
     var iter: TTextIter
     textView.getBuffer().getEndIter(addr(iter))
@@ -479,6 +487,10 @@ proc addText(textView: PTextView, text: string, colorTag: PTextTag = nil) =
     else:
       textView.getBuffer().insertWithTags(addr(iter), text, len(text), colorTag,
                                           nil)
+    if scroll:
+      var endMark = textView.getBuffer().getMark("endMark")
+      # Yay! With the use of marks; scrolling always occurs!
+      textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
 
 proc createColor(textView: PTextView, name, color: string): PTextTag =
   var tagTable = textView.getBuffer().getTagTable()
@@ -500,41 +512,110 @@ proc showBottomPanel() =
     win.bottomPanelTabs.show()
     win.settings.bottomPanelVisible = true
     PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
-  # Scroll to the end of the TextView
-  # This is stupid, it works sometimes... it's random
-  var endIter: TTextIter
-  win.outputTextView.getBuffer().getEndIter(addr(endIter))
-  discard win.outputTextView.scrollToIter(
-    addr(endIter), 0.25, False, 0.0, 0.0)
 
-proc compileRun(currentTab: int, shouldRun: bool) =
-  if win.Tabs[currentTab].filename.len == 0: return
-  # Clear the outputTextView
-  win.outputTextView.getBuffer().setText("", 0)
+{.pop.}
 
-  var outp = osProc.execProcess(GetCmd(win.settings.nimrodCmd,
-                                win.Tabs[currentTab].filename))
+proc execProcThread() {.thread.} =
+  while True:
+    # Recv message
+    var params = recv[ExecThrParams]()
+    if params.execMode != ExecNone:
+      # Execute the process
+      var split = params.cmd.split()
+      echod(repr(split))
+      var exe = split[0]
+      split.delete(0)
+      var process = osProc.startProcess(exe, args = split,
+                                    options = {poStderrToStdout, poUseShell})
+      var procOut = process.outputStream
+      while True:
+        if peek() > 0:
+          if recv[ExecThrParams]().execMode == ExecNone:
+            break
+        var line = procOut.readLine()
+        if line == "": break
+        # Send the `line` to the main thread.
+        send(mainThreadId[ExecThrParams](), (line, params.execMode))
+
+      if process.peekExitCode == -1:
+        # TODO: Will this hang the thread forever?
+        discard process.waitForExit()
+
+      send(mainThreadId[ExecThrParams](), ("", ExecNone))
+    else: echod("Process already stopped.")
+  
+proc execProcMT(cmd: string, mode: TExecMode, ifSuccess: string = "")
+proc peekProcOutput(dummy: pointer): bool =
+  result = True
+  
   # Colors
   var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
   var errorTag = createColor(win.outputTextView, "errorTag", "red")
   var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
   var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
-  for x in outp.splitLines():
-    if x =~ pegLineError / pegOtherError:
-      win.outputTextView.addText("\n" & x, errorTag)
-    elif x=~ pegSuccess:
-      win.outputTextView.addText("\n" & x, successTag)
-      
-      # Launch the process
-      if shouldRun:
-        var filename = changeFileExt(win.Tabs[currentTab].filename, os.ExeExt)
-        var output = "\n" & osProc.execProcess(filename)
-        win.outputTextView.addText(output)
-    elif x =~ pegLineWarning:
-      win.outputTextView.addText("\n" & x, warningTag)
-    else:
-      win.outputTextView.addText("\n" & x, normalTag)
-  showBottomPanel()
+  
+  var messages = peek()
+  echod("Messages in inbox: ", $messages)
+  if messages > 0:
+    for i in 1 .. messages:
+      var m = recv[ExecThrParams]()
+      case m.execMode
+      of ExecNimrod:
+        if m[0] =~ pegLineError / pegOtherError:
+          win.outputTextView.addText(m[0] & "\n", errorTag)
+        elif m[0] =~ pegSuccess:
+          win.outputTextView.addText(m[0] & "\n", successTag)
+          if win.tempStuff.ifSuccess != "":
+            # Terminate the worker thread, `execProcThread`.
+            send(win.tempStuff.procExecThread.threadId(), ("", ExecNone))
+            
+            execProcMT(win.tempStuff.ifSuccess, ExecRun)
+            return false
+            
+        elif m[0] =~ pegLineWarning:
+          win.outputTextView.addText(m[0] & "\n", warningTag)
+        else:
+          win.outputTextView.addText(m[0] & "\n", normalTag)
+      of ExecRun, ExecCustom:
+        win.outputTextView.addText(m[0] & "\n", normalTag)
+      of ExecNone:
+        # Process no longer executing.
+        # Don't return. Other messages might not be processed yet.
+        win.tempStuff.procExecRunning = False
+        result = False
+
+proc execProcMT(cmd: string, mode: TExecMode, ifSuccess: string = "") =
+  ## This function executes a process in a new thread, using only idle time
+  ## to add the output of the process to the `outputTextview`.
+  # Reset some things; and set some flags.
+  win.tempStuff.ifSuccess = ifSuccess
+  # Spawn the thread
+  send(win.tempStuff.procExecThread.threadId(), (cmd, mode))
+  win.tempStuff.procExecRunning = True
+  # Add a function which will be called every 100 miliseconds.
+  var tID = gTimeoutAdd(100, peekProcOutput, nil)
+  echod("gTimeoutAdd id = ", $tID)
+
+{.push callConv: cdecl.}
+
+proc compileRun(currentTab: int, shouldRun: bool) =
+  if win.Tabs[currentTab].filename.len == 0: return
+  if win.tempStuff.procExecRunning:
+    # TODO: Give some kind of a GUI message to the user.
+    echod("Process already running!")
+    return
+  
+  # Clear the outputTextView
+  win.outputTextView.getBuffer().setText("", 0)
+  showBottomPanel()  
+
+  var cmd = GetCmd(win.settings.nimrodCmd, win.Tabs[currentTab].filename)
+  # Execute the compiled application if compiled successfully.
+  # ifSuccess is the filename of the compiled app.
+  var ifSuccess = ""
+  if shouldRun:
+    ifSuccess = changeFileExt(win.Tabs[currentTab].filename, os.ExeExt)
+  execProcMT(cmd, ExecNimrod, ifSuccess)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   saveFile_Activate(nil, nil)
@@ -553,16 +634,20 @@ proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   compileRun(getProjectTab(), true)
 
 proc RunCustomCommand(cmd: string) = 
+  if win.tempStuff.procExecRunning:
+    # TODO: Give some kind of a GUI message to the user.
+    echod("Process already running!")
+    return
+  
   saveFile_Activate(nil, nil)
   var currentTab = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[currentTab].filename.len == 0 or cmd.len == 0: return
+  
   # Clear the outputTextView
   win.outputTextView.getBuffer().setText("", 0)
-  var outp = osProc.execProcess(GetCmd(cmd, win.Tabs[currentTab].filename))
-  var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
-  for x in outp.splitLines():
-    win.outputTextView.addText("\n" & x, normalTag)
   showBottomPanel()
+  
+  execProcMT(GetCmd(cmd, win.Tabs[currentTab].filename), ExecCustom)
 
 proc RunCustomCommand1(menuitem: PMenuItem, user_data: pgpointer) =
   RunCustomCommand(win.settings.customCmd1)
@@ -961,6 +1046,11 @@ proc initBottomTabs() =
   win.outputTextView = textviewNew()
   outputScrolledWindow.add(win.outputTextView)
   win.outputTextView.show()
+  # Create a mark at the end of the outputTextView.
+  var endIter: TTextIter
+  win.outputTextView.getBuffer().getEndIter(addr(endIter))
+  discard win.outputTextView.
+          getBuffer().createMark("endMark", addr(endIter), False)
   
   outputTab.show()
 
@@ -1134,13 +1224,19 @@ proc initControls() =
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
 
+{.pop.}
+proc NimThreadsInit() =
+  # Start the procExecThread
+  win.tempStuff.procExecThread.createThread(execProcThread)
+{.push callConv: cdecl.}
+
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:
   # Incorrect GTK version.
   quit("Aporia requires GTK $#.$#.$#. Call to check_version failed with: $#" %
        [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
 
+NimThreadsInit()
 nimrod_init()
 initControls()
 main()
-
