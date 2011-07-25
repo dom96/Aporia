@@ -547,15 +547,20 @@ proc execProcThread() {.thread.} =
         if peek() > 0:
           if recv[ExecThrParams]().execMode == ExecNone:
             break
-        var line = procOut.readLine()
-        if line == "": break
-        # Send the `line` to the main thread.
-        send(mainThreadId[ExecThrParams](), (line, params.execMode))
-
-      if process.peekExitCode == -1:
-        # TODO: Will this hang the thread forever?
-        discard process.waitForExit()
-
+        
+        var readP = @[process]
+        if select(readP) == 1 and readP.len == 0:
+          var line = procOut.readLine()
+          if line == "": break
+          # Send the `line` to the main thread.
+          send(mainThreadId[ExecThrParams](), (line, params.execMode))
+      
+      if process.peekExitCode() == -1:
+        echod("Process terminated! ", $process.peekExitCode())
+        while process.peekExitCode() == -1: process.terminate()
+        echod(process.peekExitCode())
+      process.close()
+        
       send(mainThreadId[ExecThrParams](), ("", ExecNone))
     else: echod("Process already stopped.")
   
@@ -651,6 +656,10 @@ proc CompileProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
 proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   saveAllTabs()
   compileRun(getProjectTab(), true)
+
+proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  echod("Terminating process...")
+  send(win.tempStuff.procExecThread.threadId(), ("", ExecNone))
 
 proc RunCustomCommand(cmd: string) = 
   if win.tempStuff.procExecRunning:
@@ -980,6 +989,8 @@ proc initTopMenu(MainBox: PBox) =
                       KEY_F8, aporia.CompileProject_Activate)
   createAccelMenuItem(ToolsMenu, accGroup, "Compile & run project", 
                       KEY_F9, aporia.CompileRunProject_Activate)
+  createAccelMenuItem(ToolsMenu, accGroup, "Terminate running process", 
+                      KEY_F7, aporia.StopProcess_Activate)
   createSeparator(ToolsMenu)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 1", 
                       KEY_F1, aporia.RunCustomCommand1)

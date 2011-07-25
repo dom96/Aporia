@@ -8,4 +8,6 @@ Aporia's Todo list
 - Read cmd line args to check for file paths.
 - Finish the suggest feature.
 - Get schemes from /usr/share/gtksourceview-2.0/schemes
-- Add a way to terminate a running (compilation) process
+- <del>Add a way to terminate a running (compilation) process</del>
+- Investigate why process output isn't "live" and make it "live".
+- Add links to line numbers in compiler output.
