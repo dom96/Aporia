@@ -539,6 +539,9 @@ proc execProcThread() {.thread.} =
       split.delete(0)
       var process = osProc.startProcess(exe, args = split,
                                     options = {poStderrToStdout, poUseShell})
+      
+      send(mainThreadId[ExecThrParams](),
+           ("> " & exe & " " & split.join(" "), params.execMode))
       var procOut = process.outputStream
       while True:
         if peek() > 0:
@@ -573,33 +576,37 @@ proc peekProcOutput(dummy: pointer): bool =
       var m = recv[ExecThrParams]()
       case m.execMode
       of ExecNimrod:
+        win.tempStuff.procExecRunning = True
         if m[0] =~ pegLineError / pegOtherError:
           win.outputTextView.addText(m[0] & "\n", errorTag)
         elif m[0] =~ pegSuccess:
           win.outputTextView.addText(m[0] & "\n", successTag)
           if win.tempStuff.ifSuccess != "":
-            # Terminate the worker thread, `execProcThread`.
+            # Terminate any running processes.
             send(win.tempStuff.procExecThread.threadId(), ("", ExecNone))
-            
             execProcMT(win.tempStuff.ifSuccess, ExecRun)
-            return false
+            result = false
             
         elif m[0] =~ pegLineWarning:
           win.outputTextView.addText(m[0] & "\n", warningTag)
         else:
           win.outputTextView.addText(m[0] & "\n", normalTag)
       of ExecRun, ExecCustom:
+        win.tempStuff.procExecRunning = True
         win.outputTextView.addText(m[0] & "\n", normalTag)
       of ExecNone:
         # Process no longer executing.
-        # Don't return. Other messages might not be processed yet.
         win.tempStuff.procExecRunning = False
-        result = False
+        win.outputTextView.addText("Process stopped.\n", normalTag)
+        result = false
+  if not win.tempStuff.procExecRunning: result = False 
+  if result == False: echod("idle proc exiting")
 
 proc execProcMT(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   ## This function executes a process in a new thread, using only idle time
   ## to add the output of the process to the `outputTextview`.
   # Reset some things; and set some flags.
+  echod("Spawning new process.")
   win.tempStuff.ifSuccess = ifSuccess
   # Spawn the thread
   send(win.tempStuff.procExecThread.threadId(), (cmd, mode))
