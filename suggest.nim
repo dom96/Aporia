@@ -59,10 +59,10 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
   result = @[]
   echo(findExe("nimrod") & 
                 " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
-                @[file, $(line+1), $column, getTempDir(), addToPath])
+                [file, $(line+1), $column, getTempDir(), addToPath])
   var output = execProcess(findExe("nimrod") & 
                 " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
-                @[file, $(line+1), $column, getTempDir(), addToPath])
+                [file, $(line+1), $column, getTempDir(), addToPath])
 
   for line in splitLines(output):
     if line.startswith("sug\t"):
@@ -115,7 +115,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   #removeFile(file)
   
   for i in items(win.suggest.items):
-    win.addSuggestItem(i.name, "<b>$1</b>" % @[i.name])
+    win.addSuggestItem(i.name, "<b>$1</b>" % [i.name])
 
   return True
 

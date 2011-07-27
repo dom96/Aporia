@@ -62,6 +62,9 @@ proc get_default*(lm: PSourceLanguageManager): PSourceLanguage {.cdecl, dynlib: 
 proc set_search_path*(lm: PSourceLanguageManager, dirs: cstringarray) {.cdecl, dynlib: lib,
   importc: "gtk_source_language_manager_set_search_path".}
 
+proc get_search_path*(lm: PSourceLanguageManager): cstringarray {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_manager_get_search_path".}
+
 proc set_language*(buffer: PSourceBuffer, language: PSourceLanguage) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_language".}
 
@@ -144,9 +147,23 @@ proc get_scheme*(manager: PSourceStyleSchemeManager, scheme_id: cstring): PSourc
 proc set_search_path*(manager: PSourceStyleSchemeManager, dirs: cstringarray) {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_manager_set_search_path".}
 
+proc append_search_path*(manager: PSourceStyleSchemeManager, dir: cstring) {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_append_search_path".}
+
+proc prepend_search_path*(manager: PSourceStyleSchemeManager, dir: cstring) {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_prepend_search_path".}
+
+proc get_search_path*(manager: PSourceStyleSchemeManager): cstringarray {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_get_search_path".}
+  
+proc force_rescan*(scheme: PSourceStyleSchemeManager) {.cdecl, dynlib: lib,
+  importc: "gtk_source_style_scheme_manager_force_rescan".}
+  
 proc get_name*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_get_name".}
 
 proc get_description*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_get_description".}
-  
+
+
+

@@ -39,7 +39,6 @@ type
     # Widgets
     w*: gtk2.PWindow
     suggest*: TSuggestDialog
-    langMan*: PSourceLanguageManager
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
     SourceViewTabs*: PNotebook # Tabs which hold the sourceView

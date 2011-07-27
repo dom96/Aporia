@@ -327,7 +327,8 @@ proc addTab(name, filename: string) =
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
 
   if filename != nil and filename != "":
-    var lang = win.langMan.guessLanguage(filename, nil)
+    var langMan = languageManagerGetDefault()
+    var lang = langMan.guessLanguage(filename, nil)
     if lang != nil:
       buffer.setLanguage(lang)
     else:
@@ -1041,16 +1042,18 @@ proc initSourceViewTabs() =
     for i in 0 .. len(lastSession)-1:
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
-      addTab("", filename)
+      if existsFile(filename):
+        addTab("", filename)
       
-      var iter: TTextIter
-      win.Tabs[i].buffer.getIterAtOffset(addr(iter), offset.parseInt())
-      win.Tabs[i].buffer.moveMarkByName("insert", addr(iter))
-      win.Tabs[i].buffer.moveMarkByName("selection_bound", addr(iter))
-      
-      # TODO: Fix this..... :(
-      discard PTextView(win.Tabs[i].sourceView).
-          scrollToIter(addr(iter), 0.25, true, 0.0, 0.0)
+        var iter: TTextIter
+        win.Tabs[i].buffer.getIterAtOffset(addr(iter), offset.parseInt())
+        win.Tabs[i].buffer.moveMarkByName("insert", addr(iter))
+        win.Tabs[i].buffer.moveMarkByName("selection_bound", addr(iter))
+        
+        # TODO: Fix this..... :(
+        discard PTextView(win.Tabs[i].sourceView).
+            scrollToIter(addr(iter), 0.25, true, 0.0, 0.0)
+      else: echod("Could not open ", filename)
   else:
     addTab("", "")
   
@@ -1205,18 +1208,17 @@ proc initStatusBar(MainBox: PBox) =
   
 proc initControls() =
   # Load up the language style
-  win.langMan = languageManagerGetDefault()
-  var langpaths: array[0..1, cstring] = 
-          [cstring(os.getApplicationDir() / langSpecs), nil]
-  win.langMan.setSearchPath(addr(langpaths))
-  var nimLang = win.langMan.getLanguage("nimrod")
+  var langMan = languageManagerGetDefault()
+  var langManPaths: array[0..1, cstring] =
+             [cstring(os.getApplicationDir() / langSpecs), nil]
+  # TODO: Do not overwrite the default paths.
+  langMan.setSearchPath(addr(langManPaths))
+  var nimLang = langMan.getLanguage("nimrod")
   win.nimLang = nimLang
   
   # Load the scheme
   var schemeMan = schemeManagerGetDefault()
-  var schemepaths: array[0..1, cstring] =
-          [cstring(os.getApplicationDir() / styles), nil]
-  schemeMan.setSearchPath(addr(schemepaths))
+  schemeMan.appendSearchPath(os.getApplicationDir() / styles)
   win.scheme = schemeMan.getScheme(win.settings.colorSchemeID)
   
   # Window

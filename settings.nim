@@ -20,11 +20,20 @@ var win: ptr types.MainWin
 
 # -- Fonts and Colors --
 
+proc escapeMarkup(s: string): string =
+  result = ""
+  var i = 0
+  while True:
+    case s[i]
+    of '&': result.add("&amp;")
+    of '<': result.add("&lt;")
+    of '>': result.add("&gt;")
+    of '\0': break
+    else: result.add(s[i])
+    inc(i)
+
 proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
   var schemeMan = schemeManagerGetDefault()
-  var schemepaths: array[0..1, cstring] =
-          [cstring(os.getApplicationDir() / styles), nil]
-  schemeMan.setSearchPath(addr(schemepaths))
   var schemes = cstringArrayToSeq(schemeMan.getSchemeIds())
   for i in countdown(schemes.len() - 1, 0):
     var iter: TTreeIter
@@ -35,8 +44,8 @@ proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
     var name = $scheme.getName()
     var desc = $scheme.getDescription()
     # Set the TreeIter's values
-    schemeModel.set(addr(iter), 0, schemes[i], 1, "<b>" & name & "</b> - " &
-        desc, -1)
+    schemeModel.set(addr(iter), 0, schemes[i], 1, "<b>" & escapeMarkup(name) &
+                    "</b> - " & escapeMarkup(desc), -1)
 
     if schemes[i] == win.settings.colorSchemeID:
       schemeTree.getSelection.selectIter(addr(iter))
@@ -51,9 +60,6 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
     win.settings.colorSchemeID = $value
 
     var schemeMan = schemeManagerGetDefault()
-    var schemepaths: array[0..1, cstring] =
-            [cstring(os.getApplicationDir() / styles), nil]
-    schemeMan.setSearchPath(addr(schemepaths))
     win.scheme = schemeMan.getScheme(value)
     # Loop through each tab, and set the scheme
     for i in items(win.Tabs):
