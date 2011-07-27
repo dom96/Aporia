@@ -347,9 +347,9 @@ proc addTab(name, filename: string) =
       buffer.set_text(file, len(file))
     except EIO:
       raise
-      
-    # Enable the undo/redo manager.
-    buffer.end_not_undoable_action()
+    finally:
+      # Enable the undo/redo manager.
+      buffer.end_not_undoable_action()
       
     # Get the name.ext of the filename, for the tabs title
     nam = extractFilename(filename)
@@ -1050,16 +1050,17 @@ proc initSourceViewTabs() =
         win.Tabs[i].buffer.moveMarkByName("insert", addr(iter))
         win.Tabs[i].buffer.moveMarkByName("selection_bound", addr(iter))
         
-        # TODO: Fix this..... :(
-        discard PTextView(win.Tabs[i].sourceView).
-            scrollToIter(addr(iter), 0.25, true, 0.0, 0.0)
+        var mark = win.Tabs[i].buffer.createMark(nil, addr(iter), true)
+        
+        # This only seems to work with those last 3 params.
+        # TODO: Get it to center. Inspect gedit's source code to see how it does
+        # this.
+        win.Tabs[i].sourceView.scrollToMark(mark, 0.0, True, 0.0, 0.0)
+        #win.Tabs[i].sourceView.scrollToMark(mark, 0.25, true, 0.0, 0.5)
+        #win.Tabs[i].sourceView.scrollMarkOnscreen(mark)
       else: echod("Could not open ", filename)
   else:
     addTab("", "")
-  
-  # This doesn't work :\
-  win.Tabs[0].sourceView.grabFocus()
-
   
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
@@ -1262,6 +1263,9 @@ proc NimThreadsInit() =
   win.tempStuff.procExecThread.createThread(execProcThread)
 {.push callConv: cdecl.}
 
+proc afterInit() =
+  win.Tabs[0].sourceView.grabFocus()
+
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:
   # Incorrect GTK version.
@@ -1271,4 +1275,5 @@ if versionReply != nil:
 NimThreadsInit()
 nimrod_init()
 initControls()
+afterInit()
 main()
