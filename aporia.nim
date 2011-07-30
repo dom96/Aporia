@@ -81,7 +81,7 @@ proc saveTab(tabNr: int, startpath: string) =
       var cTab = win.Tabs[tabNr]
       cTab.label.setText(name)
     else:
-      error(win.w, "Unable to write to file")  
+      error(win.w, "Unable to write to file: " & OSErrorMsg())  
 
 proc saveAllTabs() =
   for i in 0..high(win.tabs): 
@@ -186,10 +186,8 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
   box.showAll()
   return (box, label)
 
-proc changed(buffer: PTextBuffer, user_data: pgpointer) =
-  # Update the 'Line & Column'
-  #updateStatusBar(buffer)
-
+proc onChanged(buffer: PTextBuffer, user_data: pgpointer) =
+  ## This function is connected to the "changed" event on `buffer`.
   # Change the tabs state to 'unsaved'
   # and add '*' to the Tab Name
   var current = win.SourceViewTabs.getCurrentPage()
@@ -302,20 +300,41 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   # UGLY workaround for yet another compiler bug:
   discard gsignalConnect(buffer, "mark-set", 
                          GCallback(aporia.cursorMoved), nil)
-  discard gsignalConnect(buffer, "changed", GCallback(aporia.changed), nil)
+  discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), nil)
   discard gsignalConnect(sourceView, "key-press-event", 
                          GCallback(SourceViewKeyPress), nil)
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
+proc findTab(filename: string): int =
+  for i in 0..win.Tabs.len()-1:
+    if win.Tabs[i].filename == filename: 
+      return i
+
+  return -1
+
+proc updateMainTitle(pageNum: int) =
+  if win.Tabs.len()-1 >= pageNum:
+    win.w.setTitle("Aporia IDE - " & win.Tabs[pageNum].filename)
+
 proc addTab(name, filename: string, setCurrent: bool = False) =
-  ## Adds a tab, if filename is not "" reads the file. And sets
-  ## the tabs SourceViews text to that files contents.
+  ## Adds a tab. If filename is not "", a file is read and set as the content
+  ## of the new tab. If name is "" it will be either "Unknown" or the last part
+  ## of the filename.
+  ## If filename doesn't exist EIO is raised.
   assert(win.nimLang != nil)
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
 
   if filename != nil and filename != "":
+    if setCurrent:
+      # If a tab with the same filename already exists select it.
+      var existingTab = findTab(filename)
+      if existingTab != -1:
+        # Select the existing tab
+        win.sourceViewTabs.setCurrentPage(existingTab)
+        return
+  
     var langMan = languageManagerGetDefault()
     var lang = langMan.guessLanguage(filename, nil)
     if lang != nil:
@@ -363,15 +382,13 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
   PTextView(SourceView).setBuffer(nTab.buffer)
 
   if setCurrent:
-    # Switch to the newly created tab
+    # Select the newly created tab
     win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
 
 # GTK Events Contd.
 # -- TopMenu & TopBar
 
-proc newFile(menuItem: PMenuItem, user_data: pgpointer) =
-  addTab("", "")
-  win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+proc newFile(menuItem: PMenuItem, user_data: pgpointer) = addTab("", "", True)
   
 proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   var startpath = ""
@@ -388,21 +405,10 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   var files = ChooseFilesToOpen(win.w, startpath)
   if files.len() > 0:
     for f in items(files):
-      # Check for other tabs with the same filename.
-      var alreadyOpened = -1
-      for i in 0..win.tabs.len()-1:
-        if win.Tabs[i].filename == f: 
-          alreadyOpened = i
-          break
-      
-      if alreadyOpened == -1:
-        try:
-          addTab("", f, True)
-        except EIO:
-          error(win.w, "Unable to read from file")
-      else:
-        win.sourceViewTabs.setCurrentPage(alreadyOpened)
-    
+      try:
+        addTab("", f, True)
+      except EIO:
+        error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
   
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
@@ -414,12 +420,15 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pgpointer) =
 
   win.Tabs[current].saved = False
   win.Tabs[current].filename = ""
+  # saveTab will ask the user for a filename if the tabs filename is "".
   saveTab(current, os.splitFile(filename).dir)
   # If the user cancels the save file dialog. Restore the previous filename
   # and saved state
   if win.Tabs[current].filename == "":
     win.Tabs[current].filename = filename
     win.Tabs[current].saved = saved
+
+  updateMainTitle(current)
 
 proc undo(menuItem: PMenuItem, user_data: pgpointer) = 
   var current = win.SourceViewTabs.getCurrentPage()
@@ -497,6 +506,7 @@ proc addText(textView: PTextView, text: string,
       textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
 
 proc createColor(textView: PTextView, name, color: string): PTextTag =
+  # This function makes sure that the color is created only once.
   var tagTable = textView.getBuffer().getTagTable()
   result = tagTable.tableLookup(name)
   if result == nil:
@@ -552,7 +562,7 @@ proc execProcThread() {.thread.} =
         while process.peekExitCode() == -1: process.terminate()
         echod(process.peekExitCode())
       process.close()
-        
+      
       send(mainThreadId[ExecThrParams](), ("", ExecNone))
     else: echod("Process already stopped.")
   
@@ -689,8 +699,7 @@ proc onCloseTab(btn: PButton, user_data: PWidget) =
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
-  if win.Tabs.len()-1 >= pageNum:
-    win.w.setTitle("Aporia IDE - " & win.Tabs[pageNum].filename)
+  updateMainTitle(pageNum)
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext, 
                         x: gint, y: gint, data: PSelectionData, info: guint,
