@@ -167,18 +167,7 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
   updateStatusBar(buffer)
 
-proc onCloseTab(btn: PButton, user_data: PWidget) =
-  if win.sourceViewTabs.getNPages() > 1:
-    var tab = win.sourceViewTabs.pageNum(user_data)
-    win.sourceViewTabs.removePage(tab)
-
-    win.Tabs.delete(tab)
-
-proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
-                 user_data: pgpointer) =
-  if win.Tabs.len()-1 >= pageNum:
-    win.w.setTitle("Aporia IDE - " & win.Tabs[pageNum].filename)
-
+proc onCloseTab(btn: PButton, user_data: PWidget)
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
                     label: PLabel] =
   var box = hboxNew(False, 0)
@@ -320,7 +309,7 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc addTab(name, filename: string) =
+proc addTab(name, filename: string, setCurrent: bool = False) =
   ## Adds a tab, if filename is not "" reads the file. And sets
   ## the tabs SourceViews text to that files contents.
   assert(win.nimLang != nil)
@@ -373,6 +362,10 @@ proc addTab(name, filename: string) =
 
   PTextView(SourceView).setBuffer(nTab.buffer)
 
+  if setCurrent:
+    # Switch to the newly created tab
+    win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+
 # GTK Events Contd.
 # -- TopMenu & TopBar
 
@@ -404,11 +397,9 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
       
       if alreadyOpened == -1:
         try:
-          addTab("", f)
+          addTab("", f, True)
         except EIO:
           error(win.w, "Unable to read from file")
-        # Switch to the newly created tab
-        win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
       else:
         win.sourceViewTabs.setCurrentPage(alreadyOpened)
     
@@ -686,6 +677,39 @@ proc RunCustomCommand2(menuitem: PMenuItem, user_data: pgpointer) =
 
 proc RunCustomCommand3(menuitem: PMenuItem, user_data: pgpointer) =
   RunCustomCommand(win.settings.customCmd3)
+
+# -- SourceViewTabs - Notebook.
+
+proc onCloseTab(btn: PButton, user_data: PWidget) =
+  if win.sourceViewTabs.getNPages() > 1:
+    var tab = win.sourceViewTabs.pageNum(user_data)
+    win.sourceViewTabs.removePage(tab)
+
+    win.Tabs.delete(tab)
+
+proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
+                 user_data: pgpointer) =
+  if win.Tabs.len()-1 >= pageNum:
+    win.w.setTitle("Aporia IDE - " & win.Tabs[pageNum].filename)
+
+proc onDragDataReceived(widget: PWidget, context: PDragContext, 
+                        x: gint, y: gint, data: PSelectionData, info: guint,
+                        time: guint, userData: pointer) =
+  echod "dragDataReceived: ", $widget.getName()
+  var success = False
+  if data != nil and data.length >= 0:
+    if info == 0:
+      var sdata = cast[cstring](data.data)
+      for line in `$`(sdata).splitLines():
+        if line != "" and line.startswith("file://"):
+          var path = line[7 .. -1]
+          echod(path)
+          # TODO: Check if tab is already opened and switch to it instead.
+          addTab("", path, True)
+      success = True
+    else: echod("dragDataReceived: Unknown `info`")
+
+  dragFinish(context, success, False, time)
 
 # -- FindBar
 
@@ -1030,12 +1054,26 @@ proc initToolBar(MainBox: PBox) =
   
   MainBox.packStart(TopBar, False, False, 0)
   TopBar.show()
-  
+
+proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
+  result.target = target
+  result.flags = flags
+  result.info = info
+
 proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
   discard win.SourceViewTabs.signalConnect(
           "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
   win.SourceViewTabs.set_scrollable(True)
+  
+  # Drag and Drop setup
+  # TODO: This should only allow files.
+  var targetList = createTargetEntry("STRING", 0, 0)
+  
+  win.SourceViewTabs.dragDestSet(DEST_DEFAULT_ALL, addr(targetList),
+                                 1, ACTION_COPY)
+  discard win.SourceViewTabs.signalConnect(
+          "drag-data-received", SIGNAL_FUNC(onDragDataReceived), nil)
   
   win.SourceViewTabs.show()
   if lastSession.len != 0:
@@ -1046,16 +1084,18 @@ proc initSourceViewTabs() =
         addTab("", filename)
       
         var iter: TTextIter
+        # TODO: Save last cursor position as line and column offset combo.
+        # This will help with int overflows which would happen more often with
+        # a char offset.
         win.Tabs[i].buffer.getIterAtOffset(addr(iter), offset.parseInt())
-        win.Tabs[i].buffer.moveMarkByName("insert", addr(iter))
-        win.Tabs[i].buffer.moveMarkByName("selection_bound", addr(iter))
+        win.Tabs[i].buffer.placeCursor(addr(iter))
         
-        var mark = win.Tabs[i].buffer.createMark(nil, addr(iter), true)
+        var mark = win.Tabs[i].buffer.getInsert()
         
         # This only seems to work with those last 3 params.
         # TODO: Get it to center. Inspect gedit's source code to see how it does
         # this.
-        win.Tabs[i].sourceView.scrollToMark(mark, 0.0, True, 0.0, 0.0)
+        win.Tabs[i].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
         #win.Tabs[i].sourceView.scrollToMark(mark, 0.25, true, 0.0, 0.5)
         #win.Tabs[i].sourceView.scrollMarkOnscreen(mark)
       else: echod("Could not open ", filename)
