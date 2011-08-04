@@ -539,29 +539,25 @@ proc execProcThread() {.thread.} =
       echod(repr(split))
       var exe = split[0]
       split.delete(0)
-      var process = osProc.startProcess(exe, args = split,
+      win.tempStuff.procExecProcess = osProc.startProcess(exe, args = split,
                                     options = {poStderrToStdout, poUseShell})
       
       send(mainThreadId[ExecThrParams](),
            ("> " & exe & " " & split.join(" "), params.execMode))
-      var procOut = process.outputStream
+      var procOut = win.tempStuff.procExecProcess.outputStream
       while True:
         if peek() > 0:
           if recv[ExecThrParams]().execMode == ExecNone:
             break
         
-        var readP = @[process]
-        if select(readP) == 1 and readP.len == 0:
-          var line = procOut.readLine()
-          if line == "": break
-          # Send the `line` to the main thread.
-          send(mainThreadId[ExecThrParams](), (line, params.execMode))
+        var line = procOut.readLine()
+        if line == "": break
+        # Send the `line` to the main thread.
+        send(mainThreadId[ExecThrParams](), (line, params.execMode))
       
-      if process.peekExitCode() == -1:
-        echod("Process terminated! ", $process.peekExitCode())
-        while process.peekExitCode() == -1: process.terminate()
-        echod(process.peekExitCode())
-      process.close()
+      if win.tempStuff.procExecProcess.peekExitCode() == -1:
+        win.tempStuff.procExecProcess.terminate()
+      win.tempStuff.procExecProcess.close()
       
       send(mainThreadId[ExecThrParams](), ("", ExecNone))
     else: echod("Process already stopped.")
@@ -661,7 +657,9 @@ proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
 
 proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   echod("Terminating process...")
-  send(win.tempStuff.procExecThread.threadId(), ("", ExecNone))
+  if win.tempStuff.procExecRunning and win.tempStuff.procExecProcess != nil:
+    win.tempStuff.procExecProcess.terminate()
+    send(win.tempStuff.procExecThread.threadId(), ("", ExecNone))
 
 proc RunCustomCommand(cmd: string) = 
   if win.tempStuff.procExecRunning:

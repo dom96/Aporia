@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview
+import gtk2, gtksourceview, osproc
 
 type
   TSettings* = object
@@ -77,6 +77,7 @@ type
     procExecRunning*: bool
     ifSuccess*: string
     procExecThread*: TThread[tuple[cmd: string, execMode: TExecMode]]
+    procExecProcess*: PProcess
 
   Tab* = object
     buffer*: PSourceBuffer
