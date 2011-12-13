@@ -76,7 +76,7 @@ type
     
     procExecRunning*: bool
     ifSuccess*: string
-    procExecThread*: TThread[tuple[cmd: string, execMode: TExecMode]]
+    procExecThread*: TThread[char]
     procExecProcess*: PProcess
 
   Tab* = object

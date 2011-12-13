@@ -27,6 +27,9 @@ var lastSession: seq[string] = @[]
 var confParseFail = False # This gets set to true
                           # When there is an error parsing the config
 
+var processChannel: TChannel[ExecThrParams]
+open(processChannel)
+
 # Load the settings
 try:
   win.settings = cfg.load(lastSession)
@@ -159,9 +162,17 @@ proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
     
     win.bottomBar.pop(0)
     buffer.getIterAtMark(addr(iter), buffer.getInsert())
-    var row = getLine(addr(iter)) + 1
-    var col = getLineOffset(addr(iter))
-    discard win.bottomBar.push(0, "Line: " & $row & " Column: " & $col)
+
+    var row = 0
+    echo(row)
+    row = getLine(addr(iter)) + 1
+    var col = 0
+    echo(col)
+    col = getLineOffset(addr(iter))
+    
+    echo(row)
+    echo(col)
+    #discard win.bottomBar.push(0, "Line: " & $row & " Column: " & $col)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
@@ -529,37 +540,37 @@ proc showBottomPanel() =
 
 {.pop.}
 
-proc execProcThread() {.thread.} =
+proc execProcThread(dummy: char) {.thread.} =
   while True:
     # Recv message
-    var params = recv[ExecThrParams]()
+    var params = recv[ExecThrParams](processChannel)
     if params.execMode != ExecNone:
       # Execute the process
       var split = params.cmd.split()
       echod(repr(split))
       var exe = split[0]
-      split.delete(0)
+      system.delete(split, 0)
       win.tempStuff.procExecProcess = osProc.startProcess(exe, args = split,
                                     options = {poStderrToStdout, poUseShell})
       
-      send(mainThreadId[ExecThrParams](),
+      send(processChannel,
            ("> " & exe & " " & split.join(" "), params.execMode))
       var procOut = win.tempStuff.procExecProcess.outputStream
       while True:
-        if peek() > 0:
-          if recv[ExecThrParams]().execMode == ExecNone:
+        if peek(processChannel) > 0:
+          if recv[ExecThrParams](processChannel).execMode == ExecNone:
             break
         
         var line = procOut.readLine()
         if line == "": break
         # Send the `line` to the main thread.
-        send(mainThreadId[ExecThrParams](), (line, params.execMode))
+        send(processChannel, (line, params.execMode))
       
       if win.tempStuff.procExecProcess.peekExitCode() == -1:
         win.tempStuff.procExecProcess.terminate()
       win.tempStuff.procExecProcess.close()
       
-      send(mainThreadId[ExecThrParams](), ("", ExecNone))
+      send(processChannel, ("", ExecNone))
     else: echod("Process already stopped.")
   
 proc execProcMT(cmd: string, mode: TExecMode, ifSuccess: string = "")
@@ -572,11 +583,11 @@ proc peekProcOutput(dummy: pointer): bool =
   var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
   var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
   
-  var messages = peek()
+  var messages = peek(processChannel)
   echod("Messages in inbox: ", $messages)
   if messages > 0:
     for i in 1 .. messages:
-      var m = recv[ExecThrParams]()
+      var m = recv[ExecThrParams](processChannel)
       case m.execMode
       of ExecNimrod:
         win.tempStuff.procExecRunning = True
@@ -586,7 +597,7 @@ proc peekProcOutput(dummy: pointer): bool =
           win.outputTextView.addText(m[0] & "\n", successTag)
           if win.tempStuff.ifSuccess != "":
             # Terminate any running processes.
-            send(win.tempStuff.procExecThread.threadId(), ("", ExecNone))
+            send(processChannel, ("", ExecNone))
             execProcMT(win.tempStuff.ifSuccess, ExecRun)
             result = false
             
@@ -612,7 +623,7 @@ proc execProcMT(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   echod("Spawning new process.")
   win.tempStuff.ifSuccess = ifSuccess
   # Spawn the thread
-  send(win.tempStuff.procExecThread.threadId(), (cmd, mode))
+  send(processChannel, (cmd, mode))
   win.tempStuff.procExecRunning = True
   # Add a function which will be called every 100 miliseconds.
   var tID = gTimeoutAdd(100, peekProcOutput, nil)
@@ -659,7 +670,7 @@ proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   echod("Terminating process...")
   if win.tempStuff.procExecRunning and win.tempStuff.procExecProcess != nil:
     win.tempStuff.procExecProcess.terminate()
-    send(win.tempStuff.procExecThread.threadId(), ("", ExecNone))
+    send(processChannel, ("", ExecNone))
 
 proc RunCustomCommand(cmd: string) = 
   if win.tempStuff.procExecRunning:
@@ -693,7 +704,7 @@ proc onCloseTab(btn: PButton, user_data: PWidget) =
     var tab = win.sourceViewTabs.pageNum(user_data)
     win.sourceViewTabs.removePage(tab)
 
-    win.Tabs.delete(tab)
+    system.delete(win.Tabs, tab)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
@@ -736,7 +747,7 @@ proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
       return
   
   # Remove the text
-  win.Tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
+  gtk2.delete(win.Tabs[currentTab].buffer, addr(start), addr(theEnd))
   # Insert the replacement
   var text = getText(win.replaceEntry)
   win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
@@ -1307,7 +1318,7 @@ proc initControls() =
 {.pop.}
 proc NimThreadsInit() =
   # Start the procExecThread
-  win.tempStuff.procExecThread.createThread(execProcThread)
+  win.tempStuff.procExecThread.createThread(execProcThread, 'h')
 {.push callConv: cdecl.}
 
 proc afterInit() =
@@ -1320,7 +1331,11 @@ if versionReply != nil:
        [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
 
 NimThreadsInit()
+echo("Threads init")
 nimrod_init()
+echo("gtk(?) init")
 initControls()
+echo("GTK controls created")
 afterInit()
+echo("after init")
 main()
