@@ -27,9 +27,6 @@ var lastSession: seq[string] = @[]
 var confParseFail = False # This gets set to true
                           # When there is an error parsing the config
 
-var processChannel: TChannel[ExecThrParams]
-open(processChannel)
-
 # Load the settings
 try:
   win.settings = cfg.load(lastSession)
@@ -157,22 +154,17 @@ proc window_configureEvent(widget: PWidget, event: PEventConfigure,
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
   # Incase this event gets fired before
   # bottomBar is initialized
-  if win.bottomBar != nil and not win.tempStuff.stopSBUpdates:  
+  if win.bottomBar != nil and not win.tempStuff.stopSBUpdates:
     var iter: TTextIter
     
     win.bottomBar.pop(0)
     buffer.getIterAtMark(addr(iter), buffer.getInsert())
 
-    var row = 0
-    echo(row)
-    row = getLine(addr(iter)) + 1
-    var col = 0
-    echo(col)
-    col = getLineOffset(addr(iter))
+    var row = getLine(addr(iter)) + 1
+    var col = getLineOffset(addr(iter))
+
+    discard win.bottomBar.push(0, "Line: " & $row & " Column: " & $col)
     
-    echo(row)
-    echo(col)
-    #discard win.bottomBar.push(0, "Line: " & $row & " Column: " & $col)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
@@ -215,6 +207,7 @@ proc onChanged(buffer: PTextBuffer, user_data: pgpointer) =
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
+  result = false
   var key = $keyval_name(event.keyval)
   case key.toLower()
   of "period":
@@ -538,102 +531,113 @@ proc showBottomPanel() =
     win.settings.bottomPanelVisible = true
     PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
 
-{.pop.}
-
-proc execProcThread(dummy: char) {.thread.} =
+proc readAll(p: PProcess, s: PStream): string =
+  result = "" 
+  var ps: seq[PProcess] = @[]
   while True:
-    # Recv message
-    var params = recv[ExecThrParams](processChannel)
-    if params.execMode != ExecNone:
-      # Execute the process
-      var split = params.cmd.split()
-      echod(repr(split))
-      var exe = split[0]
-      system.delete(split, 0)
-      win.tempStuff.procExecProcess = osProc.startProcess(exe, args = split,
-                                    options = {poStderrToStdout, poUseShell})
-      
-      send(processChannel,
-           ("> " & exe & " " & split.join(" "), params.execMode))
-      var procOut = win.tempStuff.procExecProcess.outputStream
-      while True:
-        if peek(processChannel) > 0:
-          if recv[ExecThrParams](processChannel).execMode == ExecNone:
-            break
-        
-        var line = procOut.readLine()
-        if line == "": break
-        # Send the `line` to the main thread.
-        send(processChannel, (line, params.execMode))
-      
-      if win.tempStuff.procExecProcess.peekExitCode() == -1:
-        win.tempStuff.procExecProcess.terminate()
-      win.tempStuff.procExecProcess.close()
-      
-      send(processChannel, ("", ExecNone))
-    else: echod("Process already stopped.")
-  
-proc execProcMT(cmd: string, mode: TExecMode, ifSuccess: string = "")
-proc peekProcOutput(dummy: pointer): bool =
-  result = True
-  
+    ps = @[p]
+    if select(ps, 2) != 1: return # TODO: Finish asyncstream impl. and use it.
+    var c = s.readChar()
+    if c == '\0': break
+    result.add(c)
+
+proc execProcAsync(cmd: string, mode: TExecMode, ifSuccess: string = "")
+proc printProcOutput(line: string) =
   # Colors
   var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
   var errorTag = createColor(win.outputTextView, "errorTag", "red")
   var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
   var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
   
-  var messages = peek(processChannel)
-  echod("Messages in inbox: ", $messages)
-  if messages > 0:
-    for i in 1 .. messages:
-      var m = recv[ExecThrParams](processChannel)
-      case m.execMode
-      of ExecNimrod:
-        win.tempStuff.procExecRunning = True
-        if m[0] =~ pegLineError / pegOtherError:
-          win.outputTextView.addText(m[0] & "\n", errorTag)
-        elif m[0] =~ pegSuccess:
-          win.outputTextView.addText(m[0] & "\n", successTag)
-          if win.tempStuff.ifSuccess != "":
-            # Terminate any running processes.
-            send(processChannel, ("", ExecNone))
-            execProcMT(win.tempStuff.ifSuccess, ExecRun)
-            result = false
-            
-        elif m[0] =~ pegLineWarning:
-          win.outputTextView.addText(m[0] & "\n", warningTag)
-        else:
-          win.outputTextView.addText(m[0] & "\n", normalTag)
-      of ExecRun, ExecCustom:
-        win.tempStuff.procExecRunning = True
-        win.outputTextView.addText(m[0] & "\n", normalTag)
-      of ExecNone:
-        # Process no longer executing.
-        win.tempStuff.procExecRunning = False
-        win.outputTextView.addText("Process stopped.\n", normalTag)
-        result = false
-  if not win.tempStuff.procExecRunning: result = False 
-  if result == False: echod("idle proc exiting")
+  case win.tempStuff.execMode:
+  of ExecNimrod:
+    if line =~ pegLineError / pegOtherError:
+      win.outputTextView.addText(line & "\n", errorTag)
+      win.tempStuff.compileSuccess = false
+    elif line =~ pegSuccess:
+      win.outputTextView.addText(line & "\n", successTag)
+      win.tempStuff.compileSuccess = true
 
-proc execProcMT(cmd: string, mode: TExecMode, ifSuccess: string = "") =
+    elif line =~ pegLineWarning:
+      win.outputTextView.addText(line & "\n", warningTag)
+    else:
+      win.outputTextView.addText(line & "\n", normalTag)
+  of ExecRun, ExecCustom:
+    win.outputTextView.addText(line & "\n", normalTag)
+  of ExecNone:
+    assert(false)
+
+proc peekProcOutput(dummy: pointer): bool =
+  result = True
+  if win.tempStuff.execMode != ExecNone:
+    echo("Peek")
+    var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
+    var errorTag = createColor(win.outputTextView, "errorTag", "red")
+    var output = win.tempStuff.execProcess.readAll(win.tempStuff.peProcessOut)
+    if output != "":
+      for line in splitLines(output):
+        printProcOutput(line)
+
+    var exitCode = win.tempStuff.execProcess.peekExitCode()
+    if exitCode != -1:
+      echod("Process has quit.")
+      
+      # Read any other data left.
+      output = win.tempStuff.execProcess.readAll(win.tempStuff.peProcessOut)
+      if output != "":
+        for line in splitLines(output):
+          printProcOutput(line)
+      
+      if exitCode == QuitSuccess:
+        # Success!
+        win.outputTextView.addText("> Process terminated with exit code " & 
+                                   $exitCode & "\n", successTag)
+      else:
+        # Process failed.
+        win.outputTextView.addText("> Process terminated with exit code " & 
+                                   $exitCode & "\n", errorTag)
+      win.tempStuff.execProcess.close()
+      win.tempStuff.execMode = ExecNone
+      
+      # Execute another process in queue (if any)
+      if win.tempStuff.ifSuccess != "" and win.tempStuff.compileSuccess:
+        echo("Starting new process?")
+        execProcAsync(win.tempStuff.ifSuccess, ExecRun)
+    
+  else:
+    echod("idle proc exiting")
+    return false
+
+proc execProcAsync(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   ## This function executes a process in a new thread, using only idle time
   ## to add the output of the process to the `outputTextview`.
+  assert(win.tempStuff.execMode == ExecNone)
+  
   # Reset some things; and set some flags.
   echod("Spawning new process.")
   win.tempStuff.ifSuccess = ifSuccess
-  # Spawn the thread
-  send(processChannel, (cmd, mode))
-  win.tempStuff.procExecRunning = True
-  # Add a function which will be called every 100 miliseconds.
-  var tID = gTimeoutAdd(100, peekProcOutput, nil)
-  echod("gTimeoutAdd id = ", $tID)
+  # Execute the process
+  var split = cmd.split()
+  echod(repr(split))
+  var exe = split[0]
+  system.delete(split, 0)
+  win.tempStuff.execProcess = osProc.startProcess(exe, args = split,
+                                options = {poStderrToStdout})
+  win.tempStuff.peProcessOut = win.tempStuff.execProcess.outputStream
+  win.tempStuff.execMode = mode
+  # Output
+  var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
+  win.outputTextView.addText("> " & cmd & "\n", normalTag)
+  
+  # Add a function which will be called when the UI is idle.
+  win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, nil)
+  echod("gTimeoutAdd id = ", $win.tempStuff.idleFuncId)
 
-{.push callConv: cdecl.}
+#{.push callConv: cdecl.}
 
 proc compileRun(currentTab: int, shouldRun: bool) =
   if win.Tabs[currentTab].filename.len == 0: return
-  if win.tempStuff.procExecRunning:
+  if win.tempStuff.execMode != ExecNone:
     # TODO: Give some kind of a GUI message to the user.
     echod("Process already running!")
     return
@@ -648,7 +652,7 @@ proc compileRun(currentTab: int, shouldRun: bool) =
   var ifSuccess = ""
   if shouldRun:
     ifSuccess = changeFileExt(win.Tabs[currentTab].filename, os.ExeExt)
-  execProcMT(cmd, ExecNimrod, ifSuccess)
+  execProcAsync(cmd, ExecNimrod, ifSuccess)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   saveFile_Activate(nil, nil)
@@ -667,13 +671,18 @@ proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   compileRun(getProjectTab(), true)
 
 proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  echod("Terminating process...")
-  if win.tempStuff.procExecRunning and win.tempStuff.procExecProcess != nil:
-    win.tempStuff.procExecProcess.terminate()
-    send(processChannel, ("", ExecNone))
+  echod("Terminating process... ID: ", $win.tempStuff.idleFuncId)
+  if win.tempStuff.execMode != ExecNone and 
+     win.tempStuff.execProcess != nil:
+    win.tempStuff.execProcess.terminate()
+    win.tempStuff.execProcess.close()
+    assert gSourceRemove(win.tempStuff.idleFuncId)
+    
+    var errorTag = createColor(win.outputTextView, "errorTag", "red")
+    win.outputTextView.addText("> Process terminated\n", errorTag)
 
 proc RunCustomCommand(cmd: string) = 
-  if win.tempStuff.procExecRunning:
+  if win.tempStuff.execMode != ExecNone:
     # TODO: Give some kind of a GUI message to the user.
     echod("Process already running!")
     return
@@ -686,7 +695,7 @@ proc RunCustomCommand(cmd: string) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
   
-  execProcMT(GetCmd(cmd, win.Tabs[currentTab].filename), ExecCustom)
+  execProcAsync(GetCmd(cmd, win.Tabs[currentTab].filename), ExecCustom)
 
 proc RunCustomCommand1(menuitem: PMenuItem, user_data: pgpointer) =
   RunCustomCommand(win.settings.customCmd1)
@@ -1317,8 +1326,8 @@ proc initControls() =
 
 {.pop.}
 proc NimThreadsInit() =
-  # Start the procExecThread
-  win.tempStuff.procExecThread.createThread(execProcThread, 'h')
+  # Start the execThread
+  #win.tempStuff.execThread.createThread(execProcThread, 'h')
 {.push callConv: cdecl.}
 
 proc afterInit() =
@@ -1331,11 +1340,7 @@ if versionReply != nil:
        [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
 
 NimThreadsInit()
-echo("Threads init")
 nimrod_init()
-echo("gtk(?) init")
 initControls()
-echo("GTK controls created")
 afterInit()
-echo("after init")
 main()

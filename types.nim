@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, osproc
+import gtk2, gtksourceview, osproc, streams
 
 type
   TSettings* = object
@@ -67,17 +67,18 @@ type
     treeView*: PTreeView
     items*: seq[TSuggestItem]
   
-  ExecThrParams* = tuple[cmd: string, execMode: TExecMode]
   TExecMode* = enum
     ExecNone, ExecNimrod, ExecRun, ExecCustom
   Temp = object
     lastSaveDir*: string # Last saved directory
     stopSBUpdates*: Bool
     
-    procExecRunning*: bool
+    execMode*: TExecMode
     ifSuccess*: string
-    procExecThread*: TThread[char]
-    procExecProcess*: PProcess
+    compileSuccess*: bool
+    execProcess*: PProcess
+    peProcessOut*: PStream
+    idleFuncId*: int
 
   Tab* = object
     buffer*: PSourceBuffer
