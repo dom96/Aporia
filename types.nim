@@ -44,6 +44,7 @@ type
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
     SourceViewTabs*: PNotebook # Tabs which hold the sourceView
     bottomBar*: PStatusBar 
+    bottomProgress*: PProgressBar
     
     bottomPanelTabs*: PNotebook
     outputTextView*: PTextView
@@ -70,6 +71,26 @@ type
   
   TExecMode* = enum
     ExecNone, ExecNimrod, ExecRun, ExecCustom
+  
+  TExecThrTaskType* = enum
+    ThrRun, ThrStop
+  TExecThrTask* = object
+    case typ*: TExecThrTaskType
+    of ThrRun:
+      command*: string
+    of ThrStop: nil
+  
+  TExecThrEventType* = enum
+    EvStarted, EvRecv, EvStopped
+  TExecThrEvent* = object
+    case typ*: TExecThrEventType
+    of EvStarted:
+      p*: PProcess
+    of EvRecv:
+      line*: string
+    of EvStopped:
+      exitCode*: int
+  
   Temp = object
     lastSaveDir*: string # Last saved directory
     stopSBUpdates*: Bool
@@ -77,9 +98,10 @@ type
     execMode*: TExecMode
     ifSuccess*: string
     compileSuccess*: bool
+    execThread*: TThread[void]
     execProcess*: PProcess
-    peProcessOut*: PStream
     idleFuncId*: int
+    lastProgressPulse*: float
 
   Tab* = object
     buffer*: PSourceBuffer

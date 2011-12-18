@@ -8,7 +8,7 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
-import pegs, streams
+import pegs, streams, times
 import settings, types, cfg, search, suggest
 
 {.push callConv:cdecl.}
@@ -21,6 +21,13 @@ var win: types.MainWin
 win.Tabs = @[]
 
 search.win = addr(win)
+
+# Threading channels
+var execThrTaskChan: TChannel[TExecThrTask]
+execThrTaskChan.open()
+var execThrEventChan: TChannel[TExecThrEvent]
+execThrEventChan.open()
+# Threading channels END
 
 var lastSession: seq[string] = @[]
 
@@ -532,16 +539,6 @@ proc showBottomPanel() =
     win.settings.bottomPanelVisible = true
     PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
 
-proc readAll(p: PProcess, s: PStream): string =
-  result = "" 
-  var ps: seq[PProcess] = @[]
-  while True:
-    ps = @[p]
-    if select(ps, 2) != 1: return # TODO: Finish asyncstream impl. and use it.
-    var c = s.readChar()
-    if c == '\0': break
-    result.add(c)
-
 proc execProcAsync(cmd: string, mode: TExecMode, ifSuccess: string = "")
 proc printProcOutput(line: string) =
   # Colors
@@ -571,40 +568,38 @@ proc printProcOutput(line: string) =
 proc peekProcOutput(dummy: pointer): bool =
   result = True
   if win.tempStuff.execMode != ExecNone:
-    echo("Peek")
-    var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
-    var errorTag = createColor(win.outputTextView, "errorTag", "red")
-    var output = win.tempStuff.execProcess.readAll(win.tempStuff.peProcessOut)
-    if output != "":
-      for line in splitLines(output):
-        printProcOutput(line)
-
-    var exitCode = win.tempStuff.execProcess.peekExitCode()
-    if exitCode != -1:
-      echod("Process has quit.")
-      
-      # Read any other data left.
-      output = win.tempStuff.execProcess.readAll(win.tempStuff.peProcessOut)
-      if output != "":
-        for line in splitLines(output):
-          printProcOutput(line)
-      
-      if exitCode == QuitSuccess:
-        # Success!
-        win.outputTextView.addText("> Process terminated with exit code " & 
-                                   $exitCode & "\n", successTag)
-      else:
-        # Process failed.
-        win.outputTextView.addText("> Process terminated with exit code " & 
-                                   $exitCode & "\n", errorTag)
-      win.tempStuff.execProcess.close()
-      win.tempStuff.execMode = ExecNone
-      
-      # Execute another process in queue (if any)
-      if win.tempStuff.ifSuccess != "" and win.tempStuff.compileSuccess:
-        echo("Starting new process?")
-        execProcAsync(win.tempStuff.ifSuccess, ExecRun)
+    var events = execThrEventChan.peek()
     
+    if epochTime() - win.tempStuff.lastProgressPulse >= 0.1:
+      win.bottomProgress.pulse()
+      win.tempStuff.lastProgressPulse = epochTime()
+    if events > 0:
+      var successTag = createColor(win.outputTextView, "successTag",
+                                   "darkgreen")
+      var errorTag = createColor(win.outputTextView, "errorTag", "red")
+      for i in 0..events-1:
+        var event: TExecThrEvent = execThrEventChan.recv()
+        case event.typ
+        of EvStarted:
+          win.tempStuff.execProcess = event.p
+        of EvRecv:
+          printProcOutput(event.line)
+        of EvStopped:
+          echod("[Idle] Process has quit")
+          win.tempStuff.execMode = ExecNone
+          win.bottomProgress.hide()
+          
+          if event.exitCode == QuitSuccess:
+            win.outputTextView.addText("> Process terminated with exit code " & 
+                                             $event.exitCode & "\n", successTag)
+          else:
+            win.outputTextView.addText("> Process terminated with exit code " & 
+                                             $event.exitCode & "\n", errorTag)
+          
+          # Execute another process in queue (if any)
+          if win.tempStuff.ifSuccess != "" and win.tempStuff.compileSuccess:
+            echod("Starting new process?")
+            execProcAsync(win.tempStuff.ifSuccess, ExecRun)
   else:
     echod("idle proc exiting")
     return false
@@ -618,13 +613,11 @@ proc execProcAsync(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   echod("Spawning new process.")
   win.tempStuff.ifSuccess = ifSuccess
   # Execute the process
-  var split = cmd.split()
-  echod(repr(split))
-  var exe = split[0]
-  system.delete(split, 0)
-  win.tempStuff.execProcess = osProc.startProcess(exe, args = split,
-                                options = {poStderrToStdout})
-  win.tempStuff.peProcessOut = win.tempStuff.execProcess.outputStream
+  echo(cmd)
+  var task: TExecThrTask
+  task.typ = ThrRun
+  task.command = cmd
+  execThrTaskChan.send(task)
   win.tempStuff.execMode = mode
   # Output
   var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
@@ -634,7 +627,66 @@ proc execProcAsync(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, nil)
   echod("gTimeoutAdd id = ", $win.tempStuff.idleFuncId)
 
-#{.push callConv: cdecl.}
+  win.bottomProgress.show()
+  win.bottomProgress.pulse()
+  win.tempStuff.lastProgressPulse = epochTime()
+  
+{.pop.}
+
+proc execThreadProc(){.thread.} =
+  var p: PProcess
+  var o: PStream
+  var started = false
+  while True:
+    var tasks = execThrTaskChan.peek()
+    if tasks == 0 and not started: tasks = 1
+    if tasks > 0:
+      for i in 0..tasks-1:
+        var task: TExecThrTask = execThrTaskChan.recv()
+        case task.typ
+        of ThrRun:
+          if not started:
+            p = startCmd(task.command)
+            var event: TExecThrEvent
+            event.typ = EvStarted
+            event.p = p
+            execThrEventChan.send(event)
+            o = p.outputStream
+            started = true
+          else:
+            echod("[Thread] Process already running")
+        of ThrStop:
+          echod("[Thread] Stopping process.")
+          p.terminate()
+          started = false
+          o.close()
+          var exitCode = p.waitForExit()
+          var event: TExecThrEvent
+          event.typ = EvStopped
+          event.exitCode = exitCode
+          execThrEventChan.send(event)
+          p.close()
+    
+    # Read output.
+    if started:
+      var line = o.readLine()
+      if line != "":
+        var event: TExecThrEvent
+        event.typ = EvRecv
+        event.line = line
+        execThrEventChan.send(event)
+      else:
+        echod("[Thread] Process exited.")
+        var exitCode = p.waitForExit()
+        p.close()
+        o.close()
+        started = false
+        var event: TExecThrEvent
+        event.typ = EvStopped
+        event.exitCode = exitCode
+        execThrEventChan.send(event)
+
+{.push callConv: cdecl.}
 
 proc compileRun(currentTab: int, shouldRun: bool) =
   if win.Tabs[currentTab].filename.len == 0: return
@@ -672,15 +724,20 @@ proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   compileRun(getProjectTab(), true)
 
 proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  echod("Terminating process... ID: ", $win.tempStuff.idleFuncId)
+
   if win.tempStuff.execMode != ExecNone and 
      win.tempStuff.execProcess != nil:
+    echod("Terminating process... ID: ", $win.tempStuff.idleFuncId)
     win.tempStuff.execProcess.terminate()
     win.tempStuff.execProcess.close()
-    assert gSourceRemove(win.tempStuff.idleFuncId)
+    #assert gSourceRemove(win.tempStuff.idleFuncId)
+    # execMode is set to ExecNone in the idle proc. It must be this way.
+    # Because otherwise EvStopped stays in the channel.
     
     var errorTag = createColor(win.outputTextView, "errorTag", "red")
     win.outputTextView.addText("> Process terminated\n", errorTag)
+  else:
+    echod("No process running.")
 
 proc RunCustomCommand(cmd: string) = 
   if win.tempStuff.execMode != ExecNone:
@@ -1295,6 +1352,11 @@ proc initStatusBar(MainBox: PBox) =
   MainBox.packStart(win.bottomBar, False, False, 0)
   win.bottomBar.show()
   
+  win.bottomProgress = progressBarNew()
+  win.bottomProgress.hide()
+  win.bottomProgress.setText("Executing...")
+  win.bottomBar.packEnd(win.bottomProgress, false, false, 0)
+  
   discard win.bottomBar.push(0, "Line: 0 Column: 0")
   
 proc initControls() =
@@ -1350,7 +1412,7 @@ proc initControls() =
 {.pop.}
 proc NimThreadsInit() =
   # Start the execThread
-  #win.tempStuff.execThread.createThread(execProcThread, 'h')
+  createThread[void](win.tempStuff.execThread, execThreadProc)
 {.push callConv: cdecl.}
 
 proc afterInit() =
