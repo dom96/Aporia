@@ -372,6 +372,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
   initSourceView(sourceView, scrollWindow, buffer)
 
   var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
+  if filename != "": TabLabel.setTooltipText(filename)
   # Add a tab
   discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
 
