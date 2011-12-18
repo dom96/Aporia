@@ -37,27 +37,11 @@ proc styleInsensitive(s: string): string =
     case s[i]
     of 'A'..'Z', 'a'..'z', '0'..'9': 
       addx()
-      if brackets == 0: result.add("_?")
-    of '_':
+      result.add("_?")
+    of '*', '?', '\\', '#', '$', '^', '(', ')', '+',
+       '|', '[', ']', '{', '}', '.':
+      result.add('\\')
       addx()
-      result.add('?')
-    of '[':
-      addx()
-      inc(brackets)
-    of ']':
-      addx()
-      if brackets > 0: dec(brackets)
-    of '?':
-      addx()
-      if s[i] == '<':
-        addx()
-        while s[i] != '>' and s[i] != '\0': addx()
-    of '\\':
-      addx()
-      if s[i] in strutils.digits: 
-        while s[i] in strutils.digits: addx()
-      else:
-        addx()
     else: addx()
 
 proc findBoundsGen(text, pattern: string,
@@ -91,6 +75,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
   if win.settings.search == SearchStyleInsens:
     reOptions = reOptions + {reIgnoreCase}
     newPattern = styleInsensitive(newPattern)
+    echo(newPattern)
     isRegex = True  
     
   var matches: array[0..re.MaxSubpatterns, string]
