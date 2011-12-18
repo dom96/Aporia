@@ -12,6 +12,7 @@ import gtk2, gtksourceview, osproc, streams
 type
   TSettings* = object
     search*: TSearchEnum # Search mode.
+    wrapAround*: bool # Whether to wrap the search around.
     
     font*: string # font used by the sourceview
     colorSchemeID*: string # color scheme used by the sourceview

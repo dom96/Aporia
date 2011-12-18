@@ -38,6 +38,7 @@ proc styleInsensitive(s: string): string =
     of 'A'..'Z', 'a'..'z', '0'..'9': 
       addx()
       result.add("_?")
+    of '_': inc(i) # Don't add this.
     of '*', '?', '\\', '#', '$', '^', '(', ')', '+',
        '|', '[', ']', '{', '}', '.':
       result.add('\\')
@@ -56,7 +57,7 @@ proc findBoundsGen(text, pattern: string,
     return pegs.findBounds(text, peg(pattern), matches, start)
 
 proc findRePeg(forward: bool, startIter: PTextIter,
-               buffer: PTextBuffer, pattern: string): 
+               buffer: PTextBuffer, pattern: string, wrappedAround = false): 
     tuple[startMatch, endMatch: TTextIter, found: bool] =
   var text: cstring
   var iter: TTextIter # If forward then this points to the end
@@ -105,8 +106,42 @@ proc findRePeg(forward: bool, startIter: PTextIter,
           
     return (startMatch, endMatch, True)
   else:
-    return (startMatch, endMatch, False)
+    if win.settings.wrapAround and not wrappedAround:
+      if forward:
+        # We are at the end. Restart at the beginning.
+        buffer.getStartIter(addr(startMatch))
+      else:
+        # We are at the beginning. Restart from the end.
+        buffer.getEndIter(addr(startMatch))
+      return findRePeg(forward, addr(startMatch), buffer, pattern, true)
   
+    return (startMatch, endMatch, False)
+
+proc findSimple(forward: bool, startIter: PTextIter,
+                buffer: PTextBuffer, pattern: string, wrappedAround = false):
+                tuple[startMatch, endMatch: TTextIter, found: bool] =
+  var options = getSearchOptions()
+  var matchFound: gboolean = false
+  var startMatch, endMatch: TTextIter
+  if forward:
+    matchFound = gtksourceview.forwardSearch(startIter, pattern, 
+        options, addr(startMatch), addr(endMatch), nil)
+  else:
+    matchFound = gtksourceview.backwardSearch(startIter, pattern, 
+        options, addr(startMatch), addr(endMatch), nil)
+
+  if not matchFound:
+    if win.settings.wrapAround and not wrappedAround:
+      if forward:
+        # We are at the end. Restart from beginning.
+        buffer.getStartIter(addr(startMatch))
+      else:
+        # We are at the beginning. Restart from end.
+        buffer.getEndIter(addr(startMatch))
+      return findSimple(forward, addr(startMatch), buffer, pattern, true)
+    
+  return (startMatch, endMatch, matchFound)
+
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
@@ -123,19 +158,20 @@ proc findText*(forward: bool) =
       addr(startsel), addr(endsel))
   
   var startMatch, endMatch: TTextIter
-  var matchFound: gboolean
+  var matchFound: gboolean = false
   
   var buffer = win.Tabs[currentTab].buffer
   
   case win.settings.search
   of SearchCaseInsens, SearchCaseSens:
-    var options = getSearchOptions()
+    var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
     if forward:
-      matchFound = gtksourceview.forwardSearch(addr(endSel), pattern, 
-          options, addr(startMatch), addr(endMatch), nil)
+      ret = findSimple(forward, addr(endSel), buffer, pattern)
     else:
-      matchFound = gtksourceview.backwardSearch(addr(startSel), pattern, 
-          options, addr(startMatch), addr(endMatch), nil)
+      ret = findSimple(forward, addr(startSel), buffer, pattern)
+    startMatch = ret[0]
+    endMatch = ret[1]
+    matchFound = ret[2]
   
   of SearchRegex, SearchPeg, SearchStyleInsens:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]

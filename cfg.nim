@@ -15,6 +15,7 @@ type
 
 proc defaultSettings*(): TSettings =
   result.search = SearchCaseInsens
+  result.wrapAround = true
   result.font = "Monospace 10"
   result.colorSchemeID = "classic"
   result.indentWidth = 2

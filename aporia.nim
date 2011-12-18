@@ -707,6 +707,11 @@ proc RunCustomCommand2(menuitem: PMenuItem, user_data: pgpointer) =
 proc RunCustomCommand3(menuitem: PMenuItem, user_data: pgpointer) =
   RunCustomCommand(win.settings.customCmd3)
 
+proc memUsage_click(menuitem: PMenuItem, user_data: pgpointer) =
+  echo("Memory usage: ")
+  gMemProfile()
+  echo gcGetStatistics()
+
 # -- SourceViewTabs - Notebook.
 
 proc onCloseTab(btn: PButton, user_data: PWidget) =
@@ -1058,7 +1063,21 @@ proc initTopMenu(MainBox: PBox) =
   ToolsMenuItem.show()
   TopMenu.append(ToolsMenuItem)
   
-  # Help menu
+  # About menu
+  var AboutMenu = menuNew()
+  
+  var MemMenuItem = menu_item_new("GTK Memory usage") # GTK Mem usage
+  AboutMenu.append(MemMenuItem)
+  show(MemMenuItem)
+  discard signal_connect(MemMenuItem, "activate", 
+                         SIGNAL_FUNC(aporia.memUsage_click), nil)
+  
+  var AboutMenuItem = menuItemNewWithMnemonic("_About")
+  
+  AboutMenuItem.setSubMenu(AboutMenu)
+  AboutMenuItem.show()
+  TopMenu.append(AboutMenuItem)
+  
   MainBox.packStart(TopMenu, False, False, 0)
   TopMenu.show()
 
