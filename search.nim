@@ -204,7 +204,6 @@ proc findText*(forward: bool) =
     
 proc replaceAll*(find, replace: cstring): Int =
   # gedit-document.c, gedit_document_replace_all
-  var options = getSearchOptions()
   var count = 0
   var startMatch, endMatch: TTextIter
   var replaceLen = len(replace)
@@ -229,6 +228,7 @@ proc replaceAll*(find, replace: cstring): Int =
   while found:
     case win.settings.search
     of SearchCaseInsens, SearchCaseSens:
+      var options = getSearchOptions()
       found = gtksourceview.forwardSearch(addr(iter), find, 
           options, addr(startMatch), addr(endMatch), nil)
     of SearchRegex, SearchPeg, SearchStyleInsens:

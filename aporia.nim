@@ -767,6 +767,9 @@ proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
   var text = getText(win.replaceEntry)
   win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
   
+  # Find next match, this is just a convenience.
+  findText(True)
+  
 proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
