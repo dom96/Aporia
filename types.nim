@@ -68,6 +68,7 @@ type
     dialog*: gtk2.PWindow
     treeView*: PTreeView
     items*: seq[TSuggestItem]
+    shown*: bool
   
   TExecMode* = enum
     ExecNone, ExecNimrod, ExecRun, ExecCustom
@@ -111,7 +112,7 @@ type
     filename*: string
     
   TSuggestItem* = object
-    nodeType*, name*, nimType*, file*: string
+    nodeType*, name*, nimType*, file*, nmName*: string
     line*, col*: int
   
   TSearchEnum* = enum

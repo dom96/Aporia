@@ -53,6 +53,13 @@ proc getProjectTab(): int =
   for i in 0..high(win.tabs): 
     if win.tabs[i].filename.endswith(NimrodProjectExt): return i
 
+proc updateMainTitle(pageNum: int) =
+  if win.Tabs.len()-1 >= pageNum:
+    var name = ""
+    if win.Tabs[pageNum].filename == "": name = "Untitled" 
+    else: name = win.Tabs[pageNum].filename
+    win.w.setTitle("Aporia IDE - " & name)
+
 proc saveTab(tabNr: int, startpath: string) =
   if tabNr < 0: return
   if win.Tabs[tabNr].saved: return
@@ -87,6 +94,9 @@ proc saveTab(tabNr: int, startpath: string) =
       
       var cTab = win.Tabs[tabNr]
       cTab.label.setText(name)
+      cTab.label.setTooltipText(path)
+      
+      updateMainTitle(tabNr)
     else:
       error(win.w, "Unable to write to file: " & OSErrorMsg())  
 
@@ -147,7 +157,7 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState,
 
 proc window_configureEvent(widget: PWidget, event: PEventConfigure,
                            ud: pgpointer): gboolean =
-  if widgetRealized(win.suggest.dialog):
+  if win.suggest.shown:
     var current = win.SourceViewTabs.getCurrentPage()
     var tab     = win.Tabs[current]
     var start: TTextIter
@@ -217,21 +227,8 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
   result = false
   var key = $keyval_name(event.keyval)
   case key.toLower()
-  of "period":
-    if win.settings.suggestFeature:
-      var current = win.SourceViewTabs.getCurrentPage()
-      var tab     = win.Tabs[current]
-      var start: TTextIter
-      # Get the iter at the cursor position.
-      tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
-      if win.populateSuggest(addr(start), tab):
-        win.suggest.dialog.show()
-        moveSuggest(win, addr(start), tab)
-        win.Tabs[current].sourceView.grabFocus()
-        assert(win.Tabs[current].sourceView.isFocus())
-        win.w.present()
   of "up", "down":
-    if win.settings.suggestFeature and widgetRealized(win.suggest.dialog):
+    if win.settings.suggestFeature and win.suggest.shown:
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
@@ -251,13 +248,17 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
       else:
         # No item selected, select the first one.
-        selection.selectPath(tree_path_new_first())
+        var selectedPath = tree_path_new_first()
+        selection.selectPath(selectedPath)
+        win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
       
       # Return true to stop this event from moving the cursor down in the
       # source view.
       return True
+
   of "return", "space", "tab":
-    if win.settings.suggestFeature and widgetRealized(win.suggest.dialog):
+    if win.settings.suggestFeature and win.suggest.shown:
+      echod("[Suggest] Selected.")
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
@@ -265,19 +266,59 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
                                addr(selectedIter)):
         var selectedPath = TreeModel.getPath(addr(selectedIter))
         var index = selectedPath.getIndices()[]
-        var name = win.suggest.items[index].name
+        var name = win.suggest.items[index].nmName
         # We have the name of the item. Now insert it into the TextBuffer.
         var currentTab = win.SourceViewTabs.getCurrentPage()
         win.Tabs[currentTab].buffer.insertAtCursor(name, len(name))
         
         # Now hide the suggest dialog and clear the items.
-        win.suggest.dialog.hide()
+        win.suggest.hide()
         win.suggest.clear()
         
         return True
-  else:
-    echod("Key pressed: ", key)
 
+  of "backspace":
+    if win.settings.suggestFeature and win.suggest.shown:
+      var current = win.SourceViewTabs.getCurrentPage()
+      var tab     = win.Tabs[current]
+      var endIter: TTextIter
+      # Get the iter at the cursor position.
+      tab.buffer.getIterAtMark(addr(endIter), tab.buffer.getInsert())
+      # Get an iter one char behind.
+      var startIter: TTextIter = endIter
+      if (addr(startIter)).backwardChar(): # Can move back.
+        # Get the character immediately behind.
+        var behind = (addr(startIter)).getText(addr(endIter))
+        assert(behind.len() == 1)
+        if $behind == ".": # Note the $, I guess I must convert it into a nimstr
+          win.suggest.hide()
+        else:
+          # handled in ...KeyRelease
+  else: nil
+
+proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
+                          userData: pgpointer): bool =
+  result = false
+  var key = $keyval_name(event.keyval)
+  case key.toLower()
+  of "period":
+    if win.settings.suggestFeature:
+      if win.suggest.items.len() != 0: win.suggest.clear()
+      doSuggest(win)
+
+  of "backspace":
+    if win.settings.suggestFeature and win.suggest.shown:
+      # Don't need to know the char behind, because if it is a dot, then
+      # the suggest dialog is hidden by ...KeyPress
+      
+      # Repopulate suggest
+      doSuggest(win)
+  
+  else:
+    echod("Key released: ", key)
+    if win.settings.suggestFeature and win.suggest.shown:
+      doSuggest(win)
+    
 # Other(Helper) functions
 
 proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWindow,
@@ -314,6 +355,8 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), nil)
   discard gsignalConnect(sourceView, "key-press-event", 
                          GCallback(SourceViewKeyPress), nil)
+  discard gsignalConnect(sourceView, "key-release-event", 
+                         GCallback(SourceViewKeyRelease), nil)
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
@@ -324,10 +367,6 @@ proc findTab(filename: string): int =
       return i
 
   return -1
-
-proc updateMainTitle(pageNum: int) =
-  if win.Tabs.len()-1 >= pageNum:
-    win.w.setTitle("Aporia IDE - " & win.Tabs[pageNum].filename)
 
 proc addTab(name, filename: string, setCurrent: bool = False) =
   ## Adds a tab. If filename is not "", a file is read and set as the content

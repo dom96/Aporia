@@ -65,6 +65,7 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
                 [file, $(line+1), $column, getTempDir(), addToPath])
 
   for line in splitLines(output):
+    echo(repr(line))
     if line.startswith("sug\t"):
       var s = line.split('\t')
       if s.len == 7:
@@ -75,6 +76,15 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
         item.file = s[4]
         item.line = s[5].parseInt()
         item.col = s[6].parseInt()
+        
+        # Get the name without the module name in front of it.
+        var dots = item.name.split('.')
+        if dots.len() == 2:
+          item.nmName = item.name[dots[0].len()+1.. -1]
+        else:
+          echo("[Suggest] Skipping ", item.name)
+          continue
+        
         result.add(item)
 
 proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool = 
@@ -89,18 +99,19 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         # Save everything.
         # - Get the text from the TextView.
         var startIter: TTextIter
-        tab.buffer.getStartIter(addr(startIter))
+        t.buffer.getStartIter(addr(startIter))
         
         var endIter: TTextIter
-        tab.buffer.getEndIter(addr(endIter))
+        t.buffer.getEndIter(addr(endIter))
         
-        var text = tab.buffer.getText(addr(startIter), addr(endIter), False)
-      
+        var text = t.buffer.getText(addr(startIter), addr(endIter), False)
+
         # - Save it.
         f.write(text)
       else:
         echo("[Warning] Unable to save one or more files, suggest won't work.")
         return False
+      f.close()
   
   var file = getTempDir() / splitFile(tab.filename).name & ".nim"
   win.suggest.items = execNimSuggest(file, splitFile(tab.filename).dir,
@@ -115,7 +126,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   #removeFile(file)
   
   for i in items(win.suggest.items):
-    win.addSuggestItem(i.name, "<b>$1</b>" % [i.name])
+    win.addSuggestItem(i.nmName, "<b>$1</b>" % [i.nmName])
 
   return True
 
@@ -124,6 +135,31 @@ proc clear*(suggest: var TSuggestDialog) =
   # TODO: Why do I have to cast it? Why can't I just do PListStore(TreeModel)?
   cast[PListStore](TreeModel).clear()
   suggest.items = @[]
+
+proc show*(suggest: var TSuggestDialog) =
+  if not suggest.shown:
+    suggest.shown = true
+    suggest.dialog.show()
+
+proc hide*(suggest: var TSuggestDialog) =
+  if suggest.shown:
+    suggest.shown = false
+    suggest.dialog.hide()
+
+proc doSuggest*(win: var MainWin) =
+  var current = win.SourceViewTabs.getCurrentPage()
+  var tab     = win.Tabs[current]
+  var start: TTextIter
+  # Get the iter at the cursor position.
+  tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
+
+  if win.populateSuggest(addr(start), tab):
+    win.suggest.show()
+    moveSuggest(win, addr(start), tab)
+    win.Tabs[current].sourceView.grabFocus()
+    assert(win.Tabs[current].sourceView.isFocus())
+    win.w.present()
+  else: win.suggest.hide()
 
 when isMainModule:
   var result = execNimSuggest("aporia.nim", 633, 7)
