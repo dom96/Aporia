@@ -23,14 +23,17 @@ when not defined(os.findExe):
       if ExistsFile(x): return x
     result = ""
 
-proc addSuggestItem*(win: MainWin, name: string, markup: String,
+proc addSuggestItem*(win: var MainWin, name: string, markup: String,
                      color: String = "#000000") =
   var iter: TTreeIter
   var listStore = cast[PListStore](win.suggest.TreeView.getModel())
   listStore.append(addr(iter))
   listStore.set(addr(iter), 0, name, 1, markup, 2, color, -1)
 
-proc moveSuggest*(win: MainWin, start: PTextIter, tab: Tab) =
+proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
+  win.addSuggestItem(item.nmName, "<b>$1</b>" % [item.nmName])
+
+proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
   
   # Calculate the location of the suggest dialog.
   var iterLoc: TRectangle
@@ -82,8 +85,9 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
         if dots.len() == 2:
           item.nmName = item.name[dots[0].len()+1.. -1]
         else:
-          echo("[Suggest] Skipping ", item.name)
-          continue
+          echo("[Suggest] Unknown module name for ", item.name)
+          #continue
+          item.nmName = item.name
         
         result.add(item)
 
@@ -95,7 +99,9 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   for t in items(win.Tabs):
     if t.filename != "":
       var f: TFile
-      if f.open(getTempDir() / splitFile(t.filename).name & ".nim", fmWrite):
+      var fileSplit = splitFile(t.filename)
+      echo("Saving ", getTempDir() / fileSplit.name & fileSplit.ext)
+      if f.open(getTempDir() / fileSplit.name & fileSplit.ext, fmWrite):
         # Save everything.
         # - Get the text from the TextView.
         var startIter: TTextIter
@@ -105,7 +111,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         t.buffer.getEndIter(addr(endIter))
         
         var text = t.buffer.getText(addr(startIter), addr(endIter), False)
-
+        
         # - Save it.
         f.write(text)
       else:
@@ -113,10 +119,18 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         return False
       f.close()
   
-  var file = getTempDir() / splitFile(tab.filename).name & ".nim"
+  var currentTabSplit = splitFile(tab.filename)
+  
+  # Copy over nimrod.cfg if it exists to /tmp
+  if existsFile(currentTabSplit.dir / "nimrod".addFileExt("cfg")):
+    copyFile(currentTabSplit.dir / "nimrod".addFileExt("cfg"), 
+             getTempDir() / "nimrod".addFileExt("cfg"))
+  
+  var file = getTempDir() / currentTabSplit.name & ".nim"
   win.suggest.items = execNimSuggest(file, splitFile(tab.filename).dir,
                                      start.getLine(),
                                      start.getLineOffset())
+  win.suggest.allitems = win.suggest.items
   
   if win.suggest.items.len == 0:
     echo("[Warning] No items found for suggest")
@@ -126,7 +140,9 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   #removeFile(file)
   
   for i in items(win.suggest.items):
-    win.addSuggestItem(i.nmName, "<b>$1</b>" % [i.nmName])
+    win.addSuggestItem(i)
+
+  win.suggest.currentFilter = ""
 
   return True
 
@@ -135,6 +151,35 @@ proc clear*(suggest: var TSuggestDialog) =
   # TODO: Why do I have to cast it? Why can't I just do PListStore(TreeModel)?
   cast[PListStore](TreeModel).clear()
   suggest.items = @[]
+  suggest.allItems = @[]
+
+proc filterSuggest*(win: var MainWin) =
+  ## Filters the current suggest items after whatever is behind the cursor.
+  # Get text before the cursor, up to a dot.
+  var current = win.SourceViewTabs.getCurrentPage()
+  var tab     = win.Tabs[current]
+  var cursor: TTextIter
+  # Get the iter at the cursor position.
+  tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
+  # Search backwards for a dot.
+  var startMatch: TTextIter
+  var endMatch: TTextIter
+  var matched = (addr(cursor)).backwardSearch(".", TEXT_SEARCH_TEXT_ONLY,
+                                addr(startMatch), addr(endMatch), nil)
+  assert(matched)
+  var text = (addr(endMatch)).getText(addr(cursor))
+  echo("[Suggest] Filtering ", text)
+  win.suggest.currentFilter = normalize($text)
+  # Filter the items.
+  var allItems = win.suggest.allItems
+  win.suggest.clear()
+  var newItems: seq[TSuggestItem] = @[]
+  for i in items(allItems):
+    if normalize(i.nmName).startsWith(normalize($text)):
+      newItems.add(i)
+      win.addSuggestItem(i)
+  win.suggest.items = newItems
+  win.suggest.allItems = allItems
 
 proc show*(suggest: var TSuggestDialog) =
   if not suggest.shown:

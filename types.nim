@@ -67,8 +67,10 @@ type
   TSuggestDialog* = object
     dialog*: gtk2.PWindow
     treeView*: PTreeView
-    items*: seq[TSuggestItem]
+    items*: seq[TSuggestItem] ## Visible items (In the treeview)
+    allItems*: seq[TSuggestItem] ## All items found in current context.
     shown*: bool
+    currentFilter*: string
   
   TExecMode* = enum
     ExecNone, ExecNimrod, ExecRun, ExecCustom

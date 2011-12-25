@@ -267,6 +267,11 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         var selectedPath = TreeModel.getPath(addr(selectedIter))
         var index = selectedPath.getIndices()[]
         var name = win.suggest.items[index].nmName
+        # Remove the part that was already typed
+        if win.suggest.currentFilter != "":
+          assert(normalize(name).startsWith(win.suggest.currentFilter))
+          name = name[win.suggest.currentFilter.len() .. -1]
+        
         # We have the name of the item. Now insert it into the TextBuffer.
         var currentTab = win.SourceViewTabs.getCurrentPage()
         win.Tabs[currentTab].buffer.insertAtCursor(name, len(name))
@@ -311,13 +316,14 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       # Don't need to know the char behind, because if it is a dot, then
       # the suggest dialog is hidden by ...KeyPress
       
-      # Repopulate suggest
-      doSuggest(win)
+      win.filterSuggest()
   
   else:
-    echod("Key released: ", key)
-    if win.settings.suggestFeature and win.suggest.shown:
-      doSuggest(win)
+    if key.toLower() != "down" and key.toLower() != "up":
+      echod("Key released: ", key)
+
+      if win.settings.suggestFeature and win.suggest.shown:
+        win.filterSuggest()
     
 # Other(Helper) functions
 
