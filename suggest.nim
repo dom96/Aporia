@@ -24,20 +24,21 @@ when not defined(os.findExe):
     result = ""
 
 proc addSuggestItem*(win: var MainWin, name: string, markup: String,
-                     color: String = "#000000") =
+                     tooltipText: string, color: String = "#000000") =
   var iter: TTreeIter
   var listStore = cast[PListStore](win.suggest.TreeView.getModel())
   listStore.append(addr(iter))
-  listStore.set(addr(iter), 0, name, 1, markup, 2, color, -1)
+  listStore.set(addr(iter), 0, name, 1, markup, 2, color, 3, tooltipText, -1)
 
 proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
-  win.addSuggestItem(item.nmName, "<b>$1</b>" % [item.nmName])
+  # TODO: Escape tooltip text for pango markup.
+  win.addSuggestItem(item.nmName, "<b>$1</b>" % [item.nmName], item.nimType)
 
-proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
-  
+proc getIterGlobalCoords(iter: PTextIter, tab: Tab):
+    tuple[x, y: int32] =
   # Calculate the location of the suggest dialog.
   var iterLoc: TRectangle
-  tab.sourceView.getIterLocation(start, addr(iterLoc))
+  tab.sourceView.getIterLocation(iter, addr(iterLoc))
 
   var winX, winY: gint
   tab.sourceView.bufferToWindowCoords(TEXT_WINDOW_WIDGET, iterLoc.x, iterLoc.y,
@@ -53,10 +54,22 @@ proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
   {.warning: "get_size is deprecated, get_width should be used".}
   # TODO: This is deprecated, GTK version 2.4 has get_width/get_height
   leftGWin.getSize(addr(leftWidth), addr(leftHeight))
+
+  return (mainLocX + leftWidth + iterLoc.x, mainLocY + winY + iterLoc.height)
+
+proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
+  var (x, y) = getIterGlobalCoords(start, tab)
   
-  win.suggest.dialog.move(mainLocX + leftWidth + iterLoc.x,
-                          mainLocY + winY + iterLoc.height)
-  
+  win.suggest.dialog.move(x, y)
+
+proc doMoveSuggest*(win: var MainWin) =
+  var current = win.SourceViewTabs.getCurrentPage()
+  var tab     = win.Tabs[current]
+  var start: TTextIter
+  # Get the iter at the cursor position.
+  tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
+  moveSuggest(win, addr(start), tab)
+
 proc execNimSuggest(file, addToPath: string, line: int, column: int): 
     seq[TSuggestItem] =
   result = @[]
@@ -161,6 +174,7 @@ proc filterSuggest*(win: var MainWin) =
   var cursor: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
+  
   # Search backwards for a dot.
   var startMatch: TTextIter
   var endMatch: TTextIter
@@ -181,6 +195,9 @@ proc filterSuggest*(win: var MainWin) =
   win.suggest.items = newItems
   win.suggest.allItems = allItems
 
+  # Hide the tooltip
+  win.suggest.tooltip.hide()
+
 proc show*(suggest: var TSuggestDialog) =
   if not suggest.shown:
     suggest.shown = true
@@ -190,6 +207,8 @@ proc hide*(suggest: var TSuggestDialog) =
   if suggest.shown:
     suggest.shown = false
     suggest.dialog.hide()
+    # Hide the tooltip too.
+    suggest.tooltip.hide()
 
 proc doSuggest*(win: var MainWin) =
   var current = win.SourceViewTabs.getCurrentPage()
@@ -206,6 +225,124 @@ proc doSuggest*(win: var MainWin) =
     win.w.present()
   else: win.suggest.hide()
 
+# -- Signals
+proc TreeView_QueryTooltip(widget: PWidget, x, y: gint, keyboardMode: gboolean, 
+                           tooltip: PTooltip, win: ptr MainWin): gboolean =
+  echo(keyboardMode)
+  echo("[Suggest] Tooltip ", x, " ", y)
+  return false
+
+# -- GUI
+proc createSuggestDialog*(win: var MainWin) =
+  ## Creates the suggest dialog, it does not show it.
+  
+  # I need 'gtk_window_set_skip_taskbar_hint'. Without it I have to make
+  # a bit of a hack... which I uncommented for now. The suggest dialog will be
+  # in the taskbar though.
+  #win.suggest.dialog = dialogNew()
+  win.suggest.dialog = windowNew(0)
+
+  var vbox = vboxNew(False, 0)
+  win.suggest.dialog.add(vbox)
+  vbox.show()
+
+  # TODO: Destroy actionArea?
+  # Destroy the separator, don't need it.
+  #win.suggest.dialog.separator.destroy()
+  #win.suggest.dialog.separator = nil
+  #win.suggest.dialog.actionArea.hide()
+  #win.suggest.dialog.vbox.remove(win.suggest.dialog.actionArea)
+  #echo(win.suggest.dialog.vbox.spacing)
+  
+  # Properties
+  win.suggest.dialog.setDefaultSize(250, 150)
+  
+  win.suggest.dialog.setTransientFor(win.w)
+  win.suggest.dialog.setDecorated(False)
+  win.suggest.dialog.setSkipTaskbarHint(True)
+  
+  # TreeView & TreeModel
+  # -- ScrolledWindow
+  var scrollWindow = scrolledWindowNew(nil, nil)
+  scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
+  vbox.packStart(scrollWindow, True, True, 0)
+  scrollWindow.show()
+  # -- TreeView
+  win.suggest.treeView = treeViewNew()
+  win.suggest.treeView.setHeadersVisible(False)
+  #win.suggest.treeView.setHasTooltip(true)
+  #win.suggest.treeView.setTooltipColumn(3)
+  scrollWindow.add(win.suggest.treeView)
+  
+  discard win.suggest.treeView.signalConnect("query-tooltip",
+              SIGNAL_FUNC(TreeView_QueryTooltip), addr(win))
+  
+  var textRenderer = cellRendererTextNew()
+  # Renderer is number 0. That's why we count from 1.
+  var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
+                     "markup", 1, "foreground", 2, nil)
+  discard win.suggest.treeView.appendColumn(textColumn)
+  # -- ListStore
+  # There are 3 attributes. The renderer is counted. Last is the tooltip text.
+  var listStore = listStoreNew(4, TypeString, TypeString, TypeString, TypeString)
+  assert(listStore != nil)
+  win.suggest.treeview.setModel(liststore)
+  win.suggest.treeView.show()
+  
+  # -- Append some items.
+  #win.addSuggestItem("Test!", "<b>Tes</b>t!")
+  #win.addSuggestItem("Test2!", "Test2!", "#ff0000")
+  #win.addSuggestItem("Test3!")
+  win.suggest.items = @[]
+  win.suggest.allItems = @[]
+  #win.suggest.dialog.show()
+
+  # -- Tooltip
+  win.suggest.tooltip = windowNew(gtk2.WINDOW_TOPLEVEL)
+  win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
+  win.suggest.tooltip.setTransientFor(win.w)
+  win.suggest.tooltip.setSkipTaskbarHint(True)
+  
+  var tpVBox = vboxNew(false, 0)
+  win.suggest.tooltip.add(tpVBox)
+  tpVBox.show()
+  
+  var tpHBox = hboxNew(false, 0)
+  tpVBox.packStart(tpHBox, false, false, 3)
+  tpHBox.show()
+  
+  win.suggest.tooltipLabel = labelNew("")
+  win.suggest.tooltipLabel.setLineWrap(true)
+  tpHBox.packStart(win.suggest.tooltipLabel, false, false, 3)
+  win.suggest.tooltipLabel.show()
+
+proc showTooltip*(win: var MainWin, tab: Tab, markup: string,
+                  selectedPath: PTreePath) =
+  win.suggest.tooltipLabel.setMarkup(markup)
+  var cursor: TTextIter
+  # Get the iter at the cursor position.
+  tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
+  # Get the location where to show the tooltip.
+  var (x, y) = getIterGlobalCoords(addr(cursor), tab)
+  # Get the width of the suggest dialog to move the tooltip out of the way.
+  var width: gint
+  win.suggest.dialog.getSize(addr(width), nil)
+  x += width
+
+  # Find the position of the selected tree item.
+  var cellArea: TRectangle
+  win.suggest.treeview.getCellArea(selectedPath, nil, addr(cellArea))
+  y += cellArea.y
+
+  win.suggest.tooltip.move(x, y)
+  win.suggest.tooltip.show()
+
+  win.suggest.tooltip.resize(1, 1) # Reset the window size. Kinda hackish D:
+  
+  tab.sourceView.grabFocus()
+  assert(tab.sourceView.isFocus())
+  win.w.present()
+  
 when isMainModule:
   var result = execNimSuggest("aporia.nim", 633, 7)
   

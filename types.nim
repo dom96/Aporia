@@ -71,6 +71,8 @@ type
     allItems*: seq[TSuggestItem] ## All items found in current context.
     shown*: bool
     currentFilter*: string
+    tooltip*: PWindow
+    tooltipLabel*: PLabel
   
   TExecMode* = enum
     ExecNone, ExecNimrod, ExecRun, ExecCustom

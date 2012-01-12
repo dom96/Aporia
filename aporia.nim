@@ -181,11 +181,13 @@ proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
     var col = getLineOffset(addr(iter))
 
     discard win.bottomBar.push(0, "Line: " & $row & " Column: " & $col)
-    
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
   updateStatusBar(buffer)
+
+  if win.suggest.shown:
+    win.suggest.hide()
 
 proc onCloseTab(btn: PButton, user_data: PWidget)
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
@@ -232,6 +234,11 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
+      
+      # Get current tab(For tooltip)
+      var current = win.SourceViewTabs.getCurrentPage()
+      var tab     = win.Tabs[current]
+      
       if selection.getSelected(cast[PPGtkTreeModel](addr(TreeModel)),
                                addr(selectedIter)):
         var selectedPath = TreeModel.getPath(addr(selectedIter))
@@ -246,16 +253,27 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           # selectedPath is now the next or prev path.
           selection.selectPath(selectedPath)
           win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+          var index = selectedPath.getIndices()[]
+          if win.suggest.items.len() > index:
+            win.showTooltip(tab, win.suggest.items[index].nimType, selectedPath)
       else:
         # No item selected, select the first one.
         var selectedPath = tree_path_new_first()
         selection.selectPath(selectedPath)
         win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+        var index = selectedPath.getIndices()[]
+        assert(index == 0)
+        if win.suggest.items.len() > index:
+          win.showTooltip(tab, win.suggest.items[index].nimType, selectedPath)
       
       # Return true to stop this event from moving the cursor down in the
       # source view.
       return True
-
+  
+  of "left", "right":
+    if win.settings.suggestFeature and win.suggest.shown:
+      win.suggest.hide()
+  
   of "return", "space", "tab":
     if win.settings.suggestFeature and win.suggest.shown:
       echod("[Suggest] Selected.")
@@ -317,13 +335,14 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       # the suggest dialog is hidden by ...KeyPress
       
       win.filterSuggest()
-  
+      win.doMoveSuggest()
   else:
     if key.toLower() != "down" and key.toLower() != "up":
       echod("Key released: ", key)
 
       if win.settings.suggestFeature and win.suggest.shown:
         win.filterSuggest()
+        win.doMoveSuggest()
     
 # Other(Helper) functions
 
@@ -947,64 +966,6 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
 
 # GUI Initialization
 
-proc createSuggestDialog() =
-  ## Creates the suggest dialog, it does not show it.
-  
-  # I need 'gtk_window_set_skip_taskbar_hint'. Without it I have to make
-  # a bit of a hack... which I uncommented for now. The suggest dialog will be
-  # in the taskbar though.
-  #win.suggest.dialog = dialogNew()
-  win.suggest.dialog = windowNew(0)
-
-  var vbox = vboxNew(False, 0)
-  win.suggest.dialog.add(vbox)
-  vbox.show()
-
-  # TODO: Destroy actionArea?
-  # Destroy the separator, don't need it.
-  #win.suggest.dialog.separator.destroy()
-  #win.suggest.dialog.separator = nil
-  #win.suggest.dialog.actionArea.hide()
-  #win.suggest.dialog.vbox.remove(win.suggest.dialog.actionArea)
-  #echo(win.suggest.dialog.vbox.spacing)
-  
-  # Properties
-  win.suggest.dialog.setDefaultSize(250, 150)
-  
-  win.suggest.dialog.setTransientFor(win.w)
-  win.suggest.dialog.setDecorated(False)
-  win.suggest.dialog.setSkipTaskbarHint(True)
-  
-  # TreeView & TreeModel
-  # -- ScrolledWindow
-  var scrollWindow = scrolledWindowNew(nil, nil)
-  scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
-  vbox.packStart(scrollWindow, True, True, 0)
-  scrollWindow.show()
-  # -- TreeView
-  win.suggest.treeView = treeViewNew()
-  win.suggest.treeView.setHeadersVisible(False)
-  scrollWindow.add(win.suggest.treeView)
-  
-  var textRenderer = cellRendererTextNew()
-  # Renderer is number 0. That's why we count from 1.
-  var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
-                     "markup", 1, "foreground", 2, nil)
-  discard win.suggest.treeView.appendColumn(textColumn)
-  # -- ListStore
-  # There are 3 attributes. The renderer is counted.
-  var listStore = listStoreNew(3, TypeString, TypeString, TypeString)
-  assert(listStore != nil)
-  win.suggest.treeview.setModel(liststore)
-  win.suggest.treeView.show()
-  
-  # -- Append some items.
-  #win.addSuggestItem("Test!", "<b>Tes</b>t!")
-  #win.addSuggestItem("Test2!", "Test2!", "#ff0000")
-  #win.addSuggestItem("Test3!")
-  win.suggest.items = @[]
-  #win.suggest.dialog.show()
-
 
 proc createAccelMenuItem(toolsMenu: PMenu, accGroup: PAccelGroup, 
                          label: string, acc: gint,
@@ -1438,7 +1399,7 @@ proc initControls() =
     SIGNAL_FUNC(window_configureEvent), nil)
   
   # Suggest dialog
-  createSuggestDialog()
+  createSuggestDialog(win)
   
   # MainBox (vbox)
   var MainBox = vboxNew(False, 0)
