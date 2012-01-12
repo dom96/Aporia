@@ -186,9 +186,6 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
   updateStatusBar(buffer)
 
-  if win.suggest.shown:
-    win.suggest.hide()
-
 proc onCloseTab(btn: PButton, user_data: PWidget)
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
                     label: PLabel] =
