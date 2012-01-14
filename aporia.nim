@@ -281,19 +281,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
                                addr(selectedIter)):
         var selectedPath = TreeModel.getPath(addr(selectedIter))
         var index = selectedPath.getIndices()[]
-        var name = win.suggest.items[index].nmName
-        # Remove the part that was already typed
-        if win.suggest.currentFilter != "":
-          assert(normalize(name).startsWith(win.suggest.currentFilter))
-          name = name[win.suggest.currentFilter.len() .. -1]
-        
-        # We have the name of the item. Now insert it into the TextBuffer.
-        var currentTab = win.SourceViewTabs.getCurrentPage()
-        win.Tabs[currentTab].buffer.insertAtCursor(name, len(name))
-        
-        # Now hide the suggest dialog and clear the items.
-        win.suggest.hide()
-        win.suggest.clear()
+        win.insertSuggestItem(index)
         
         return True
 
@@ -340,7 +328,10 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       if win.settings.suggestFeature and win.suggest.shown:
         win.filterSuggest()
         win.doMoveSuggest()
-    
+
+proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
+  win.suggest.hide()
+
 # Other(Helper) functions
 
 proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWindow,
@@ -361,6 +352,8 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
                win.settings.highlightCurrentLine)
   SourceView.setShowRightMargin(win.settings.rightMargin)
   SourceView.setAutoIndent(win.settings.autoIndent)
+  discard signalConnect(SourceView, "button-press-event",
+                        signalFunc(SourceViewMousePress), nil)
 
   var font = font_description_from_string(win.settings.font)
   SourceView.modifyFont(font)
@@ -842,6 +835,8 @@ proc onCloseTab(btn: PButton, user_data: PWidget) =
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
   updateMainTitle(pageNum)
+  # Hide the suggest dialog
+  win.suggest.hide()
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext, 
                         x: gint, y: gint, data: PSelectionData, info: guint,

@@ -200,6 +200,11 @@ proc filterSuggest*(win: var MainWin) =
 
 proc show*(suggest: var TSuggestDialog) =
   if not suggest.shown:
+    var selection = suggest.treeview.getSelection()  
+    var selectedPath = tree_path_new_first()
+    selection.selectPath(selectedPath)
+    suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+  
     suggest.shown = true
     suggest.dialog.show()
 
@@ -220,101 +225,25 @@ proc doSuggest*(win: var MainWin) =
   if win.populateSuggest(addr(start), tab):
     win.suggest.show()
     moveSuggest(win, addr(start), tab)
-    win.Tabs[current].sourceView.grabFocus()
-    assert(win.Tabs[current].sourceView.isFocus())
-    win.w.present()
+    #win.Tabs[current].sourceView.grabFocus()
+    #assert(win.Tabs[current].sourceView.isFocus())
+    #win.w.present()
   else: win.suggest.hide()
 
-# -- Signals
-proc TreeView_QueryTooltip(widget: PWidget, x, y: gint, keyboardMode: gboolean, 
-                           tooltip: PTooltip, win: ptr MainWin): gboolean =
-  echo(keyboardMode)
-  echo("[Suggest] Tooltip ", x, " ", y)
-  return false
-
-# -- GUI
-proc createSuggestDialog*(win: var MainWin) =
-  ## Creates the suggest dialog, it does not show it.
+proc insertSuggestItem*(win: var MainWin, index: int) =
+  var name = win.suggest.items[index].nmName
+  # Remove the part that was already typed
+  if win.suggest.currentFilter != "":
+    assert(normalize(name).startsWith(win.suggest.currentFilter))
+    name = name[win.suggest.currentFilter.len() .. -1]
   
-  # I need 'gtk_window_set_skip_taskbar_hint'. Without it I have to make
-  # a bit of a hack... which I uncommented for now. The suggest dialog will be
-  # in the taskbar though.
-  #win.suggest.dialog = dialogNew()
-  win.suggest.dialog = windowNew(0)
-
-  var vbox = vboxNew(False, 0)
-  win.suggest.dialog.add(vbox)
-  vbox.show()
-
-  # TODO: Destroy actionArea?
-  # Destroy the separator, don't need it.
-  #win.suggest.dialog.separator.destroy()
-  #win.suggest.dialog.separator = nil
-  #win.suggest.dialog.actionArea.hide()
-  #win.suggest.dialog.vbox.remove(win.suggest.dialog.actionArea)
-  #echo(win.suggest.dialog.vbox.spacing)
+  # We have the name of the item. Now insert it into the TextBuffer.
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  win.Tabs[currentTab].buffer.insertAtCursor(name, len(name))
   
-  # Properties
-  win.suggest.dialog.setDefaultSize(250, 150)
-  
-  win.suggest.dialog.setTransientFor(win.w)
-  win.suggest.dialog.setDecorated(False)
-  win.suggest.dialog.setSkipTaskbarHint(True)
-  
-  # TreeView & TreeModel
-  # -- ScrolledWindow
-  var scrollWindow = scrolledWindowNew(nil, nil)
-  scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
-  vbox.packStart(scrollWindow, True, True, 0)
-  scrollWindow.show()
-  # -- TreeView
-  win.suggest.treeView = treeViewNew()
-  win.suggest.treeView.setHeadersVisible(False)
-  #win.suggest.treeView.setHasTooltip(true)
-  #win.suggest.treeView.setTooltipColumn(3)
-  scrollWindow.add(win.suggest.treeView)
-  
-  discard win.suggest.treeView.signalConnect("query-tooltip",
-              SIGNAL_FUNC(TreeView_QueryTooltip), addr(win))
-  
-  var textRenderer = cellRendererTextNew()
-  # Renderer is number 0. That's why we count from 1.
-  var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
-                     "markup", 1, "foreground", 2, nil)
-  discard win.suggest.treeView.appendColumn(textColumn)
-  # -- ListStore
-  # There are 3 attributes. The renderer is counted. Last is the tooltip text.
-  var listStore = listStoreNew(4, TypeString, TypeString, TypeString, TypeString)
-  assert(listStore != nil)
-  win.suggest.treeview.setModel(liststore)
-  win.suggest.treeView.show()
-  
-  # -- Append some items.
-  #win.addSuggestItem("Test!", "<b>Tes</b>t!")
-  #win.addSuggestItem("Test2!", "Test2!", "#ff0000")
-  #win.addSuggestItem("Test3!")
-  win.suggest.items = @[]
-  win.suggest.allItems = @[]
-  #win.suggest.dialog.show()
-
-  # -- Tooltip
-  win.suggest.tooltip = windowNew(gtk2.WINDOW_TOPLEVEL)
-  win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
-  win.suggest.tooltip.setTransientFor(win.w)
-  win.suggest.tooltip.setSkipTaskbarHint(True)
-  
-  var tpVBox = vboxNew(false, 0)
-  win.suggest.tooltip.add(tpVBox)
-  tpVBox.show()
-  
-  var tpHBox = hboxNew(false, 0)
-  tpVBox.packStart(tpHBox, false, false, 3)
-  tpHBox.show()
-  
-  win.suggest.tooltipLabel = labelNew("")
-  win.suggest.tooltipLabel.setLineWrap(true)
-  tpHBox.packStart(win.suggest.tooltipLabel, false, false, 3)
-  win.suggest.tooltipLabel.show()
+  # Now hide the suggest dialog and clear the items.
+  win.suggest.hide()
+  win.suggest.clear()
 
 proc showTooltip*(win: var MainWin, tab: Tab, markup: string,
                   selectedPath: PTreePath) =
@@ -342,6 +271,120 @@ proc showTooltip*(win: var MainWin, tab: Tab, markup: string,
   tab.sourceView.grabFocus()
   assert(tab.sourceView.isFocus())
   win.w.present()
+
+# -- Signals
+proc TreeView_RowActivated(tv: PTreeView, path: PTreePath, 
+            column: PTreeViewColumn, win: ptr MainWin) =
+  var index = path.getIndices()[]
+  if win.suggest.items.len() > index:
+    win[].insertSuggestItem(index)
+
+proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) =
+  var selectedIter: TTreeIter
+  var TreeModel: PTreeModel
+  if selection.getSelected(addr(TreeModel), addr(selectedIter)):
+    # Get current tab(For tooltip)
+    var current = win.SourceViewTabs.getCurrentPage()
+    var tab     = win.Tabs[current]
+    var selectedPath = TreeModel.getPath(addr(selectedIter))
+    var index = selectedPath.getIndices()[]
+    if win.suggest.items.len() > index:
+      if win.suggest.shown:
+        win[].showTooltip(tab, win.suggest.items[index].nimType, selectedPath)
+
+proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) =
+  win.w.present()
+  var current = win.SourceViewTabs.getCurrentPage()
+  win.Tabs[current].sourceView.grabFocus()
+  assert(win.Tabs[current].sourceView.isFocus())
+
+# -- GUI
+proc createSuggestDialog*(win: var MainWin) =
+  ## Creates the suggest dialog, it does not show it.
+  
+  #win.suggest.dialog = dialogNew()
+  win.suggest.dialog = windowNew(0)
+
+  var vbox = vboxNew(False, 0)
+  win.suggest.dialog.add(vbox)
+  vbox.show()
+
+  # TODO: Destroy actionArea?
+  # Destroy the separator, don't need it.
+  #win.suggest.dialog.separator.destroy()
+  #win.suggest.dialog.separator = nil
+  #win.suggest.dialog.actionArea.hide()
+  #win.suggest.dialog.vbox.remove(win.suggest.dialog.actionArea)
+  #echo(win.suggest.dialog.vbox.spacing)
+  
+  # Properties
+  win.suggest.dialog.setDefaultSize(250, 150)
+  
+  win.suggest.dialog.setTransientFor(win.w)
+  win.suggest.dialog.setDecorated(False)
+  win.suggest.dialog.setSkipTaskbarHint(True)
+  discard win.suggest.dialog.signalConnect("focus-in-event",
+      SIGNAL_FUNC(onFocusIn), addr(win))
+  
+  # TreeView & TreeModel
+  # -- ScrolledWindow
+  var scrollWindow = scrolledWindowNew(nil, nil)
+  scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
+  vbox.packStart(scrollWindow, True, True, 0)
+  scrollWindow.show()
+  # -- TreeView
+  win.suggest.treeView = treeViewNew()
+  win.suggest.treeView.setHeadersVisible(False)
+  #win.suggest.treeView.setHasTooltip(true)
+  #win.suggest.treeView.setTooltipColumn(3)
+  scrollWindow.add(win.suggest.treeView)
+  
+  discard win.suggest.treeView.signalConnect("row-activated",
+              SIGNAL_FUNC(TreeView_RowActivated), addr(win))
+              
+  var selection = win.suggest.treeview.getSelection()
+  discard selection.gsignalConnect("changed",
+              GCallback(TreeView_SelectChanged), addr(win))
+  
+  var textRenderer = cellRendererTextNew()
+  # Renderer is number 0. That's why we count from 1.
+  var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
+                     "markup", 1, "foreground", 2, nil)
+  discard win.suggest.treeView.appendColumn(textColumn)
+  # -- ListStore
+  # There are 3 attributes. The renderer is counted. Last is the tooltip text.
+  var listStore = listStoreNew(4, TypeString, TypeString, TypeString, TypeString)
+  assert(listStore != nil)
+  win.suggest.treeview.setModel(liststore)
+  win.suggest.treeView.show()
+  
+  # -- Append some items.
+  #win.addSuggestItem("Test!", "<b>Tes</b>t!")
+  #win.addSuggestItem("Test2!", "Test2!", "#ff0000")
+  #win.addSuggestItem("Test3!")
+  win.suggest.items = @[]
+  win.suggest.allItems = @[]
+  #win.suggest.dialog.show()
+
+  # -- Tooltip
+  win.suggest.tooltip = windowNew(gtk2.WINDOW_TOPLEVEL)
+  win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
+  win.suggest.tooltip.setTransientFor(win.w)
+  win.suggest.tooltip.setSkipTaskbarHint(True)
+  win.suggest.tooltip.setDecorated(False)
+  
+  var tpVBox = vboxNew(false, 0)
+  win.suggest.tooltip.add(tpVBox)
+  tpVBox.show()
+  
+  var tpHBox = hboxNew(false, 0)
+  tpVBox.packStart(tpHBox, false, false, 3)
+  tpHBox.show()
+  
+  win.suggest.tooltipLabel = labelNew("")
+  win.suggest.tooltipLabel.setLineWrap(true)
+  tpHBox.packStart(win.suggest.tooltipLabel, false, false, 3)
+  win.suggest.tooltipLabel.show()
   
 when isMainModule:
   var result = execNimSuggest("aporia.nim", 633, 7)
