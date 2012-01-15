@@ -373,6 +373,9 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.tooltip.setSkipTaskbarHint(True)
   win.suggest.tooltip.setDecorated(False)
   
+  discard win.suggest.tooltip.signalConnect("focus-in-event",
+    SIGNAL_FUNC(onFocusIn), addr(win))
+  
   var tpVBox = vboxNew(false, 0)
   win.suggest.tooltip.add(tpVBox)
   tpVBox.show()
