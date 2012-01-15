@@ -166,6 +166,23 @@ proc clear*(suggest: var TSuggestDialog) =
   suggest.items = @[]
   suggest.allItems = @[]
 
+proc show*(suggest: var TSuggestDialog) =
+  if not suggest.shown and suggest.items.len() > 0:
+    var selection = suggest.treeview.getSelection()  
+    var selectedPath = tree_path_new_first()
+    selection.selectPath(selectedPath)
+    suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+  
+    suggest.shown = true
+    suggest.dialog.show()
+
+proc hide*(suggest: var TSuggestDialog) =
+  if suggest.shown:
+    suggest.shown = false
+    suggest.dialog.hide()
+    # Hide the tooltip too.
+    suggest.tooltip.hide()
+
 proc filterSuggest*(win: var MainWin) =
   ## Filters the current suggest items after whatever is behind the cursor.
   # Get text before the cursor, up to a dot.
@@ -198,22 +215,7 @@ proc filterSuggest*(win: var MainWin) =
   # Hide the tooltip
   win.suggest.tooltip.hide()
 
-proc show*(suggest: var TSuggestDialog) =
-  if not suggest.shown:
-    var selection = suggest.treeview.getSelection()  
-    var selectedPath = tree_path_new_first()
-    selection.selectPath(selectedPath)
-    suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
-  
-    suggest.shown = true
-    suggest.dialog.show()
-
-proc hide*(suggest: var TSuggestDialog) =
-  if suggest.shown:
-    suggest.shown = false
-    suggest.dialog.hide()
-    # Hide the tooltip too.
-    suggest.tooltip.hide()
+  if win.suggest.items.len() == 0: win.suggest.hide()
 
 proc doSuggest*(win: var MainWin) =
   var current = win.SourceViewTabs.getCurrentPage()
