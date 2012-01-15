@@ -1182,6 +1182,7 @@ proc initSourceViewTabs() =
   
   win.SourceViewTabs.show()
   if lastSession.len != 0:
+    var count = 0
     for i in 0 .. len(lastSession)-1:
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
@@ -1192,17 +1193,18 @@ proc initSourceViewTabs() =
         # TODO: Save last cursor position as line and column offset combo.
         # This will help with int overflows which would happen more often with
         # a char offset.
-        win.Tabs[i].buffer.getIterAtOffset(addr(iter), offset.parseInt())
-        win.Tabs[i].buffer.placeCursor(addr(iter))
+        win.Tabs[count].buffer.getIterAtOffset(addr(iter), offset.parseInt())
+        win.Tabs[count].buffer.placeCursor(addr(iter))
         
-        var mark = win.Tabs[i].buffer.getInsert()
+        var mark = win.Tabs[count].buffer.getInsert()
         
         # This only seems to work with those last 3 params.
         # TODO: Get it to center. Inspect gedit's source code to see how it does
         # this.
-        win.Tabs[i].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
+        win.Tabs[count].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
         #win.Tabs[i].sourceView.scrollToMark(mark, 0.25, true, 0.0, 0.5)
         #win.Tabs[i].sourceView.scrollMarkOnscreen(mark)
+        inc(count)
       else: echod("Could not open ", filename)
   else:
     addTab("", "")
