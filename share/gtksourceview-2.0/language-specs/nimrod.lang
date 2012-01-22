@@ -23,7 +23,7 @@
 <language id="nimrod" _name="Nimrod" version="2.0" _section="Sources">
   <metadata>
     <property name="mimetypes">text/x-nimrod</property>
-    <property name="globs">*.nim</property>
+    <property name="globs">*.nim;*.nimrod</property>
     <property name="line-comment-start">#</property>
   </metadata>
 

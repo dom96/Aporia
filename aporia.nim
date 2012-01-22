@@ -57,15 +57,23 @@ proc updateMainTitle(pageNum: int) =
   if win.Tabs.len()-1 >= pageNum:
     var name = ""
     if win.Tabs[pageNum].filename == "": name = "Untitled" 
-    else: name = win.Tabs[pageNum].filename
+    else: name = win.Tabs[pageNum].filename.extractFilename
     win.w.setTitle("Aporia IDE - " & name)
-
+  
 proc saveTab(tabNr: int, startpath: string) =
   if tabNr < 0: return
   if win.Tabs[tabNr].saved: return
   var path = ""
   if win.Tabs[tabNr].filename == "":
-    path = ChooseFileToSave(win.w, startpath) 
+    path = ChooseFileToSave(win.w, startpath)
+    
+    # Chane syntax highlighting for this tab.
+    var langMan = languageManagerGetDefault()
+    var lang = langMan.guessLanguage(path, nil)
+    if lang != nil:
+      win.Tabs[tabNr].buffer.setLanguage(lang)
+    else:
+      win.Tabs[tabNr].buffer.setHighlightSyntax(False)
   else: 
     path = win.Tabs[tabNr].filename
   
@@ -400,6 +408,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
         win.sourceViewTabs.setCurrentPage(existingTab)
         return
   
+    # Guess the language of the file loaded
     var langMan = languageManagerGetDefault()
     var lang = langMan.guessLanguage(filename, nil)
     if lang != nil:
