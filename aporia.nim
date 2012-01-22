@@ -1385,10 +1385,16 @@ proc initStatusBar(MainBox: PBox) =
 proc initControls() =
   # Load up the language style
   var langMan = languageManagerGetDefault()
-  var langManPaths: array[0..1, cstring] =
-             [cstring(os.getApplicationDir() / langSpecs), nil]
-  # TODO: Do not overwrite the default paths.
-  langMan.setSearchPath(addr(langManPaths))
+  var langManPaths: seq[string] = @[os.getApplicationDir() / langSpecs]
+  
+  var defLangManPaths = langMan.getSearchPath()
+  for i in 0..len(defLangManPaths.cstringArrayToSeq)-1:
+    if deflangManPaths[i] == nil: echo("bazinga")
+    langManPaths.add($defLangManPaths[i])
+    
+  var newLangPaths = allocCStringArray(langManPaths)
+  langMan.setSearchPath(newLangPaths)
+  deallocCStringArray(newLangPaths)
   var nimLang = langMan.getLanguage("nimrod")
   win.nimLang = nimLang
   
