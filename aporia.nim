@@ -234,7 +234,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
   result = false
   var key = $keyval_name(event.keyval)
   case key.toLower()
-  of "up", "down":
+  of "up", "down", "page_up", "page_down":
     if win.settings.suggestFeature and win.suggest.shown:
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
@@ -244,16 +244,30 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       var current = win.SourceViewTabs.getCurrentPage()
       var tab     = win.Tabs[current]
       
+      template nextTimes(t: expr): stmt =
+        for i in 0..t:
+          next(selectedPath)
+      template prevTimes(t: expr): stmt =
+        for i in 0..t:
+          moved = prev(selectedPath)
+      
       if selection.getSelected(cast[PPGtkTreeModel](addr(TreeModel)),
                                addr(selectedIter)):
         var selectedPath = TreeModel.getPath(addr(selectedIter))
 
         var moved = False
-        if key.toLower() == "up":
+        case key.toLower():
+        of "up":
           moved = prev(selectedPath)
-        elif key.toLower() == "down":
+        of "down":
           moved = True
           next(selectedPath)
+        of "page_up":
+          prevTimes(5)
+        of "page_down":
+          moved = True
+          nextTimes(5)
+        
         if moved:
           # selectedPath is now the next or prev path.
           selection.selectPath(selectedPath)
@@ -275,7 +289,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       # source view.
       return True
   
-  of "left", "right":
+  of "left", "right", "home", "end", "delete":
     if win.settings.suggestFeature and win.suggest.shown:
       win.suggest.hide()
   
@@ -330,7 +344,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       win.filterSuggest()
       win.doMoveSuggest()
   else:
-    if key.toLower() != "down" and key.toLower() != "up":
+    if key.toLower() notin ["up", "down", "page_up", "page_down", "home", "end"]:
       echod("Key released: ", key)
 
       if win.settings.suggestFeature and win.suggest.shown:

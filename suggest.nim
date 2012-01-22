@@ -108,9 +108,11 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   ## Populates the suggestDialog with items, returns true if at least one item 
   ## has been added.
   if tab.filename == "": return False
-  # Save all tabs *THAT HAVE A FILENAME* to /tmp
+  var currentTabSplit = splitFile(tab.filename)
+  
+  # Save tabs that are in the same directory as the file being suggested to /tmp
   for t in items(win.Tabs):
-    if t.filename != "":
+    if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
       var f: TFile
       var fileSplit = splitFile(t.filename)
       echo("Saving ", getTempDir() / fileSplit.name & fileSplit.ext)
@@ -131,8 +133,6 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         echo("[Warning] Unable to save one or more files, suggest won't work.")
         return False
       f.close()
-  
-  var currentTabSplit = splitFile(tab.filename)
   
   # Copy over nimrod.cfg if it exists to /tmp
   if existsFile(currentTabSplit.dir / "nimrod".addFileExt("cfg")):
