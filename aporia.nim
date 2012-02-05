@@ -58,7 +58,7 @@ proc updateMainTitle(pageNum: int) =
     var name = ""
     if win.Tabs[pageNum].filename == "": name = "Untitled" 
     else: name = win.Tabs[pageNum].filename.extractFilename
-    win.w.setTitle("Aporia IDE - " & name)
+    win.w.setTitle("Aporia - " & name)
   
 proc saveTab(tabNr: int, startpath: string) =
   if tabNr < 0: return
@@ -1424,7 +1424,7 @@ proc initControls() =
   # Window
   win.w = windowNew(gtk2.WINDOW_TOPLEVEL)
   win.w.setDefaultSize(win.settings.winWidth, win.settings.winHeight)
-  win.w.setTitle("Aporia IDE")
+  win.w.setTitle("Aporia")
   if win.settings.winMaximized: win.w.maximize()
   
   win.w.show() # The window has to be shown before
