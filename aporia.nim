@@ -175,6 +175,24 @@ proc window_configureEvent(widget: PWidget, event: PEventConfigure,
 
   return False
 
+proc cycleTab(win: var MainWin) =
+  var current = win.SourceViewTabs.getCurrentPage()
+  if current + 1 >= win.tabs.len():
+    current = 0
+  else:
+    current.inc(1)
+  
+  # select next tab
+  win.sourceViewTabs.setCurrentPage(current)
+
+proc window_keyPress(widg: PWidget, event: PEventKey, 
+                          userData: pgpointer): bool =
+  var modifiers = acceleratorGetDefaultModMask()
+  
+  if event.keyval == KeyTab and (event.state and modifiers) == CONTROL_MASK:
+    # Ctrl + Tab
+    win.cycleTab()
+
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
   # Incase this event gets fired before
@@ -1420,6 +1438,9 @@ proc initControls() =
     SIGNAL_FUNC(aporia.windowState_Changed), nil)
   discard win.w.signalConnect("configure-event", 
     SIGNAL_FUNC(window_configureEvent), nil)
+  discard win.w.signalConnect("key-press-event",
+    SIGNAL_FUNC(window_keyPress), nil)
+  
   
   # Suggest dialog
   createSuggestDialog(win)
