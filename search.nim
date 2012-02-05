@@ -43,6 +43,9 @@ proc styleInsensitive(s: string): string =
        '|', '[', ']', '{', '}', '.':
       result.add('\\')
       addx()
+    of ' ':
+      result.add("\\s")
+      inc(i)
     else: addx()
 
 proc findBoundsGen(text, pattern: string,
