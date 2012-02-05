@@ -8,7 +8,7 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
-import pegs, streams, times
+import pegs, streams, times, parseopt
 import settings, types, cfg, search, suggest
 
 {.push callConv:cdecl.}
@@ -16,6 +16,11 @@ import settings, types, cfg, search, suggest
 const
   NimrodProjectExt = ".nimprj"
   GTKVerReq = (2, 12, 0) # Version of GTK required for Aporia to run.
+  aporiaVersion = "0.1"
+  helpText = """./aporia [args] filename...
+  -v  --version  Reports aporia's version
+  -h  --help Shows this message
+"""
 
 var win: types.MainWin
 win.Tabs = @[]
@@ -33,6 +38,29 @@ var lastSession: seq[string] = @[]
 
 var confParseFail = False # This gets set to true
                           # When there is an error parsing the config
+
+proc writeHelp() =
+  echo(helpText)
+  quit(QuitSuccess)
+
+proc writeVersion() =
+  echo("Aporia v$1 compiled at $2 $3.\nCopyright (c) Dominik Picheta 2010-2012" % 
+       [aporiaVersion, compileDate, compileTime])
+  quit(QuitSuccess)
+
+proc parseArgs(): seq[string] =
+  result = @[]
+  for kind, key, val in getopt():
+    case kind
+    of cmdArgument:
+      result.add(key)
+    of cmdLongOption, cmdShortOption:
+      case key
+      of "help", "h": writeHelp()
+      of "version", "v": writeVersion()
+    of cmdEnd: assert(false) # cannot happen
+
+var loadFiles = parseArgs()
 
 # Load the settings
 try:
@@ -1222,7 +1250,7 @@ proc initSourceViewTabs() =
           "drag-data-received", SIGNAL_FUNC(onDragDataReceived), nil)
   
   win.SourceViewTabs.show()
-  if lastSession.len != 0:
+  if lastSession.len != 0 or loadFiles.len != 0:
     var count = 0
     for i in 0 .. len(lastSession)-1:
       var splitUp = lastSession[i].split('|')
@@ -1247,6 +1275,17 @@ proc initSourceViewTabs() =
         #win.Tabs[i].sourceView.scrollMarkOnscreen(mark)
         inc(count)
       else: echod("Could not open ", filename)
+    
+    for f in loadFiles:
+      if existsFile(f):
+        addTab("", f)
+      else:
+        echod("Could not open ", f)
+    
+    if loadFiles.len() != 0:
+      # Select the tab that was opened.
+      win.sourceViewTabs.setCurrentPage(win.tabs.len()-1)
+    
   else:
     addTab("", "")
   
