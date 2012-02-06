@@ -1465,7 +1465,7 @@ proc initStatusBar(MainBox: PBox) =
 proc initControls() =
   # Load up the language style
   var langMan = languageManagerGetDefault()
-  var langManPaths: seq[string] = @[os.getApplicationDir() / langSpecs]
+  var langManPaths: seq[string] = @[os.getAppDir() / langSpecs]
   
   var defLangManPaths = langMan.getSearchPath()
   for i in 0..len(defLangManPaths.cstringArrayToSeq)-1:
@@ -1480,7 +1480,7 @@ proc initControls() =
   
   # Load the scheme
   var schemeMan = schemeManagerGetDefault()
-  schemeMan.appendSearchPath(os.getApplicationDir() / styles)
+  schemeMan.appendSearchPath(os.getAppDir() / styles)
   win.scheme = schemeMan.getScheme(win.settings.colorSchemeID)
   
   # Window
