@@ -153,31 +153,40 @@ proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
   # then quit
   main_quit()
 
+proc confirmUnsaved(win: var MainWin, t: Tab): int =
+  var askSave = dialogNewWithButtons("", win.w, 0,
+                        STOCK_SAVE, RESPONSE_ACCEPT, STOCK_CANCEL, 
+                        RESPONSE_CANCEL,
+                        "Close without saving", RESPONSE_REJECT, nil)
+  askSave.setTransientFor(win.w)
+  # TODO: Make this dialog look better
+  var labelText = ""
+  if t.filename != "":
+    labelText = t.filename.extractFilename & 
+        " is unsaved, would you like to save it?"
+  else:
+    labelText = "Would you like to save this tab?"
+  
+  var label = labelNew(labelText)
+  askSave.vbox.pack_start(label, False, False, 0)
+  label.show()
+
+  result = askSave.run()
+  gtk2.destroy(PWidget(askSave))
+
 proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
   var quit = True
   for i in low(win.Tabs)..len(win.Tabs)-1:
     if not win.Tabs[i].saved:
-      var askSave = dialogNewWithButtons("", win.w, 0,
-                            STOCK_SAVE, RESPONSE_ACCEPT, STOCK_CANCEL, 
-                            RESPONSE_CANCEL,
-                            "Close without saving", RESPONSE_REJECT, nil)
-      askSave.setTransientFor(win.w)
-      # TODO: Make this dialog look better
-      var label = labelNew(win.Tabs[i].filename & 
-          " is unsaved, would you like to save it ?")
-      askSave.vbox.pack_start(label, False, False, 0)
-      label.show()
-
-      var resp = askSave.run()
-      gtk2.destroy(PWidget(askSave))
-      case resp
-      of RESPONSE_ACCEPT:
+      win.sourceViewTabs.setCurrentPage(i)
+      var resp = win.confirmUnsaved(win.tabs[i])
+      if resp == RESPONSE_ACCEPT:
         saveTab(i, os.splitFile(win.tabs[i].filename).dir)
         quit = True
-      of RESPONSE_CANCEL:
+      elif resp == RESPONSE_CANCEL:
         quit = False
         break
-      of RESPONSE_REJECT:
+      elif resp == RESPONSE_REJECT:
         quit = True
       else:
         quit = False
@@ -897,9 +906,23 @@ proc memUsage_click(menuitem: PMenuItem, user_data: pgpointer) =
 proc onCloseTab(btn: PButton, user_data: PWidget) =
   if win.sourceViewTabs.getNPages() > 1:
     var tab = win.sourceViewTabs.pageNum(user_data)
-    win.sourceViewTabs.removePage(tab)
+    var close = true
+    if not win.tabs[tab].saved:
+      var resp = win.confirmUnsaved(win.tabs[tab])
+      if resp == RESPONSE_ACCEPT:
+        saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
+        close = True
+      elif resp == RESPONSE_CANCEL:
+        close = False
+      elif resp == RESPONSE_REJECT:
+        close = True
+      else:
+        close = False
+    
+    if close:
+      win.sourceViewTabs.removePage(tab)
 
-    system.delete(win.Tabs, tab)
+      system.delete(win.Tabs, tab)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
