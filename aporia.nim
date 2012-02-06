@@ -73,7 +73,7 @@ except EIO:
   win.settings = cfg.defaultSettings()
 
 proc echod[T](s: openarray[T]) =
-  when defined(debug):
+  when not defined(release):
     for i in items(s): stdout.write(i)
     echo()
     
@@ -823,8 +823,7 @@ proc execThreadProc(){.thread.} =
 proc compileRun(currentTab: int, shouldRun: bool) =
   if win.Tabs[currentTab].filename.len == 0: return
   if win.tempStuff.execMode != ExecNone:
-    # TODO: Give some kind of a GUI message to the user.
-    echod("Process already running!")
+    win.w.error("Process already running!")
     return
   
   # Clear the outputTextView
@@ -873,8 +872,7 @@ proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
 
 proc RunCustomCommand(cmd: string) = 
   if win.tempStuff.execMode != ExecNone:
-    # TODO: Give some kind of a GUI message to the user.
-    echod("Process already running!")
+    win.w.error("Process already running!")
     return
   
   saveFile_Activate(nil, nil)
@@ -1448,7 +1446,7 @@ proc initFindBar(MainBox: PBox) =
   extraBtn.show()
   
   MainBox.packStart(win.findBar, False, False, 0)
-  win.findBar.show()
+  #win.findBar.show()
 
 proc initStatusBar(MainBox: PBox) =
   win.bottomBar = statusbarNew()
