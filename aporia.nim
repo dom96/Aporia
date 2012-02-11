@@ -250,8 +250,14 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
   updateStatusBar(buffer)
 
 proc onCloseTab(btn: PButton, user_data: PWidget)
+proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
+                       userDat: pwidget): bool
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
-                    label: PLabel] =
+                    label: PLabel] =                  
+  var eventBox = eventBoxNew()
+  discard signal_connect(eventBox, "button-release-event",
+                    SIGNAL_FUNC(tab_buttonRelease), t_child)
+  
   var box = hboxNew(False, 0)
   var label = labelNew(name)
   var closebtn = buttonNew()
@@ -266,7 +272,9 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
   box.packStart(label, True, True, 0)
   box.packEnd(closebtn, False, False, 0)
   box.showAll()
-  return (box, label)
+
+  eventBox.add(box)
+  return (eventBox, label)
 
 proc onChanged(buffer: PTextBuffer, user_data: pgpointer) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -907,33 +915,41 @@ proc memUsage_click(menuitem: PMenuItem, user_data: pgpointer) =
 
 proc about_click(menuitem: PMenuItem, user_data: pgpointer) =
   # About dialog
-  var aboutDialog = newAboutDialog("Aporia 0.1", 
+  var aboutDialog = newAboutDialog("Aporia " & aporiaVersion, 
       "Aporia is an IDE for the \nNimrod programming language.",
       "Copyright (c) 2010-2012 Dominik Picheta")
   aboutDialog.show()
 
 # -- SourceViewTabs - Notebook.
 
+proc closeTab(child: PWidget) =
+  var tab = win.sourceViewTabs.pageNum(child)
+  var close = true
+  if not win.tabs[tab].saved:
+    var resp = win.confirmUnsaved(win.tabs[tab])
+    if resp == RESPONSE_ACCEPT:
+      saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
+      close = True
+    elif resp == RESPONSE_CANCEL:
+      close = False
+    elif resp == RESPONSE_REJECT:
+      close = True
+    else:
+      close = False
+  
+  if close:
+    win.sourceViewTabs.removePage(tab)
+
+    system.delete(win.Tabs, tab)
+
 proc onCloseTab(btn: PButton, user_data: PWidget) =
   if win.sourceViewTabs.getNPages() > 1:
-    var tab = win.sourceViewTabs.pageNum(user_data)
-    var close = true
-    if not win.tabs[tab].saved:
-      var resp = win.confirmUnsaved(win.tabs[tab])
-      if resp == RESPONSE_ACCEPT:
-        saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-        close = True
-      elif resp == RESPONSE_CANCEL:
-        close = False
-      elif resp == RESPONSE_REJECT:
-        close = True
-      else:
-        close = False
-    
-    if close:
-      win.sourceViewTabs.removePage(tab)
+    closeTab(user_data)
 
-      system.delete(win.Tabs, tab)
+proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
+                       userDat: pwidget): bool =
+  if ev.button == 2: # Middle click.
+    closeTab(userDat)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
