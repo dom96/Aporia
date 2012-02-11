@@ -56,6 +56,8 @@ type
     replaceBtn*: PButton
     replaceAllBtn*: PButton
     
+    goLineBar*: TGoLineBar
+    
     viewBottomPanelMenuItem*: PMenuItem # view menu
 
     Tabs*: seq[Tab] # Other
@@ -121,3 +123,7 @@ type
   
   TSearchEnum* = enum
     SearchCaseSens, SearchCaseInsens, SearchStyleInsens, SearchRegex, SearchPeg
+
+  TGoLineBar* = object
+    bar*: PHBox
+    entry*: PEntry

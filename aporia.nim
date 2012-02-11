@@ -8,7 +8,7 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
-import pegs, streams, times, parseopt
+import pegs, streams, times, parseopt, parseutils
 import settings, types, cfg, search, suggest, AboutDialog
 
 {.push callConv:cdecl.}
@@ -617,6 +617,10 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   win.replaceBtn.show()
   win.replaceAllBtn.show()
   
+proc GoLine_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  win.goLineBar.bar.show()
+  win.goLineBar.entry.grabFocus()
+  
 proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   settings.showSettings(win)
   
@@ -1055,6 +1059,40 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
+# Go to line bar.
+proc goLine_Changed(ed: PEditable, d: pgpointer) =
+  var line = win.goLineBar.entry.getText()
+  var lineNum: biggestInt = -1
+  if parseBiggestInt($line, lineNum) != 0:
+    # Get current tab
+    var current = win.SourceViewTabs.getCurrentPage()
+    template buffer: expr = win.tabs[current].buffer
+    if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
+      var iter: TTextIter
+      buffer.getIterAtLine(addr(iter), int(lineNum)-1)
+      
+      buffer.moveMarkByName("insert", addr(iter))
+      buffer.moveMarkByName("selection_bound", addr(iter))
+      discard PTextView(win.Tabs[current].sourceView).
+          scrollToIter(addr(iter), 0.2, False, 0.0, 0.0)
+      
+      # Reset entry color.
+      win.goLineBar.entry.modifyBase(STATE_NORMAL, nil)
+      win.goLineBar.entry.modifyText(STATE_NORMAL, nil)
+      return # Success
+  
+  # Make entry red.
+  var red: Gdk2.TColor
+  discard colorParse("#ff6666", addr(red))
+  var white: Gdk2.TColor
+  discard colorParse("white", addr(white))
+  
+  win.goLineBar.entry.modifyBase(STATE_NORMAL, addr(red))
+  win.goLineBar.entry.modifyText(STATE_NORMAL, addr(white))
+
+proc goLineClose_clicked(button: PButton, user_data: pgpointer) = 
+  win.goLineBar.bar.hide()
+
 # GUI Initialization
 
 
@@ -1158,6 +1196,16 @@ proc initTopMenu(MainBox: PBox) =
   discard signal_connect(ReplaceMenuItem, "activate", 
                           SIGNAL_FUNC(aporia.replace_Activate), nil)
 
+  createSeparator(EditMenu)
+  
+  var GoLineMenuItem = menu_item_new("Go to line...") # Go to line
+  GoLineMenuItem.add_accelerator("activate", accGroup, 
+                  KEY_l, CONTROL_MASK, ACCEL_VISIBLE) 
+  EditMenu.append(GoLineMenuItem)
+  show(GoLineMenuItem)
+  discard signal_connect(GoLineMenuItem, "activate", 
+                          SIGNAL_FUNC(GoLine_Activate), nil)
+  
   createSeparator(EditMenu)
   
   var SettingsMenuItem = menu_item_new("Settings...") # Settings
@@ -1377,8 +1425,10 @@ proc initFindBar(MainBox: PBox) =
   # Add a (find) text entry
   win.findEntry = entryNew()
   win.findBar.packStart(win.findEntry, False, False, 0)
+  # The following event gets fired when Enter is pressed.
   discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(
                                       aporia.nextBtn_Clicked), nil)
+  
   win.findEntry.show()
   var rq: TRequisition 
   win.findEntry.sizeRequest(addr(rq))
@@ -1463,6 +1513,40 @@ proc initFindBar(MainBox: PBox) =
   MainBox.packStart(win.findBar, False, False, 0)
   #win.findBar.show()
 
+proc initGoLineBar(MainBox: PBox) =
+  # Create a fixed container
+  win.goLineBar.bar = HBoxNew(False, 0)
+  win.goLineBar.bar.setSpacing(4)
+
+  # Add a Label 'Go to line'
+  var goLineLabel = labelNew("Go to line:")
+  win.goLineBar.bar.packStart(goLineLabel, False, False, 0)
+  goLineLabel.show()
+
+  # Add a text entry
+  win.goLineBar.entry = entryNew()
+  win.goLineBar.bar.packStart(win.goLineBar.entry, False, False, 0)
+  discard win.goLineBar.entry.signalConnect("changed", SIGNAL_FUNC(
+                                      goLine_changed), nil)
+  win.goLineBar.entry.show()
+  
+  # Right side ...
+  
+  # Close button - With a close stock image
+  var closeBtn = buttonNew()
+  var closeImage = imageNewFromStock(STOCK_CLOSE, ICON_SIZE_SMALL_TOOLBAR)
+  var closeBox = hboxNew(False, 0)
+  closeBtn.add(closeBox)
+  closeBox.show()
+  closeBox.add(closeImage)
+  closeImage.show()
+  discard closeBtn.signalConnect("clicked", 
+             SIGNAL_FUNC(aporia.goLineClose_Clicked), nil)
+  win.goLineBar.bar.packEnd(closeBtn, False, False, 2)
+  closeBtn.show()
+
+  MainBox.packStart(win.goLineBar.bar, False, False, 0)
+
 proc initStatusBar(MainBox: PBox) =
   win.bottomBar = statusbarNew()
   MainBox.packStart(win.bottomBar, False, False, 0)
@@ -1528,6 +1612,7 @@ proc initControls() =
   initToolBar(MainBox)
   initTAndBP(MainBox)
   initFindBar(MainBox)
+  initGoLineBar(MainBox)
   initStatusBar(MainBox)
   
   MainBox.show()

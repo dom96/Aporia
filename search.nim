@@ -54,10 +54,18 @@ proc findBoundsGen(text, pattern: string,
     tuple[first: int, last: int] =
   
   if rePattern:
-    return re.findBounds(text, re(pattern, reOptions), start)
+    try:
+      result = re.findBounds(text, re(pattern, reOptions), start)
+    except EInvalidRegex:
+      result = (-1, 0)
   else:
     var matches: array[0..re.MaxSubpatterns-1, string]
-    return pegs.findBounds(text, peg(pattern), matches, start)
+    try:
+      result = pegs.findBounds(text, peg(pattern), matches, start)
+    except EInvalidPeg, EAssertionFailed:
+      result = (-1, 0)
+
+  if result[0] == -1 or result[1] == -1: return (-1, 0)
 
 proc findRePeg(forward: bool, startIter: PTextIter,
                buffer: PTextBuffer, pattern: string, wrappedAround = false): 
