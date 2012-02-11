@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, osproc, streams
+import gtk2, gtksourceview, osproc, streams, AboutDialog
 
 type
   TSettings* = object

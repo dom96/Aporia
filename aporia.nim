@@ -9,7 +9,7 @@
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import pegs, streams, times, parseopt
-import settings, types, cfg, search, suggest
+import settings, types, cfg, search, suggest, AboutDialog
 
 {.push callConv:cdecl.}
 
@@ -897,7 +897,16 @@ proc RunCustomCommand3(menuitem: PMenuItem, user_data: pgpointer) =
 proc memUsage_click(menuitem: PMenuItem, user_data: pgpointer) =
   echo("Memory usage: ")
   gMemProfile()
-  echo gcGetStatistics()
+  var stats = "Memory usage: "
+  stats.add gcGetStatistics()
+  win.w.info(stats)
+
+proc about_click(menuitem: PMenuItem, user_data: pgpointer) =
+  # About dialog
+  var aboutDialog = newAboutDialog("Aporia 0.1", 
+      "Aporia is an IDE for the \nNimrod programming language.",
+      "Copyright (c) 2010-2012 Dominik Picheta")
+  aboutDialog.show()
 
 # -- SourceViewTabs - Notebook.
 
@@ -1211,20 +1220,26 @@ proc initTopMenu(MainBox: PBox) =
   ToolsMenuItem.show()
   TopMenu.append(ToolsMenuItem)
   
-  # About menu
-  var AboutMenu = menuNew()
+  # Help menu
+  var HelpMenu = menuNew()
   
   var MemMenuItem = menu_item_new("GTK Memory usage") # GTK Mem usage
-  AboutMenu.append(MemMenuItem)
+  HelpMenu.append(MemMenuItem)
   show(MemMenuItem)
   discard signal_connect(MemMenuItem, "activate", 
                          SIGNAL_FUNC(aporia.memUsage_click), nil)
+  createSeparator(ToolsMenu)
+  var AboutMenuItem = menu_item_new("About")
+  HelpMenu.append(AboutMenuItem)
+  show(AboutMenuItem)
+  discard signal_connect(AboutMenuItem, "activate", 
+                         SIGNAL_FUNC(aporia.About_click), nil)
   
-  var AboutMenuItem = menuItemNewWithMnemonic("_About")
+  var HelpMenuItem = menuItemNewWithMnemonic("_Help")
   
-  AboutMenuItem.setSubMenu(AboutMenu)
-  AboutMenuItem.show()
-  TopMenu.append(AboutMenuItem)
+  HelpMenuItem.setSubMenu(HelpMenu)
+  HelpMenuItem.show()
+  TopMenu.append(HelpMenuItem)
   
   MainBox.packStart(TopMenu, False, False, 0)
   TopMenu.show()
