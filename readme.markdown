@@ -12,6 +12,12 @@ which have not yet made it to a stable release.
 Once you have a working Nimrod compiler, all you need to do
 is `nimrod c aporia.nim`
 
+### Compiling from C sources
+If you do not want to get the nimrod compiler you can still compile Aporia from
+the generated C sources, it's as simple as executing the ``build.sh`` script
+(or ``build.bat`` on Windows). You can then also use ``install.sh`` to install
+Aporia.
+
 ## Dependencies
 * GTK
 * GtkSourceView
