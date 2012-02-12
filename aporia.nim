@@ -1575,7 +1575,15 @@ proc initStatusBar(MainBox: PBox) =
   win.bottomBar.packEnd(win.bottomProgress, false, false, 0)
   
   discard win.bottomBar.push(0, "Line: 0 Column: 0")
-  
+
+proc initTempStuff() =
+  win.tempStuff.lastSaveDir = ""
+  win.tempStuff.stopSBUpdates = false
+  win.tempStuff.execMode = execNone
+
+  win.tempStuff.ifSuccess = ""
+  win.tempStuff.compileSuccess = false
+
 proc initControls() =
   # Load up the language style
   var langMan = languageManagerGetDefault()
@@ -1635,6 +1643,9 @@ proc initControls() =
   MainBox.show()
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
+
+  # Init tempStuff
+  initTempStuff()
 
 {.pop.}
 proc NimThreadsInit() =
