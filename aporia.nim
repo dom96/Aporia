@@ -16,7 +16,7 @@ import settings, types, cfg, search, suggest, AboutDialog
 const
   NimrodProjectExt = ".nimprj"
   GTKVerReq = (2, 12, 0) # Version of GTK required for Aporia to run.
-  aporiaVersion = "0.1"
+  aporiaVersion = "0.1.1"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
   -h  --help Shows this message
