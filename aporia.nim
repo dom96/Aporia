@@ -255,6 +255,7 @@ proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
                     label: PLabel] =                  
   var eventBox = eventBoxNew()
+  eventBox.setVisibleWindow(false)
   discard signal_connect(eventBox, "button-release-event",
                     SIGNAL_FUNC(tab_buttonRelease), t_child)
   

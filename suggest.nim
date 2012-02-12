@@ -81,7 +81,7 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
                 [file, $(line+1), $column, getTempDir(), addToPath])
 
   for line in splitLines(output):
-    echo(repr(line))
+    #echo(repr(line))
     if line.startswith("sug\t"):
       var s = line.split('\t')
       if s.len == 7:
