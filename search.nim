@@ -78,7 +78,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
     text = startIter.getText(addr(iter))
   else:
     buffer.getStartIter(addr(iter))
-    text = addr(iter).getText(startIter)
+    text = getText(addr(iter), startIter)
   
   # Set up some options.
   var isRegex = win.settings.search == SearchRegex
@@ -111,8 +111,8 @@ proc findRePeg(forward: bool, startIter: PTextIter,
       buffer.getIterAtOffset(addr(endMatch), startIter.getOffset() + 
           match[1] + 1)
     else:
-      buffer.getIterAtOffset(addr(startMatch), addr(iter).getOffset() + match[0])
-      buffer.getIterAtOffset(addr(endMatch), addr(iter).getOffset() +
+      buffer.getIterAtOffset(addr startMatch, getOffset(addr iter) + match[0])
+      buffer.getIterAtOffset(addr(endMatch), getOffset(addr(iter)) +
           match[1] + 1)
           
     return (startMatch, endMatch, True)

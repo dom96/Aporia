@@ -599,12 +599,12 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var insertIter: TTextIter
   win.Tabs[currentTab].buffer.getIterAtMark(addr(insertIter), 
                                       win.Tabs[currentTab].buffer.getInsert())
-  var insertOffset = addr(insertIter).getOffset()
+  var insertOffset = getOffset(addr insertIter)
   
   var selectIter: TTextIter
   win.Tabs[currentTab].buffer.getIterAtMark(addr(selectIter), 
                 win.Tabs[currentTab].buffer.getSelectionBound())
-  var selectOffset = addr(selectIter).getOffset()
+  var selectOffset = getOffset(addr selectIter)
   
   if insertOffset != selectOffset:
     var text = win.Tabs[currentTab].buffer.getText(addr(insertIter), 

@@ -97,7 +97,7 @@ proc save*(win: MainWin) =
         if i.filename != "":
           var cursorIter: TTextIter
           i.buffer.getIterAtMark(addr(cursorIter), i.buffer.getInsert())
-          var cursorPos = addr(cursorIter).getOffset()
+          var cursorPos = getOffset(addr cursorIter)
           # Kind of a messy way to save the cursor pos and filename.
           tabs.add(i.filename & "|" & $cursorPos & ";")
       f.write(tabs & "\"\n")
