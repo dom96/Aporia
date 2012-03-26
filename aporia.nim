@@ -229,6 +229,7 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
   if event.keyval == KeyTab and (event.state and modifiers) == CONTROL_MASK:
     # Ctrl + Tab
     win.cycleTab()
+    return true
 
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
