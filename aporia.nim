@@ -222,14 +222,41 @@ proc cycleTab(win: var MainWin) =
   # select next tab
   win.sourceViewTabs.setCurrentPage(current)
 
+proc closeTab(tab: int) =
+  var close = true
+  if not win.tabs[tab].saved:
+    var resp = win.confirmUnsaved(win.tabs[tab])
+    if resp == RESPONSE_ACCEPT:
+      saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
+      close = True
+    elif resp == RESPONSE_CANCEL:
+      close = False
+    elif resp == RESPONSE_REJECT:
+      close = True
+    else:
+      close = False
+  
+  if close:
+    win.sourceViewTabs.removePage(tab)
+
+    system.delete(win.Tabs, tab)
+
 proc window_keyPress(widg: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
   var modifiers = acceleratorGetDefaultModMask()
-  
-  if event.keyval == KeyTab and (event.state and modifiers) == CONTROL_MASK:
-    # Ctrl + Tab
-    win.cycleTab()
-    return true
+
+  if (event.state and modifiers) == CONTROL_MASK:
+    # Ctrl pressed.
+    # TODO: Change to case stmt when Araq fixes this bug.
+    if event.keyval == KeyTab:
+      # Ctrl + Tab
+      win.cycleTab()
+      return true
+    elif event.keyval == KeyW:
+      # Ctrl + W
+      closeTab(win.SourceViewTabs.getCurrentPage())
+      return True
+
 
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
@@ -926,23 +953,7 @@ proc about_click(menuitem: PMenuItem, user_data: pgpointer) =
 
 proc closeTab(child: PWidget) =
   var tab = win.sourceViewTabs.pageNum(child)
-  var close = true
-  if not win.tabs[tab].saved:
-    var resp = win.confirmUnsaved(win.tabs[tab])
-    if resp == RESPONSE_ACCEPT:
-      saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-      close = True
-    elif resp == RESPONSE_CANCEL:
-      close = False
-    elif resp == RESPONSE_REJECT:
-      close = True
-    else:
-      close = False
-  
-  if close:
-    win.sourceViewTabs.removePage(tab)
-
-    system.delete(win.Tabs, tab)
+  closeTab(tab)
 
 proc onCloseTab(btn: PButton, user_data: PWidget) =
   if win.sourceViewTabs.getNPages() > 1:
