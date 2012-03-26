@@ -257,6 +257,10 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
       closeTab(win.SourceViewTabs.getCurrentPage())
       return True
 
+  if event.keyval == KeyEscape:
+    # Esc pressed
+    win.findBar.hide()
+    win.goLineBar.bar.hide()
 
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
