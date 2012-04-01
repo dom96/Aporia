@@ -94,14 +94,15 @@ proc saveTab(tabNr: int, startpath: string) =
   var path = ""
   if win.Tabs[tabNr].filename == "":
     path = ChooseFileToSave(win.w, startpath)
-    
-    # Chane syntax highlighting for this tab.
-    var langMan = languageManagerGetDefault()
-    var lang = langMan.guessLanguage(path, nil)
-    if lang != nil:
-      win.Tabs[tabNr].buffer.setLanguage(lang)
-    else:
-      win.Tabs[tabNr].buffer.setHighlightSyntax(False)
+
+    if path != "":
+      # Change syntax highlighting for this tab.
+      var langMan = languageManagerGetDefault()
+      var lang = langMan.guessLanguage(path, nil)
+      if lang != nil:
+        win.Tabs[tabNr].buffer.setLanguage(lang)
+      else:
+        win.Tabs[tabNr].buffer.setHighlightSyntax(False)
   else: 
     path = win.Tabs[tabNr].filename
   
