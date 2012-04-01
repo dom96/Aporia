@@ -1009,12 +1009,15 @@ proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
           addr(start), addr(theEnd)):
       # No match
       return
-  
+
+  win.Tabs[currentTab].buffer.beginUserAction()
   # Remove the text
   gtk2.delete(win.Tabs[currentTab].buffer, addr(start), addr(theEnd))
   # Insert the replacement
   var text = getText(win.replaceEntry)
   win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
+
+  win.Tabs[currentTab].buffer.endUserAction()
   
   # Find next match, this is just a convenience.
   findText(True)
