@@ -628,8 +628,8 @@ proc redo(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
-    
-proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) = 
+
+proc setFindField() =
   # Get the selected text, and set the findEntry to it.
   var currentTab = win.SourceViewTabs.getCurrentPage()
   var insertIter: TTextIter
@@ -647,6 +647,9 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
                                                    addr(selectIter), false)
     win.findEntry.setText(text)
 
+proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) = 
+  setFindField()
+
   win.findBar.show()
   win.findEntry.grabFocus()
   win.replaceEntry.hide()
@@ -655,6 +658,8 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   win.replaceAllBtn.hide()
 
 proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  setFindField()
+
   win.findBar.show()
   win.findEntry.grabFocus()
   win.replaceEntry.show()
