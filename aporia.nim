@@ -261,6 +261,9 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
     # Esc pressed
     win.findBar.hide()
     win.goLineBar.bar.hide()
+    var current = win.SourceViewTabs.getCurrentPage()
+    win.tabs[current].sourceView.grabFocus()
+    
 
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
