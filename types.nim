@@ -36,6 +36,8 @@ type
     customCmd2*: string # command template to use to exec a custom command
     customCmd3*: string # command template to use to exec a custom command
     
+    recentlyOpenedFiles*: seq[string] # paths of recently opened files
+    
   MainWin* = object
     # Widgets
     w*: gtk2.PWindow
@@ -57,6 +59,8 @@ type
     replaceAllBtn*: PButton
     
     goLineBar*: TGoLineBar
+    
+    FileMenu*: PMenu
     
     viewBottomPanelMenuItem*: PMenuItem # view menu
 
@@ -109,6 +113,8 @@ type
     execProcess*: PProcess
     idleFuncId*: int
     lastProgressPulse*: float
+
+    recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
 
   Tab* = object
     buffer*: PSourceBuffer

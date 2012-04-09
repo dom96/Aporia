@@ -16,7 +16,7 @@ import settings, types, cfg, search, suggest, AboutDialog
 const
   NimrodProjectExt = ".nimprj"
   GTKVerReq = (2, 12, 0) # Version of GTK required for Aporia to run.
-  aporiaVersion = "0.1.1"
+  aporiaVersion = "0.1.2"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
   -h  --help Shows this message
@@ -248,15 +248,16 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
 
   if (event.state and modifiers) == CONTROL_MASK:
     # Ctrl pressed.
-    # TODO: Change to case stmt when Araq fixes this bug.
-    if event.keyval == KeyTab:
+    case event.keyval
+    of KeyTab:
       # Ctrl + Tab
       win.cycleTab()
       return true
-    elif event.keyval == KeyW:
+    of KeyW:
       # Ctrl + W
       closeTab(win.SourceViewTabs.getCurrentPage())
       return True
+    else: nil
 
   if event.keyval == KeyEscape:
     # Esc pressed
@@ -577,6 +578,54 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
 # GTK Events Contd.
 # -- TopMenu & TopBar
 
+proc recentFile_Activate(menuItem: PMenuItem, file: ptr string)
+proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
+  if win.tempStuff.recentFileMenuItems.len > 0:
+    for i in win.tempStuff.recentFileMenuItems:
+      PWidget(i).destroy()
+
+  win.tempStuff.recentFileMenuItems = @[]
+
+  # Recently opened files
+  # -- Show first five in the File menu
+  if win.settings.recentlyOpenedFiles.len > 0:
+    let recent = win.settings.recentlyOpenedFiles
+  
+    var moreMenu = menuNew()
+    var moreMenuItem = menuItemNew("More recent files...")
+    if recent.len > 5:
+      moreMenuItem.setSubMenu(moreMenu)
+      moreMenuItem.show()
+    else:
+      PWidget(moreMenu).destroy()
+      PWidget(moreMenuItem).destroy()
+    
+    let frm = max(0, (recent.len-1)-9)
+    let to =  recent.len-1
+    var addedItems = 0
+    # Countdown from the last item going back to the first, only 10 though.
+    for i in countdown(to, frm):
+      # Add to the File menu.
+      var recentFileMI = menuItemNew($(addedItems+1) & ". " &
+                                     recent[i].extractFilename)
+      win.tempStuff.recentFileMenuItems.add(recentFileMI)
+      if addedItems >= 5:
+        # Add to the "More recent files" menu.
+        moreMenu.append(recentFileMI)
+      else:
+        win.FileMenu.append(recentFileMI)
+      show(recentFileMI)
+      
+      discard signal_connect(recentFileMI, "activate", 
+                             SIGNAL_FUNC(recentFile_Activate),
+                             addr(win.settings.recentlyOpenedFiles[i]))
+      addedItems.inc()
+    
+    if recent.len > 5:
+      win.FileMenu.append(moreMenuItem)
+      win.tempStuff.recentFileMenuItems.add(moreMenuItem)
+
+
 proc newFile(menuItem: PMenuItem, user_data: pgpointer) = addTab("", "", True)
   
 proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
@@ -596,6 +645,9 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
     for f in items(files):
       try:
         addTab("", f, True)
+        # Add to recently opened files.
+        # TODO: Save settings?
+        win.settings.recentlyOpenedFiles.add(f)
       except EIO:
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
   
@@ -618,6 +670,13 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pgpointer) =
     win.Tabs[current].saved = saved
 
   updateMainTitle(current)
+
+proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
+  let filename = file[]
+  try:
+    addTab("", filename, True)
+  except EIO:
+    error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
 proc undo(menuItem: PMenuItem, user_data: pgpointer) = 
   var current = win.SourceViewTabs.getCurrentPage()
@@ -1165,21 +1224,21 @@ proc initTopMenu(MainBox: PBox) =
   var TopMenu = menuBarNew()
   
   # FileMenu
-  var FileMenu = menuNew()
+  win.FileMenu = menuNew()
 
   var NewMenuItem = menu_item_new("New") # New
-  FileMenu.append(NewMenuItem)
+  win.FileMenu.append(NewMenuItem)
   show(NewMenuItem)
   discard signal_connect(NewMenuItem, "activate", 
                           SIGNAL_FUNC(newFile), nil)
 
-  createSeparator(FileMenu)
+  createSeparator(win.FileMenu)
 
   var OpenMenuItem = menu_item_new("Open...") # Open...
   # CTRL + O
   OpenMenuItem.add_accelerator("activate", accGroup, 
                   KEY_o, CONTROL_MASK, ACCEL_VISIBLE) 
-  FileMenu.append(OpenMenuItem)
+  win.FileMenu.append(OpenMenuItem)
   show(OpenMenuItem)
   discard signal_connect(OpenMenuItem, "activate", 
                           SIGNAL_FUNC(aporia.openFile), nil)
@@ -1188,7 +1247,7 @@ proc initTopMenu(MainBox: PBox) =
   # CTRL + S
   SaveMenuItem.add_accelerator("activate", accGroup, 
                   KEY_s, CONTROL_MASK, ACCEL_VISIBLE) 
-  FileMenu.append(SaveMenuItem)
+  win.FileMenu.append(SaveMenuItem)
   show(SaveMenuItem)
   discard signal_connect(SaveMenuItem, "activate", 
                           SIGNAL_FUNC(saveFile_activate), nil)
@@ -1197,14 +1256,18 @@ proc initTopMenu(MainBox: PBox) =
 
   SaveAsMenuItem.add_accelerator("activate", accGroup, 
                   KEY_s, CONTROL_MASK or gdk2.SHIFT_MASK, ACCEL_VISIBLE) 
-  FileMenu.append(SaveAsMenuItem)
+  win.FileMenu.append(SaveAsMenuItem)
   show(SaveAsMenuItem)
   discard signal_connect(SaveAsMenuItem, "activate", 
                           SIGNAL_FUNC(saveFileAs_Activate), nil)
   
+  createSeparator(win.FileMenu)
+  
   var FileMenuItem = menuItemNewWithMnemonic("_File")
+  discard signalConnect(FileMenuItem, "activate",
+                        SIGNAL_FUNC(fileMenuItem_Activate), nil)
 
-  FileMenuItem.setSubMenu(FileMenu)
+  FileMenuItem.setSubMenu(win.FileMenu)
   FileMenuItem.show()
   TopMenu.append(FileMenuItem)
   
@@ -1611,6 +1674,8 @@ proc initTempStuff() =
 
   win.tempStuff.ifSuccess = ""
   win.tempStuff.compileSuccess = false
+
+  win.tempStuff.recentFileMenuItems = @[]
 
 proc initControls() =
   # Load up the language style

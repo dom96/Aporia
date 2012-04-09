@@ -250,7 +250,7 @@ proc replaceAll*(find, replace: cstring): Int =
   
     if found:
       inc(count)
-      buffer.delete(addr(startMatch), addr(endMatch))
+      gtk2.delete(buffer, addr(startMatch), addr(endMatch))
       buffer.insert(addr(startMatch), replace, replaceLen)
   
       iter = startMatch

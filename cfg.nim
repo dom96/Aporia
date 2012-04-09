@@ -28,6 +28,7 @@ proc defaultSettings*(): TSettings =
   result.customCmd1 = ""
   result.customCmd2 = ""
   result.customCmd3 = ""
+  result.recentlyOpenedFiles = @[]
 
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
@@ -45,6 +46,13 @@ proc writeKeyVal(f: TFile, key: string, val: int) =
   f.write(key)
   f.write(" = ")
   f.write(val)
+  f.write("\n")
+
+proc writeKeyValRaw(f: TFile, key: string, val: string) =
+  f.write(key)
+  f.write(" = r")
+  if val.len == 0: f.write("\"\"")
+  else: f.write("\"" & val & "\"")
   f.write("\n")
 
 proc save*(win: MainWin) =
@@ -82,6 +90,12 @@ proc save*(win: MainWin) =
     f.writeKeyVal("VPanedPos", settings.VPanedPos)
     f.writeKeyVal("winWidth", settings.winWidth)
     f.writeKeyVal("winHeight", settings.winHeight)
+    if settings.recentlyOpenedFiles.len() > 0:
+      let frm = max(0, (win.settings.recentlyOpenedFiles.len-1)-9)
+      let to  = settings.recentlyOpenedFiles.len()-1
+      f.writeKeyValRaw("recentlyOpenedFiles", 
+                    join(settings.recentlyOpenedFiles[frm..to], ";"))
+    
     
     f.writeSection("tools")
     f.writeKeyVal("nimrodCmd", settings.nimrodCmd)
@@ -146,7 +160,12 @@ proc load*(lastSession: var seq[string]): TSettings =
         for i in e.value.split(';'):
           if i != "":
             lastSession.add(i)
-        
+      of "recentlyopenedfiles":
+        for count, file in pairs(e.value.split(';')):
+          if file != "":
+            if count > 9: raise newException(ECFGParse, "Too many recent files")
+            result.recentlyOpenedFiles.add(file)
+      
     of cfgError:
       raise newException(ECFGParse, e.msg)
     of cfgSectionStart, cfgOption:
