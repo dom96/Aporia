@@ -8,7 +8,7 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
-import pegs, streams, times, parseopt, parseutils
+import pegs, streams, times, parseopt, parseutils, md5
 import settings, types, cfg, search, suggest, AboutDialog
 
 {.push callConv:cdecl.}
@@ -88,7 +88,7 @@ proc updateMainTitle(pageNum: int) =
     else: name = win.Tabs[pageNum].filename.extractFilename
     win.w.setTitle("Aporia - " & name)
   
-proc saveTab(tabNr: int, startpath: string) =
+proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   if tabNr < 0: return
   if win.Tabs[tabNr].saved: return
   var path = ""
@@ -127,13 +127,14 @@ proc saveTab(tabNr: int, startpath: string) =
       # Change the tab name and .Tabs.filename etc.
       win.Tabs[tabNr].filename = path
       win.Tabs[tabNr].saved = True
-      var name = extractFilename(path)
-      
-      var cTab = win.Tabs[tabNr]
-      cTab.label.setText(name)
-      cTab.label.setTooltipText(path)
-      
-      updateMainTitle(tabNr)
+      if updateGUI:
+        var name = extractFilename(path)
+        
+        var cTab = win.Tabs[tabNr]
+        cTab.label.setText(name)
+        cTab.label.setTooltipText(path)
+        
+        updateMainTitle(tabNr)
     else:
       error(win.w, "Unable to write to file: " & OSErrorMsg())  
 
@@ -942,39 +943,59 @@ proc execThreadProc(){.thread.} =
 
 {.push callConv: cdecl.}
 
-proc compileRun(currentTab: int, shouldRun: bool) =
-  if win.Tabs[currentTab].filename.len == 0: return
+proc saveForCompile(currentTab: int): string =
+  if win.Tabs[currentTab].filename.len == 0:
+    # Save to /tmp
+    if not existsDir(getTempDir() / "aporia"): createDir(getTempDir() / "aporia")
+    result = getTempDir() / "aporia" / "a" & getMD5($epochTime()).addFileExt("nim")
+    win.Tabs[currentTab].filename = result
+    saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
+    win.Tabs[currentTab].filename = ""
+    win.Tabs[currentTab].saved = false
+  else:
+    saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir)
+    result = win.tabs[currentTab].filename
+
+proc saveAllForCompile(projectTab: int): string =
+  for i, tab in win.tabs:
+    if i == projectTab:
+      result = saveForCompile(i)
+    else:
+      discard saveForCompile(i)
+
+proc compileRun(filename: string, shouldRun: bool) =
+  if filename.len == 0: return
   if win.tempStuff.execMode != ExecNone:
     win.w.error("Process already running!")
     return
   
   # Clear the outputTextView
   win.outputTextView.getBuffer().setText("", 0)
-  showBottomPanel()  
+  showBottomPanel()
 
-  var cmd = GetCmd(win.settings.nimrodCmd, win.Tabs[currentTab].filename)
+  var cmd = GetCmd(win.settings.nimrodCmd, filename)
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
   var ifSuccess = ""
   if shouldRun:
-    ifSuccess = changeFileExt(win.Tabs[currentTab].filename, os.ExeExt)
+    ifSuccess = changeFileExt(filename, os.ExeExt)
   execProcAsync(cmd, ExecNimrod, ifSuccess)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  saveFile_Activate(nil, nil)
-  compileRun(win.SourceViewTabs.getCurrentPage(), false)
+  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  compileRun(filename, false)
   
 proc CompileRunCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  saveFile_Activate(nil, nil)
-  compileRun(win.SourceViewTabs.getCurrentPage(), true)
+  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  compileRun(filename, true)
 
 proc CompileProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  saveAllTabs()
-  compileRun(getProjectTab(), false)
+  let filename = saveAllForCompile(getProjectTab())
+  compileRun(filename, false)
   
 proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
-  saveAllTabs()
-  compileRun(getProjectTab(), true)
+  let filename = saveAllForCompile(getProjectTab())
+  compileRun(filename, true)
 
 proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
 
