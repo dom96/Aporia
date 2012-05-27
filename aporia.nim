@@ -8,7 +8,7 @@
 #
 
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
-import pegs, streams, times, parseopt, parseutils, md5
+import pegs, streams, times, parseopt, parseutils
 import settings, types, cfg, search, suggest, AboutDialog
 
 {.push callConv:cdecl.}
@@ -947,7 +947,7 @@ proc saveForCompile(currentTab: int): string =
   if win.Tabs[currentTab].filename.len == 0:
     # Save to /tmp
     if not existsDir(getTempDir() / "aporia"): createDir(getTempDir() / "aporia")
-    result = getTempDir() / "aporia" / "a" & getMD5($epochTime()).addFileExt("nim")
+    result = getTempDir() / "aporia" / "a" & ($currentTab).addFileExt("nim")
     win.Tabs[currentTab].filename = result
     saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
     win.Tabs[currentTab].filename = ""
