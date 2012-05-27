@@ -678,15 +678,24 @@ proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
+proc scrollToInsert(tabIndex: int = -1) =
+  var current = win.SourceViewTabs.getCurrentPage()
+  if tabIndex != -1: current = tabIndex
+
+  var mark = win.Tabs[current].buffer.getInsert()
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
+
 proc undo(menuItem: PMenuItem, user_data: pgpointer) = 
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canUndo():
     win.Tabs[current].buffer.undo()
+  scrollToInsert()
   
 proc redo(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
+  scrollToInsert()
 
 proc setFindField() =
   # Get the selected text, and set the findEntry to it.
@@ -1466,13 +1475,14 @@ proc initSourceViewTabs() =
         #win.Tabs[i].sourceView.scrollToMark(mark, 0.25, true, 0.0, 0.5)
         #win.Tabs[i].sourceView.scrollMarkOnscreen(mark)
         inc(count)
-      else: echod("Could not open ", filename)
+      else: dialogs.error(win.w, "Could not restore file from session, file not found: " & filename)
     
     for f in loadFiles:
       if existsFile(f):
         addTab("", f)
       else:
-        echod("Could not open ", f)
+        dialogs.error(win.w, "Could not open " & f)
+        quit(QuitFailure)
     
     if loadFiles.len() != 0:
       # Select the tab that was opened.

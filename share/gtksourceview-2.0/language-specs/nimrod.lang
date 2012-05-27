@@ -211,6 +211,7 @@
           <keyword>(i|I)_*(s|S)_*(n|N)_*(o|O)_*(t|T)_*</keyword>
           <keyword>(i|I)_*(t|T)_*(e|E)_*(r|R)_*(a|A)_*(t|T)_*(o|O)_*(r|R)_*</keyword>
           <keyword>(l|L)_*(a|A)_*(m|M)_*(b|B)_*(d|D)_*(a|A)_*</keyword>
+          <keyword>(l|L)_*(e|E)_*(t|T)_*</keyword>
           <keyword>(m|M)_*(a|A)_*(c|C)_*(r|R)_*(o|O)_*</keyword>
           <keyword>(m|M)_*(e|E)_*(t|T)_*(h|H)_*(o|O)_*(d|D)_*</keyword>
           <keyword>(m|M)_*(o|O)_*(d|D)_*</keyword>
