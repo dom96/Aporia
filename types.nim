@@ -103,7 +103,7 @@ type
       exitCode*: int
   
   Temp = object
-    lastSaveDir*: string # Last saved directory
+    lastSaveDir*: string # Last saved directory/last active directory
     stopSBUpdates*: Bool
     
     execMode*: TExecMode

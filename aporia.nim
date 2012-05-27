@@ -654,16 +654,23 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
   
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
-  saveTab(current, os.splitFile(win.tabs[current].filename).dir)
+  var startpath = os.splitFile(win.tabs[current].filename).dir
+  if startpath == "":
+    startpath = win.tempStuff.lastSaveDir
+  
+  saveTab(current, startpath)
 
 proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   var (filename, saved) = (win.Tabs[current].filename, win.Tabs[current].saved)
+  var startpath = os.splitFile(win.tabs[current].filename).dir
+  if startpath == "":
+    startpath = win.tempStuff.lastSaveDir
 
   win.Tabs[current].saved = False
   win.Tabs[current].filename = ""
   # saveTab will ask the user for a filename if the tabs filename is "".
-  saveTab(current, os.splitFile(filename).dir)
+  saveTab(current, startpath)
   # If the user cancels the save file dialog. Restore the previous filename
   # and saved state
   if win.Tabs[current].filename == "":
@@ -1069,6 +1076,12 @@ proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
   updateMainTitle(pageNum)
+  
+  # Set the lastSavedDir
+  if win.tabs.len > pageNum:
+    if win.Tabs[pageNum].filename.len != 0:
+      win.tempStuff.lastSaveDir = splitFile(win.Tabs[pageNum].filename).dir
+  
   # Hide the suggest dialog
   win.suggest.hide()
 
