@@ -94,7 +94,6 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   var path = ""
   if win.Tabs[tabNr].filename == "":
     path = ChooseFileToSave(win.w, startpath)
-
     if path != "":
       # Change syntax highlighting for this tab.
       var langMan = languageManagerGetDefault()
@@ -178,21 +177,23 @@ proc confirmUnsaved(win: var MainWin, t: Tab): int =
 
 proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
   var quit = True
-  for i in low(win.Tabs)..len(win.Tabs)-1:
+  for i in win.Tabs.low .. win.Tabs.len-1:
     if not win.Tabs[i].saved:
-      win.sourceViewTabs.setCurrentPage(i)
-      var resp = win.confirmUnsaved(win.tabs[i])
-      if resp == RESPONSE_ACCEPT:
-        saveTab(i, os.splitFile(win.tabs[i].filename).dir)
-        quit = True
-      elif resp == RESPONSE_CANCEL:
-        quit = False
-        break
-      elif resp == RESPONSE_REJECT:
-        quit = True
-      else:
-        quit = False
-        break
+      # Only ask to save if file isn't empty
+      if win.Tabs[i].buffer.get_char_count != 0:
+        win.sourceViewTabs.setCurrentPage(i)
+        var resp = win.confirmUnsaved(win.tabs[i])
+        if resp == RESPONSE_ACCEPT:
+          saveTab(i, os.splitFile(win.tabs[i].filename).dir)
+          quit = True
+        elif resp == RESPONSE_CANCEL:
+          quit = False
+          break
+        elif resp == RESPONSE_REJECT:
+          quit = True
+        else:
+          quit = False
+          break
 
   # If False is returned the window will close
   return not quit
@@ -227,16 +228,18 @@ proc cycleTab(win: var MainWin) =
 proc closeTab(tab: int) =
   var close = true
   if not win.tabs[tab].saved:
-    var resp = win.confirmUnsaved(win.tabs[tab])
-    if resp == RESPONSE_ACCEPT:
-      saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-      close = True
-    elif resp == RESPONSE_CANCEL:
-      close = False
-    elif resp == RESPONSE_REJECT:
-      close = True
-    else:
-      close = False
+    # Only ask to save if file isn't empty
+    if win.Tabs[tab].buffer.get_char_count != 0:
+      var resp = win.confirmUnsaved(win.tabs[tab])
+      if resp == RESPONSE_ACCEPT:
+        saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
+        close = True
+      elif resp == RESPONSE_CANCEL:
+        close = False
+      elif resp == RESPONSE_REJECT:
+        close = True
+      else:
+        close = False
   
   if close:
     win.sourceViewTabs.removePage(tab)
@@ -514,7 +517,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
   ## If filename doesn't exist EIO is raised.
   assert(win.nimLang != nil)
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
-
+  
   if filename != nil and filename != "":
     if setCurrent:
       # If a tab with the same filename already exists select it.
@@ -523,7 +526,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
         # Select the existing tab
         win.sourceViewTabs.setCurrentPage(existingTab)
         return
-  
+    
     # Guess the language of the file loaded
     var langMan = languageManagerGetDefault()
     var lang = langMan.guessLanguage(filename, nil)
@@ -531,14 +534,14 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
       buffer.setLanguage(lang)
     else:
       buffer.setHighlightSyntax(False)
-
+  
   var nam = name
   if nam == "": nam = "Untitled"
   if filename == "": nam.add(" *")
   elif filename != "" and name == "":
     # Disable the undo/redo manager.
     buffer.begin_not_undoable_action()
-  
+    
     # Load the file.
     try:
       var file: string = readFile(filename)
@@ -602,7 +605,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       PWidget(moreMenuItem).destroy()
     
     let frm = max(0, (recent.len-1)-9)
-    let to =  recent.len-1
+    let to  = recent.len-1
     var addedItems = 0
     # Countdown from the last item going back to the first, only 10 though.
     for i in countdown(to, frm):
@@ -749,7 +752,14 @@ proc GoLine_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   
 proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   settings.showSettings(win)
-  
+
+proc viewToolBar_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
+  win.settings.toolBarVisible = menuitem.itemGetActive()
+  if win.settings.toolBarVisible:
+    win.toolBar.show()
+  else:
+    win.toolBar.hide()
+
 proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
   win.settings.bottomPanelVisible = menuitem.itemGetActive()
   if win.settings.bottomPanelVisible:
@@ -1073,6 +1083,11 @@ proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
   if ev.button == 2: # Middle click.
     closeTab(userDat)
 
+proc onTabsPressed(widg: PWidget, ev: PEventButton,
+                       userDat: pwidget):bool =
+  if ev.button == 1 and ev.`type` == BUTTON2_PRESS:
+    addTab("", "", true)
+
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
   updateMainTitle(pageNum)
@@ -1097,8 +1112,11 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
         if line != "" and line.startswith("file://"):
           var path = line[7 .. -1]
           echod(path)
-          # TODO: Check if tab is already opened and switch to it instead.
-          addTab("", path, True)
+          var existingTab = findTab(path)
+          if existingTab != -1:
+            win.sourceViewTabs.setCurrentPage(existingTab)
+          else:
+            addTab("", path, True)
       success = True
     else: echod("dragDataReceived: Unknown `info`")
 
@@ -1270,6 +1288,8 @@ proc initTopMenu(MainBox: PBox) =
   win.FileMenu = menuNew()
 
   var NewMenuItem = menu_item_new("New") # New
+  NewMenuItem.add_accelerator("activate", accGroup, 
+                  KEY_n, CONTROL_MASK, ACCEL_VISIBLE)
   win.FileMenu.append(NewMenuItem)
   show(NewMenuItem)
   discard signal_connect(NewMenuItem, "activate", 
@@ -1374,6 +1394,14 @@ proc initTopMenu(MainBox: PBox) =
   # View menu
   var ViewMenu = menuNew()
   
+  win.viewToolBarMenuItem = check_menu_item_new("Tool Bar")
+  PCheckMenuItem(win.viewToolBarMenuItem).itemSetActive(
+         win.settings.toolBarVisible)
+  ViewMenu.append(win.viewToolBarMenuItem)
+  show(win.viewToolBarMenuItem)
+  discard signal_connect(win.viewToolBarMenuItem, "toggled", 
+                          SIGNAL_FUNC(aporia.viewToolBar_Toggled), nil)
+  
   win.viewBottomPanelMenuItem = check_menu_item_new("Bottom Panel")
   PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(
          win.settings.bottomPanelVisible)
@@ -1444,25 +1472,26 @@ proc initTopMenu(MainBox: PBox) =
   TopMenu.show()
 
 proc initToolBar(MainBox: PBox) =
-  # TopBar(ToolBar)
-  var TopBar = toolbarNew()
-  TopBar.setStyle(TOOLBAR_ICONS)
+  # Create top ToolBar
+  win.toolBar = toolbarNew()
+  win.toolBar.setStyle(TOOLBAR_ICONS)
   
-  var NewFileItem = TopBar.insertStock(STOCK_NEW, "New File",
+  var NewFileItem = win.toolBar.insertStock(STOCK_NEW, "New File",
                       "New File", SIGNAL_FUNC(aporia.newFile), nil, 0)
-  TopBar.appendSpace()
-  var OpenItem = TopBar.insertStock(STOCK_OPEN, "Open",
+  win.toolBar.appendSpace()
+  var OpenItem = win.toolBar.insertStock(STOCK_OPEN, "Open",
                       "Open", SIGNAL_FUNC(aporia.openFile), nil, -1)
-  var SaveItem = TopBar.insertStock(STOCK_SAVE, "Save",
+  var SaveItem = win.toolBar.insertStock(STOCK_SAVE, "Save",
                       "Save", SIGNAL_FUNC(saveFile_Activate), nil, -1)
-  TopBar.appendSpace()
-  var UndoItem = TopBar.insertStock(STOCK_UNDO, "Undo", 
+  win.toolBar.appendSpace()
+  var UndoItem = win.toolBar.insertStock(STOCK_UNDO, "Undo", 
                       "Undo", SIGNAL_FUNC(aporia.undo), nil, -1)
-  var RedoItem = TopBar.insertStock(STOCK_REDO, "Redo",
+  var RedoItem = win.toolBar.insertStock(STOCK_REDO, "Redo",
                       "Redo", SIGNAL_FUNC(aporia.redo), nil, -1)
   
-  MainBox.packStart(TopBar, False, False, 0)
-  TopBar.show()
+  MainBox.packStart(win.toolBar, False, False, 0)
+  if win.settings.toolBarVisible == true:
+    win.toolBar.show()
 
 proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
   result.target = target
@@ -1484,10 +1513,14 @@ proc initSourceViewTabs() =
   discard win.SourceViewTabs.signalConnect(
           "drag-data-received", SIGNAL_FUNC(onDragDataReceived), nil)
   
+  # TODO: only create new tab when double-clicking in empty space
+  discard win.SourceViewTabs.signalConnect("button-press-event",
+          SIGNAL_FUNC(onTabsPressed), nil)
+  
   win.SourceViewTabs.show()
   if lastSession.len != 0 or loadFiles.len != 0:
     var count = 0
-    for i in 0 .. len(lastSession)-1:
+    for i in 0 .. lastSession.len-1:
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
@@ -1506,6 +1539,7 @@ proc initSourceViewTabs() =
         # TODO: Get it to center. Inspect gedit's source code to see how it does
         # this.
         win.Tabs[count].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
+        #win.Tabs[count].sourceView.scroll_mark_onscreen(mark)
         #win.Tabs[i].sourceView.scrollToMark(mark, 0.25, true, 0.0, 0.5)
         #win.Tabs[i].sourceView.scrollMarkOnscreen(mark)
         inc(count)
