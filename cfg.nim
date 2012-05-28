@@ -21,6 +21,7 @@ proc defaultSettings*(): TSettings =
   result.indentWidth = 2
   result.showLineNumbers = True
   result.highlightMatchingBrackets = True
+  result.toolBarVisible = true
   result.winWidth = 800
   result.winHeight = 600
   result.autoIndent = True
@@ -86,6 +87,8 @@ proc save*(win: MainWin) =
     f.writeSection("auto")
     f.write("; Stuff which is saved automatically," & 
         " like whether the window is maximized or not\n")
+    f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
+    f.writeKeyVal("bottomPanelVisible", $settings.bottomPanelVisible)
     f.writeKeyVal("winMaximized", $settings.winMaximized)
     f.writeKeyVal("VPanedPos", settings.VPanedPos)
     f.writeKeyVal("winWidth", settings.winWidth)
@@ -103,7 +106,7 @@ proc save*(win: MainWin) =
     f.writeKeyVal("customCmd2", settings.customCmd2)
     f.writeKeyVal("customCmd3", settings.customCmd3)
     
-    if win.Tabs.len() != 0:
+    if win.Tabs.len != 0:
       f.writeSection("session")
       var tabs = "tabs = r\""
       # Save all the tabs that have a filename.
@@ -149,6 +152,8 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
       of "winmaximized": result.winMaximized = isTrue(e.value)
       of "vpanedpos": result.VPanedPos = e.value.parseInt()
+      of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
+      of "bottompanelvisible": result.bottomPanelVisible = isTrue(e.value)
       of "winwidth": result.winWidth = e.value.parseInt()
       of "winheight": result.winHeight = e.value.parseInt()
       of "nimrodcmd": result.nimrodCmd = e.value
