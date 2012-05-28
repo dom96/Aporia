@@ -27,7 +27,8 @@ type
     VPanedPos*: int # Position of the VPaned, which splits
                     # the sourceViewTabs and bottomPanelTabs
     winWidth*, winHeight*: int # The size of the window.
-                    
+    
+    toolBarVisible*: bool # Whether the top panel is shown
     bottomPanelVisible*: bool # Whether the bottom panel is shown
     suggestFeature*: bool # Whether the suggest feature is enabled
     
@@ -48,6 +49,7 @@ type
     bottomBar*: PStatusBar 
     bottomProgress*: PProgressBar
     
+    toolBar*: PToolBar # FIXME: should be notebook?
     bottomPanelTabs*: PNotebook
     outputTextView*: PTextView
     
@@ -62,6 +64,7 @@ type
     
     FileMenu*: PMenu
     
+    viewToolBarMenuItem*: PMenuItem # view menu
     viewBottomPanelMenuItem*: PMenuItem # view menu
 
     Tabs*: seq[Tab] # Other
