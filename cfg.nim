@@ -141,7 +141,7 @@ proc load*(lastSession: var seq[string]): TSettings =
       case normalize(e.key)
       of "font": result.font = e.value
       of "scheme": result.colorSchemeID = e.value
-      of "indentwidth": result.indentWidth = e.value.parseInt()
+      of "indentwidth": result.indentWidth = int32(e.value.parseInt())
       of "showlinenumbers": result.showLineNumbers = isTrue(e.value)
       of "highlightmatchingbrackets": 
         result.highlightMatchingBrackets = isTrue(e.value)
@@ -151,11 +151,11 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "suggestfeature": result.suggestFeature = isTrue(e.value)
       of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
       of "winmaximized": result.winMaximized = isTrue(e.value)
-      of "vpanedpos": result.VPanedPos = e.value.parseInt()
+      of "vpanedpos": result.VPanedPos = int32(e.value.parseInt())
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
       of "bottompanelvisible": result.bottomPanelVisible = isTrue(e.value)
-      of "winwidth": result.winWidth = e.value.parseInt()
-      of "winheight": result.winHeight = e.value.parseInt()
+      of "winwidth": result.winWidth = int32(e.value.parseInt())
+      of "winheight": result.winHeight = int32(e.value.parseInt())
       of "nimrodcmd": result.nimrodCmd = e.value
       of "customcmd1": result.customCmd1 = e.value
       of "customcmd2": result.customCmd2 = e.value

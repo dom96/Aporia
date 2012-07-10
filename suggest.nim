@@ -90,8 +90,8 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
         item.name = s[2]
         item.nimType = s[3]
         item.file = s[4]
-        item.line = s[5].parseInt()
-        item.col = s[6].parseInt()
+        item.line = int32(s[5].parseInt())
+        item.col = int32(s[6].parseInt())
         
         # Get the name without the module name in front of it.
         var dots = item.name.split('.')
@@ -241,7 +241,7 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
   
   # We have the name of the item. Now insert it into the TextBuffer.
   var currentTab = win.SourceViewTabs.getCurrentPage()
-  win.Tabs[currentTab].buffer.insertAtCursor(name, len(name))
+  win.Tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
   
   # Now hide the suggest dialog and clear the items.
   win.suggest.hide()

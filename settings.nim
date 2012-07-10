@@ -234,7 +234,7 @@ proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
         win.settings.highlightMatchingBrackets)
 
 proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
-  win.settings.indentWidth = int(spinbtn.getValue())
+  win.settings.indentWidth = int32(spinbtn.getValue())
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     i.sourceView.setIndentWidth(win.settings.indentWidth)

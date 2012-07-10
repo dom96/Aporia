@@ -107,13 +107,13 @@ proc findRePeg(forward: bool, startIter: PTextIter,
   
   if match != (-1, 0):
     if forward:
-      buffer.getIterAtOffset(addr(startMatch), startIter.getOffset() + match[0])
+      buffer.getIterAtOffset(addr(startMatch), startIter.getOffset() + int32(match[0]))
       buffer.getIterAtOffset(addr(endMatch), startIter.getOffset() + 
-          match[1] + 1)
+          int32(match[1]) + 1)
     else:
-      buffer.getIterAtOffset(addr startMatch, getOffset(addr iter) + match[0])
+      buffer.getIterAtOffset(addr startMatch, getOffset(addr iter) + int32(match[0]))
       buffer.getIterAtOffset(addr(endMatch), getOffset(addr(iter)) +
-          match[1] + 1)
+          int32(match[1]) + 1)
           
     return (startMatch, endMatch, True)
   else:
@@ -251,7 +251,7 @@ proc replaceAll*(find, replace: cstring): Int =
     if found:
       inc(count)
       gtk2.delete(buffer, addr(startMatch), addr(endMatch))
-      buffer.insert(addr(startMatch), replace, replaceLen)
+      buffer.insert(addr(startMatch), replace, int32(replaceLen))
   
       iter = startMatch
   

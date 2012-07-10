@@ -15,7 +15,7 @@ import settings, types, cfg, search, suggest, AboutDialog
 
 const
   NimrodProjectExt = ".nimprj"
-  GTKVerReq = (2, 12, 0) # Version of GTK required for Aporia to run.
+  GTKVerReq = (2'i32, 12'i32, 0'i32) # Version of GTK required for Aporia to run.
   aporiaVersion = "0.1.2"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
@@ -181,7 +181,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
     if not win.Tabs[i].saved:
       # Only ask to save if file isn't empty
       if win.Tabs[i].buffer.get_char_count != 0:
-        win.sourceViewTabs.setCurrentPage(i)
+        win.sourceViewTabs.setCurrentPage(i.int32)
         var resp = win.confirmUnsaved(win.tabs[i])
         if resp == RESPONSE_ACCEPT:
           saveTab(i, os.splitFile(win.tabs[i].filename).dir)
@@ -242,7 +242,7 @@ proc closeTab(tab: int) =
         close = False
   
   if close:
-    win.sourceViewTabs.removePage(tab)
+    win.sourceViewTabs.removePage(int32(tab))
 
     system.delete(win.Tabs, tab)
 
@@ -524,7 +524,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
       var existingTab = findTab(filename)
       if existingTab != -1:
         # Select the existing tab
-        win.sourceViewTabs.setCurrentPage(existingTab)
+        win.sourceViewTabs.setCurrentPage(int32(existingTab))
         return
     
     # Guess the language of the file loaded
@@ -545,7 +545,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
     # Load the file.
     try:
       var file: string = readFile(filename)
-      buffer.set_text(file, len(file))
+      buffer.set_text(file, len(file).int32)
     except EIO:
       raise
     finally:
@@ -577,7 +577,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
 
   if setCurrent:
     # Select the newly created tab
-    win.sourceViewTabs.setCurrentPage(win.Tabs.len()-1)
+    win.sourceViewTabs.setCurrentPage(int32(win.Tabs.len())-1)
 
 # GTK Events Contd.
 # -- TopMenu & TopBar
@@ -689,7 +689,7 @@ proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
-proc scrollToInsert(tabIndex: int = -1) =
+proc scrollToInsert(tabIndex: int32 = -1) =
   var current = win.SourceViewTabs.getCurrentPage()
   if tabIndex != -1: current = tabIndex
 
@@ -780,9 +780,9 @@ proc addText(textView: PTextView, text: string,
     textView.getBuffer().getEndIter(addr(iter))
 
     if colorTag == nil:
-      textView.getBuffer().insert(addr(iter), text, len(text))
+      textView.getBuffer().insert(addr(iter), text, int32(len(text)))
     else:
-      textView.getBuffer().insertWithTags(addr(iter), text, len(text), colorTag,
+      textView.getBuffer().insertWithTags(addr(iter), text, len(text).int32, colorTag,
                                           nil)
     if scroll:
       var endMark = textView.getBuffer().getMark("endMark")
@@ -1114,7 +1114,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
           echod(path)
           var existingTab = findTab(path)
           if existingTab != -1:
-            win.sourceViewTabs.setCurrentPage(existingTab)
+            win.sourceViewTabs.setCurrentPage(int32(existingTab))
           else:
             addTab("", path, True)
       success = True
@@ -1144,7 +1144,7 @@ proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
   gtk2.delete(win.Tabs[currentTab].buffer, addr(start), addr(theEnd))
   # Insert the replacement
   var text = getText(win.replaceEntry)
-  win.Tabs[currentTab].buffer.insert(addr(start), text, len(text))
+  win.Tabs[currentTab].buffer.insert(addr(start), text, int32(len(text)))
 
   win.Tabs[currentTab].buffer.endUserAction()
   
@@ -1234,7 +1234,7 @@ proc goLine_Changed(ed: PEditable, d: pgpointer) =
     template buffer: expr = win.tabs[current].buffer
     if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
       var iter: TTextIter
-      buffer.getIterAtLine(addr(iter), int(lineNum)-1)
+      buffer.getIterAtLine(addr(iter), int32(lineNum)-1)
       
       buffer.moveMarkByName("insert", addr(iter))
       buffer.moveMarkByName("selection_bound", addr(iter))
@@ -1495,8 +1495,8 @@ proc initToolBar(MainBox: PBox) =
 
 proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
   result.target = target
-  result.flags = flags
-  result.info = info
+  result.flags = flags.int32
+  result.info = info.int32
 
 proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
@@ -1530,7 +1530,7 @@ proc initSourceViewTabs() =
         # TODO: Save last cursor position as line and column offset combo.
         # This will help with int overflows which would happen more often with
         # a char offset.
-        win.Tabs[count].buffer.getIterAtOffset(addr(iter), offset.parseInt())
+        win.Tabs[count].buffer.getIterAtOffset(addr(iter), int32(offset.parseInt()))
         win.Tabs[count].buffer.placeCursor(addr(iter))
         
         var mark = win.Tabs[count].buffer.getInsert()
@@ -1554,7 +1554,7 @@ proc initSourceViewTabs() =
     
     if loadFiles.len() != 0:
       # Select the tab that was opened.
-      win.sourceViewTabs.setCurrentPage(win.tabs.len()-1)
+      win.sourceViewTabs.setCurrentPage(int32(win.tabs.len())-1)
     
   else:
     addTab("", "")

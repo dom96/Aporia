@@ -16,7 +16,7 @@ type
     
     font*: string # font used by the sourceview
     colorSchemeID*: string # color scheme used by the sourceview
-    indentWidth*: int # how many spaces used for indenting code (in sourceview)
+    indentWidth*: int32 # how many spaces used for indenting code (in sourceview)
     showLineNumbers*: bool # whether to show line numbers in the sourceview
     highlightMatchingBrackets*: bool # whether to highlight matching brackets
     rightMargin*: bool # Whether to show the right margin
@@ -24,9 +24,9 @@ type
     autoIndent*: bool
 
     winMaximized*: bool # Whether the MainWindow is maximized on startup
-    VPanedPos*: int # Position of the VPaned, which splits
-                    # the sourceViewTabs and bottomPanelTabs
-    winWidth*, winHeight*: int # The size of the window.
+    VPanedPos*: int32 # Position of the VPaned, which splits
+                      # the sourceViewTabs and bottomPanelTabs
+    winWidth*, winHeight*: int32 # The size of the window.
     
     toolBarVisible*: bool # Whether the top panel is shown
     bottomPanelVisible*: bool # Whether the bottom panel is shown
@@ -114,7 +114,7 @@ type
     compileSuccess*: bool
     execThread*: TThread[void]
     execProcess*: PProcess
-    idleFuncId*: int
+    idleFuncId*: int32
     lastProgressPulse*: float
 
     recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
@@ -128,7 +128,7 @@ type
     
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*: string
-    line*, col*: int
+    line*, col*: int32
   
   TSearchEnum* = enum
     SearchCaseSens, SearchCaseInsens, SearchStyleInsens, SearchRegex, SearchPeg
