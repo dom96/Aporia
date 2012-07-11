@@ -855,6 +855,7 @@ proc peekProcOutput(dummy: pointer): bool =
         of EvStarted:
           win.tempStuff.execProcess = event.p
         of EvRecv:
+          echod("Line is: " & event.line)
           printProcOutput(event.line)
         of EvStopped:
           echod("[Idle] Process has quit")
@@ -905,6 +906,13 @@ proc execProcAsync(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   
 {.pop.}
 
+template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt =
+  ## Sends a thrEvent of type ``t``, does ``todo`` before sending.
+  var event: TExecThrEvent
+  event.typ = t
+  todo
+  execThrEventChan.send(event)
+
 proc execThreadProc(){.thread.} =
   var p: PProcess
   var o: PStream
@@ -919,10 +927,8 @@ proc execThreadProc(){.thread.} =
         of ThrRun:
           if not started:
             p = startCmd(task.command)
-            var event: TExecThrEvent
-            event.typ = EvStarted
-            event.p = p
-            execThrEventChan.send(event)
+            createExecThrEvent(EvStarted):
+              event.p = p
             o = p.outputStream
             started = true
           else:
@@ -933,31 +939,35 @@ proc execThreadProc(){.thread.} =
           started = false
           o.close()
           var exitCode = p.waitForExit()
-          var event: TExecThrEvent
-          event.typ = EvStopped
-          event.exitCode = exitCode
-          execThrEventChan.send(event)
+          createExecThrEvent(EvStopped):
+            event.exitCode = exitCode
           p.close()
     
-    # Read output.
+    # Check if process exited.
     if started:
-      var line = o.readLine()
-      if line != "":
-        var event: TExecThrEvent
-        event.typ = EvRecv
-        event.line = line
-        execThrEventChan.send(event)
-      else:
+      if not p.running:
         echod("[Thread] Process exited.")
+        if not o.atEnd:
+          var line = ""
+          while not o.atEnd:
+            line = o.readLine()
+            createExecThrEvent(EvRecv):
+              event.line = line
+        
+        # Process exited.
         var exitCode = p.waitForExit()
         p.close()
         o.close()
         started = false
-        var event: TExecThrEvent
-        event.typ = EvStopped
-        event.exitCode = exitCode
-        execThrEventChan.send(event)
+        createExecThrEvent(EvStopped):
+          event.exitCode = exitCode
+    
+    if started:
+      var line = o.readLine()
+      createExecThrEvent(EvRecv):
+        event.line = line
 
+      
 {.push callConv: cdecl.}
 
 proc saveForCompile(currentTab: int): string =
