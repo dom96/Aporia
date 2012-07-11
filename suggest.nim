@@ -10,7 +10,7 @@
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,
-  types
+  utils
 
 when not defined(os.findExe): 
   proc findExe*(exe: string): string = 

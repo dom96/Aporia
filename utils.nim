@@ -136,3 +136,35 @@ type
   TGoLineBar* = object
     bar*: PHBox
     entry*: PEntry
+
+# -- Debug
+proc echod*[T](s: openarray[T]) =
+  when not defined(release):
+    for i in items(s): stdout.write(i)
+    echo()
+
+
+# -- Useful TextView functions.
+
+proc createColor*(textView: PTextView, name, color: string): PTextTag =
+  # This function makes sure that the color is created only once.
+  var tagTable = textView.getBuffer().getTagTable()
+  result = tagTable.tableLookup(name)
+  if result == nil:
+    result = textView.getBuffer().createTag(name, "foreground", color, nil)
+
+proc addText*(textView: PTextView, text: string,
+             colorTag: PTextTag = nil, scroll: bool = true) =
+  if text != nil:
+    var iter: TTextIter
+    textView.getBuffer().getEndIter(addr(iter))
+
+    if colorTag == nil:
+      textView.getBuffer().insert(addr(iter), text, int32(len(text)))
+    else:
+      textView.getBuffer().insertWithTags(addr(iter), text, len(text).int32, colorTag,
+                                          nil)
+    if scroll:
+      var endMark = textView.getBuffer().getMark("endMark")
+      # Yay! With the use of marks; scrolling always occurs!
+      textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)

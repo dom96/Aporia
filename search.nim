@@ -8,12 +8,12 @@
 #
 
 import gtk2, glib2, gtksourceview, gdk2, pegs, re, strutils
-import types
+import utils
 
 {.push callConv:cdecl.}
 
 var
-  win*: ptr types.MainWin
+  win*: ptr utils.MainWin
 
 proc getSearchOptions(): TTextSearchFlags =
   case win.settings.search

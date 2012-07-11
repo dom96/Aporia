@@ -8,7 +8,7 @@
 #
 
 import gtk2, gdk2, glib2, pango, os
-import gtksourceview, types
+import gtksourceview, utils
 
 {.push callConv:cdecl.}
 
@@ -16,7 +16,7 @@ const
   langSpecs* = "share/gtksourceview-2.0/language-specs"
   styles* = "share/gtksourceview-2.0/styles"
 
-var win: ptr types.MainWin
+var win: ptr utils.MainWin
 
 # -- Fonts and Colors --
 
@@ -353,7 +353,7 @@ proc closeDialog(widget: pWidget, user_data: pgpointer) =
 
   gtk2.PObject(dialog).destroy()
 
-proc showSettings*(aWin: var types.MainWin) =
+proc showSettings*(aWin: var utils.MainWin) =
   win = addr(aWin)  # This has to be a pointer
                     # Because i need the settings to be changed
                     # in aporia.nim not in here.

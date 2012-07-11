@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import types, times, streams, parsecfg, strutils, os
+import utils, times, streams, parsecfg, strutils, os
 from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter
 
 type
