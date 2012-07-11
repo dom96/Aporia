@@ -1406,7 +1406,7 @@ proc initTopMenu(MainBox: PBox) =
   PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(
          win.settings.bottomPanelVisible)
   win.viewBottomPanelMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_f9, CONTROL_MASK, ACCEL_VISIBLE) 
+                  KEY_b, SHIFT_MASK, ACCEL_VISIBLE) 
   ViewMenu.append(win.viewBottomPanelMenuItem)
   show(win.viewBottomPanelMenuItem)
   discard signal_connect(win.viewBottomPanelMenuItem, "toggled", 
