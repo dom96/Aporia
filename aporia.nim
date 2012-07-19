@@ -492,10 +492,16 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc findTab(filename: string): int =
+proc findTab(filename: string, absolute: bool = true): int =
   for i in 0..win.Tabs.len()-1:
-    if win.Tabs[i].filename == filename: 
-      return i
+    if absolute:
+      if win.Tabs[i].filename == filename: 
+        return i
+    else:
+      if filename in win.Tabs[i].filename:
+        return i 
+      elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
+        return i
 
   return -1
 
@@ -933,6 +939,26 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
 
   dragFinish(context, success, False, time)
 
+# -- Bottom tabs
+
+proc errorList_SelectChanged(selection: PTreeSelection, d: pointer) =
+  var selectedIter: TTreeIter
+  var TreeModel: PTreeModel
+  if selection.getSelected(addr(TreeModel), addr(selectedIter)):
+    let selectedPath = TreeModel.getPath(addr(selectedIter))
+    let selectedIndex = selectedPath.getIndices()[]
+    let item = win.tempStuff.errorList[selectedIndex]
+    var existingTab = findTab(item.file, false)
+    if existingTab == -1:
+      win.w.error("Could not find correct tab.")
+    else:
+      win.sourceViewTabs.setCurrentPage(int32(existingTab))
+      
+      # Move cursor to where the error is.
+      var iter: TTextIter
+      win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
+          int32(item.line.parseInt)-1, int32(item.column.parseInt))
+
 # -- FindBar
 
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
@@ -1217,7 +1243,7 @@ proc initTopMenu(MainBox: PBox) =
   PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(
          win.settings.bottomPanelVisible)
   win.viewBottomPanelMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_b, SHIFT_MASK, ACCEL_VISIBLE) 
+                  KEY_b, CONTROL_MASK or SHIFT_MASK, ACCEL_VISIBLE) 
   ViewMenu.append(win.viewBottomPanelMenuItem)
   show(win.viewBottomPanelMenuItem)
   discard signal_connect(win.viewBottomPanelMenuItem, "toggled", 
@@ -1369,13 +1395,13 @@ proc initSourceViewTabs() =
     
   else:
     addTab("", "")
-  
+
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
   if win.settings.bottomPanelVisible:
     win.bottomPanelTabs.show()
   
-  # output tab
+  # -- output tab
   var tabLabel = labelNew("Output")
   var outputTab = vboxNew(False, 0)
   discard win.bottomPanelTabs.appendPage(outputTab, tabLabel)
@@ -1395,6 +1421,41 @@ proc initBottomTabs() =
           getBuffer().createMark("endMark", addr(endIter), False)
   
   outputTab.show()
+
+  # -- errors tab
+  var errorListLabel = labelNew("Error list")
+  var errorListTab = vboxNew(false, 0)
+  discard win.bottomPanelTabs.appendPage(errorListTab, errorListLabel)
+  
+  var errorsScrollWin = scrolledWindowNew(nil, nil)
+  errorsScrollWin.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
+  errorListTab.packStart(errorsScrollWin, True, True, 0)
+  errorsScrollWin.show()
+  
+  win.errorListWidget = treeviewNew()
+  var errorSelection = win.errorListWidget.getSelection()
+  discard errorSelection.gsignalConnect("changed",
+              GCallback(errorList_SelectChanged), nil)
+  
+  errorsScrollWin.add(win.errorListWidget)
+  
+  win.errorListWidget.createTextColumn("Type", 0)
+  win.errorListWidget.createTextColumn("Description", 1, true)
+  win.errorListWidget.createTextColumn("File", 2)
+  win.errorListWidget.createTextColumn("Line", 3)
+  win.errorListWidget.createTextColumn("Column", 4)
+
+  # There are 3 attributes. The renderer is counted. Last is the tooltip text.
+  var listStore = listStoreNew(5, TypeString, TypeString, TypeString,
+                                  TypeString, TypeString)
+  assert(listStore != nil)
+  win.errorListWidget.setModel(liststore)
+  win.errorListWidget.show()
+  errorListTab.show()
+
+  #addError(TETError, "type mistmatch:\n expected blah\n got: proc asd();",
+  #  "file.nim", "190", "5")
+
 
 proc initTAndBP(MainBox: PBox) =
   # This init's the HPaned, which splits the sourceViewTabs
@@ -1566,6 +1627,9 @@ proc initTempStuff() =
 
   win.tempStuff.recentFileMenuItems = @[]
 
+  win.tempStuff.compilationErrorBuffer = ""
+  win.tempStuff.errorList = @[]
+
 proc initControls() =
   # Load up the language style
   var langMan = languageManagerGetDefault()
@@ -1607,6 +1671,8 @@ proc initControls() =
   discard win.w.signalConnect("key-press-event",
     SIGNAL_FUNC(window_keyPress), nil)
   
+  # Init tempStuff
+  initTempStuff()
   
   # Suggest dialog
   createSuggestDialog(win)
@@ -1625,9 +1691,6 @@ proc initControls() =
   MainBox.show()
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
-
-  # Init tempStuff
-  initTempStuff()
 
 proc afterInit() =
   win.Tabs[0].sourceView.grabFocus()

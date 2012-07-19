@@ -52,6 +52,7 @@ type
     toolBar*: PToolBar # FIXME: should be notebook?
     bottomPanelTabs*: PNotebook
     outputTextView*: PTextView
+    errorListWidget*: PTreeView
     
     findBar*: PHBox # findBar
     findEntry*: PEntry
@@ -116,6 +117,9 @@ type
     execProcess*: PProcess
     idleFuncId*: int32
     lastProgressPulse*: float
+    errorMsgStarted*: bool
+    compilationErrorBuffer*: string # holds error msg if it spans multiple lines.
+    errorList*: seq[TError]
 
     recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
 
@@ -136,6 +140,13 @@ type
   TGoLineBar* = object
     bar*: PHBox
     entry*: PEntry
+
+  TErrorType* = enum
+    TETError, TETWarning
+
+  TError* = object
+    kind*: TErrorType
+    desc*, file*, line*, column*: string
 
 # -- Debug
 proc echod*[T](s: openarray[T]) =
@@ -168,3 +179,17 @@ proc addText*(textView: PTextView, text: string,
       var endMark = textView.getBuffer().getMark("endMark")
       # Yay! With the use of marks; scrolling always occurs!
       textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
+
+# -- Useful TreeView function
+proc createTextColumn*(tv: PTreeView, title: string, column: int,
+                      expand = false, resizable = true) =
+  ## Creates a new Text column.
+  var c = TreeViewColumnNew()
+  var renderer = cellRendererTextNew()
+  c.columnSetTitle(title)
+  c.columnPackStart(renderer, expand)
+  c.columnSetExpand(expand)
+  c.columnSetResizable(resizable)
+  c.columnSetAttributes(renderer, "text", column, nil)
+  assert tv.appendColumn(c) == column+1
+
