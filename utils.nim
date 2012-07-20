@@ -180,6 +180,13 @@ proc addText*(textView: PTextView, text: string,
       # Yay! With the use of marks; scrolling always occurs!
       textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
 
+proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
+  var current = win.SourceViewTabs.getCurrentPage()
+  if tabIndex != -1: current = tabIndex
+
+  var mark = win.Tabs[current].buffer.getInsert()
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
+
 # -- Useful TreeView function
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
                       expand = false, resizable = true) =

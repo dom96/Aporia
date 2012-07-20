@@ -21,6 +21,7 @@ var
   pegOtherError = peg"'Error:' \s* {.*}"
   pegSuccess = peg"'Hint: operation successful'.*"
   reLineMessage = re".+\(\d+,\s\d+\)"
+  pegLineInfo = peg"{[^(]*} '(' {\d+} ', ' \d+ ') Info:' \s* {.*}"
 
 proc `$`(theType: TErrorType): string =
   case theType
@@ -95,7 +96,7 @@ proc parseError(err: string,
   case normalize(theType)
   of "error", "info":
     res.theType = TETError
-  of "hint":
+  of "hint", "warning":
     res.theType = TETWarning
   else:
     echo(theType)
@@ -107,6 +108,14 @@ proc parseError(err: string,
 proc execProcAsync*(cmd: string, mode: TExecMode, ifSuccess: string = "")
 proc printProcOutput(line: string) =
   ## This shouldn't have to worry about receiving broken up errors (into new lines)
+  ## continuous errors should be received, errors which span multiple lines
+  ## should be received as one continuous message.
+  echod("Printing: ", line.repr)
+  template paErr(): stmt =
+    var parseRes: tuple[theType: TErrorType, desc, file, line, col: string]
+    parseError(line, parseRes)
+    addError(parseRes.theType, parseRes.desc,
+             parseRes.file, parseRes.line, parseRes.col)
 
   # Colors
   var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
@@ -116,19 +125,16 @@ proc printProcOutput(line: string) =
   
   case win.tempStuff.execMode:
   of ExecNimrod:
-    if line =~ pegLineError / pegOtherError:
+    if line =~ pegLineError / pegOtherError / pegLineInfo:
       win.outputTextView.addText(line & "\n", errorTag)
-      var parseRes: tuple[theType: TErrorType, desc, file, line, col: string]
-      parseError(line, parseRes)
-      addError(parseRes.theType, parseRes.desc,
-               parseRes.file, parseRes.line, parseRes.col)
+      paErr()
       win.tempStuff.compileSuccess = false
     elif line =~ pegSuccess:
       win.outputTextView.addText(line & "\n", successTag)
       win.tempStuff.compileSuccess = true
-
     elif line =~ pegLineWarning:
       win.outputTextView.addText(line & "\n", warningTag)
+      paErr()
     else:
       win.outputTextView.addText(line & "\n", normalTag)
   of ExecRun, ExecCustom:
@@ -154,20 +160,40 @@ proc peekProcOutput*(dummy: pointer): bool =
         of EvStarted:
           win.tempStuff.execProcess = event.p
         of EvRecv:
-          echod("Line is: " & event.line)
-          if event.line == "":
-            if win.tempStuff.errorMsgStarted:
-              win.tempStuff.errorMsgStarted = false
-              printProcOutput(win.tempStuff.compilationErrorBuffer)
-              win.tempStuff.compilationErrorBuffer = ""
-          elif event.line.startsWith(reLineMessage):
-            win.tempStuff.errorMsgStarted = true
-            win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
-          else:
-            if win.tempStuff.errorMsgStarted:
-              win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
+          event.line = event.line.strip()
+          if win.tempStuff.execMode == execNimrod:
+            if event.line != "":
+              echod("Line is: " & event.line.repr)
+            if event.line == "" or event.line.startsWith(pegSuccess):
+              echod(1)
+              if win.tempStuff.errorMsgStarted:
+                win.tempStuff.errorMsgStarted = false
+                printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
+                win.tempStuff.compilationErrorBuffer = ""
+              if event.line != "":
+                printProcOutput(event.line)
+            elif event.line.startsWith(reLineMessage):
+              echod(2)
+              if not win.tempStuff.errorMsgStarted:
+                echod(2.1)
+                win.tempStuff.errorMsgStarted = true
+                win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
+              elif win.tempStuff.compilationErrorBuffer != "":
+                echod(2.2)
+                printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
+                win.tempStuff.compilationErrorBuffer = ""
+                win.tempStuff.errorMsgStarted = false
+                printProcOutput(event.line)
+              else:
+                printProcOutput(event.line)
             else:
-              printProcOutput(event.line)
+              echod(3)
+              if win.tempStuff.errorMsgStarted:
+                win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
+              else:
+                printProcOutput(event.line)
+          else:
+            printProcOutput(event.line)
         of EvStopped:
           echod("[Idle] Process has quit")
           if win.tempStuff.compilationErrorBuffer.len() > 0:

@@ -422,7 +422,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 
 proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
-  result = false
+  result = true
   var key = $keyval_name(event.keyval)
   case key.toLower()
   of "period":
@@ -684,24 +684,17 @@ proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
-proc scrollToInsert(tabIndex: int32 = -1) =
-  var current = win.SourceViewTabs.getCurrentPage()
-  if tabIndex != -1: current = tabIndex
-
-  var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
-
 proc undo(menuItem: PMenuItem, user_data: pgpointer) = 
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canUndo():
     win.Tabs[current].buffer.undo()
-  scrollToInsert()
+  win.scrollToInsert()
   
 proc redo(menuItem: PMenuItem, user_data: pgpointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
-  scrollToInsert()
+  win.scrollToInsert()
 
 proc setFindField() =
   # Get the selected text, and set the findEntry to it.
@@ -871,6 +864,20 @@ proc RunCustomCommand2(menuitem: PMenuItem, user_data: pgpointer) =
 proc RunCustomCommand3(menuitem: PMenuItem, user_data: pgpointer) =
   RunCustomCommand(win.settings.customCmd3)
 
+proc RunCheck(menuItem: PMenuItem, user_data: pgpointer) =
+  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  if filename.len == 0: return
+  if win.tempStuff.execMode != ExecNone:
+    win.w.error("Process already running!")
+    return
+  
+  # Clear the outputTextView
+  win.outputTextView.getBuffer().setText("", 0)
+  showBottomPanel()
+
+  var cmd = GetCmd("$findExe(nimrod) check $#", filename)
+  execProcAsync(cmd, ExecNimrod)
+
 proc memUsage_click(menuitem: PMenuItem, user_data: pgpointer) =
   echo("Memory usage: ")
   gMemProfile()
@@ -941,23 +948,32 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
 
 # -- Bottom tabs
 
-proc errorList_SelectChanged(selection: PTreeSelection, d: pointer) =
-  var selectedIter: TTreeIter
-  var TreeModel: PTreeModel
-  if selection.getSelected(addr(TreeModel), addr(selectedIter)):
-    let selectedPath = TreeModel.getPath(addr(selectedIter))
-    let selectedIndex = selectedPath.getIndices()[]
-    let item = win.tempStuff.errorList[selectedIndex]
-    var existingTab = findTab(item.file, false)
-    if existingTab == -1:
-      win.w.error("Could not find correct tab.")
-    else:
-      win.sourceViewTabs.setCurrentPage(int32(existingTab))
-      
-      # Move cursor to where the error is.
-      var iter: TTextIter
-      win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
-          int32(item.line.parseInt)-1, int32(item.column.parseInt))
+proc errorList_RowActivated(tv: PTreeView, path: PTreePath, 
+            column: PTreeViewColumn, d: pointer) =
+  let selectedIndex = path.getIndices()[]
+  let item = win.tempStuff.errorList[selectedIndex]
+  var existingTab = findTab(item.file, false)
+  if existingTab == -1:
+    win.w.error("Could not find correct tab.")
+  else:
+    win.sourceViewTabs.setCurrentPage(int32(existingTab))
+    
+    # Move cursor to where the error is.
+    var iter: TTextIter
+    var iterPlus1: TTextIter 
+    win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
+        int32(item.line.parseInt)-1, int32(item.column.parseInt))
+    win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
+        int32(item.line.parseInt)-1, int32(item.column.parseInt)+1)
+    
+    win.Tabs[existingTab].buffer.moveMarkByName("insert", addr(iter))
+    win.Tabs[existingTab].buffer.moveMarkByName("selection_bound",
+        addr(iterPlus1))
+    
+    # TODO: This should be getting focus, but as usual it's not... FIXME
+    win.Tabs[existingTab].sourceView.grabFocus()
+
+    win.scrollToInsert(int32(existingTab))
 
 # -- FindBar
 
@@ -1100,9 +1116,10 @@ proc goLineClose_clicked(button: PButton, user_data: pgpointer) =
 
 proc createAccelMenuItem(toolsMenu: PMenu, accGroup: PAccelGroup, 
                          label: string, acc: gint,
-                         action: proc (i: PMenuItem, p: pgpointer)) = 
+                         action: proc (i: PMenuItem, p: pgpointer),
+                         mask: gint = 0) = 
   var result = menu_item_new(label)
-  result.addAccelerator("activate", accGroup, acc, 0, ACCEL_VISIBLE)
+  result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
   ToolsMenu.append(result)
   show(result)
   discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
@@ -1277,6 +1294,10 @@ proc initTopMenu(MainBox: PBox) =
                       KEY_F2, aporia.RunCustomCommand2)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 3", 
                       KEY_F3, aporia.RunCustomCommand3)
+  createSeparator(ToolsMenu)
+  createAccelMenuItem(ToolsMenu, accGroup, "Check", 
+                      KEY_F5, aporia.RunCheck, CONTROL_MASK)
+  
   
   var ToolsMenuItem = menuItemNewWithMnemonic("_Tools")
   
@@ -1292,7 +1313,7 @@ proc initTopMenu(MainBox: PBox) =
   show(MemMenuItem)
   discard signal_connect(MemMenuItem, "activate", 
                          SIGNAL_FUNC(aporia.memUsage_click), nil)
-  createSeparator(ToolsMenu)
+  
   var AboutMenuItem = menu_item_new("About")
   HelpMenu.append(AboutMenuItem)
   show(AboutMenuItem)
@@ -1433,9 +1454,8 @@ proc initBottomTabs() =
   errorsScrollWin.show()
   
   win.errorListWidget = treeviewNew()
-  var errorSelection = win.errorListWidget.getSelection()
-  discard errorSelection.gsignalConnect("changed",
-              GCallback(errorList_SelectChanged), nil)
+  discard win.errorListWidget.signalConnect("row-activated",
+              SIGNAL_FUNC(errorList_RowActivated), nil)
   
   errorsScrollWin.add(win.errorListWidget)
   
