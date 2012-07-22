@@ -20,6 +20,7 @@ var
   pegLineWarning = peg"{[^(]*} '(' {\d+} ', ' \d+ ') ' ('Warning:'/'Hint:') \s* {.*}"
   pegOtherError = peg"'Error:' \s* {.*}"
   pegSuccess = peg"'Hint: operation successful'.*"
+  pegOtherHint = peg"'Hint: '.*"
   reLineMessage = re".+\(\d+,\s\d+\)"
   pegLineInfo = peg"{[^(]*} '(' {\d+} ', ' \d+ ') Info:' \s* {.*}"
 
@@ -164,7 +165,8 @@ proc peekProcOutput*(dummy: pointer): bool =
           if win.tempStuff.execMode == execNimrod:
             if event.line != "":
               echod("Line is: " & event.line.repr)
-            if event.line == "" or event.line.startsWith(pegSuccess):
+            if event.line == "" or event.line.startsWith(pegSuccess) or
+                event.line =~ pegOtherHint:
               echod(1)
               if win.tempStuff.errorMsgStarted:
                 win.tempStuff.errorMsgStarted = false
@@ -193,7 +195,8 @@ proc peekProcOutput*(dummy: pointer): bool =
               else:
                 printProcOutput(event.line)
           else:
-            printProcOutput(event.line)
+            if event.line != "":
+              printProcOutput(event.line)
         of EvStopped:
           echod("[Idle] Process has quit")
           if win.tempStuff.compilationErrorBuffer.len() > 0:
