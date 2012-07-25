@@ -237,6 +237,7 @@ proc closeTab(tab: int) =
 
 proc window_keyPress(widg: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
+  # TODO: Make sure this doesn't interfere with normal key handling.
   var modifiers = acceleratorGetDefaultModMask()
 
   if (event.state and modifiers) == CONTROL_MASK:
@@ -586,20 +587,20 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
   win.tempStuff.recentFileMenuItems = @[]
 
   # Recently opened files
-  # -- Show first five in the File menu
+  # -- Show first ten in the File menu
   if win.settings.recentlyOpenedFiles.len > 0:
     let recent = win.settings.recentlyOpenedFiles
   
     var moreMenu = menuNew()
     var moreMenuItem = menuItemNew("More recent files...")
-    if recent.len > 5:
+    if recent.len > 10:
       moreMenuItem.setSubMenu(moreMenu)
       moreMenuItem.show()
     else:
       PWidget(moreMenu).destroy()
       PWidget(moreMenuItem).destroy()
     
-    let frm = max(0, (recent.len-1)-9)
+    let frm = max(0, (recent.len-1)-19)
     let to  = recent.len-1
     var addedItems = 0
     # Countdown from the last item going back to the first, only 10 though.
@@ -608,7 +609,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       var recentFileMI = menuItemNew($(addedItems+1) & ". " &
                                      recent[i].extractFilename)
       win.tempStuff.recentFileMenuItems.add(recentFileMI)
-      if addedItems >= 5:
+      if addedItems >= 10:
         # Add to the "More recent files" menu.
         moreMenu.append(recentFileMI)
       else:
@@ -620,7 +621,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
                              addr(win.settings.recentlyOpenedFiles[i]))
       addedItems.inc()
     
-    if recent.len > 5:
+    if recent.len > 10:
       win.FileMenu.append(moreMenuItem)
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 

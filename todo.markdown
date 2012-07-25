@@ -7,6 +7,8 @@
 * Show close tab button only on selected tab.
 * Get rid of echo; change to `echod`.
 * Fix key handling issues; KeyRelease/KeyPressed? Ctrl + F5 should work.
+* Go to definition, use gtksourceview to know if clicked on identifier.
+* Find all references
 
 ## Miscellaneous
 

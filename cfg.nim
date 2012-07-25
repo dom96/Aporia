@@ -94,7 +94,7 @@ proc save*(win: MainWin) =
     f.writeKeyVal("winWidth", settings.winWidth)
     f.writeKeyVal("winHeight", settings.winHeight)
     if settings.recentlyOpenedFiles.len() > 0:
-      let frm = max(0, (win.settings.recentlyOpenedFiles.len-1)-9)
+      let frm = max(0, (win.settings.recentlyOpenedFiles.len-1)-19)
       let to  = settings.recentlyOpenedFiles.len()-1
       f.writeKeyValRaw("recentlyOpenedFiles", 
                     join(settings.recentlyOpenedFiles[frm..to], ";"))
@@ -168,7 +168,7 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 9: raise newException(ECFGParse, "Too many recent files")
+            if count > 19: raise newException(ECFGParse, "Too many recent files")
             result.recentlyOpenedFiles.add(file)
       
     of cfgError:
