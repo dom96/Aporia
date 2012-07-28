@@ -238,12 +238,13 @@ proc closeTab(tab: int) =
 proc window_keyPress(widg: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
   # TODO: Make sure this doesn't interfere with normal key handling.
+  result = false
   var modifiers = acceleratorGetDefaultModMask()
 
   if (event.state and modifiers) == CONTROL_MASK:
     # Ctrl pressed.
     case event.keyval
-    of KeyTab:
+    of KeyF5:
       # Ctrl + Tab
       win.cycleTab()
       return true
@@ -559,7 +560,9 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
   var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
   if filename != "": TabLabel.setTooltipText(filename)
   # Add a tab
-  discard win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
+  let res = win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
+  assert res != -1
+  win.SourceViewTabs.setTabReorderable(scrollWindow, true)
 
   var nTab: Tab
   nTab.buffer = buffer
@@ -915,6 +918,7 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
+  win.tempStuff.lastTab = pageNum
   updateMainTitle(pageNum)
   
   # Set the lastSavedDir
@@ -946,6 +950,15 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
     else: echod("dragDataReceived: Unknown `info`")
 
   dragFinish(context, success, False, time)
+
+proc onPageReordered(notebook: PNotebook, child: PWidget, pageNum: cuint, 
+                     userData: pointer) =
+  echod($pageNum, " <- ", $win.tempStuff.lastTab)
+  let oldPos = win.Tabs[win.tempStuff.lastTab]
+  win.Tabs.delete(win.tempStuff.lastTab)
+  win.Tabs.insert(oldPos, int(pageNum))
+  
+  win.tempStuff.lastTab = int(pageNum)
 
 # -- Bottom tabs
 
@@ -1371,6 +1384,9 @@ proc initSourceViewTabs() =
                                  1, ACTION_COPY)
   discard win.SourceViewTabs.signalConnect(
           "drag-data-received", SIGNAL_FUNC(onDragDataReceived), nil)
+  
+  discard win.sourceViewTabs.signalConnect("page-reordered",
+          SIGNAL_FUNC(onPageReordered), nil)
   
   # TODO: only create new tab when double-clicking in empty space
   discard win.SourceViewTabs.signalConnect("button-press-event",

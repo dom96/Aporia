@@ -12,6 +12,8 @@
 
 ## Miscellaneous
 
+* Find all.
+* Different editing modes - html, xml, etc. (These should make editing these particular things easier.)
 * Track history of file. When you edit and then undo the file should not be marked as being unsaved.
 * Use threads when executing the compiler.
 * Investigate line and cursor position as well as scrolling when restoring a session.

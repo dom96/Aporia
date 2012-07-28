@@ -122,6 +122,7 @@ type
     errorList*: seq[TError]
 
     recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
+    lastTab*: int # For reordering tabs, the last tab that was selected.
 
   Tab* = object
     buffer*: PSourceBuffer
