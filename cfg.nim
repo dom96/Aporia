@@ -30,6 +30,7 @@ proc defaultSettings*(): TSettings =
   result.customCmd2 = ""
   result.customCmd3 = ""
   result.recentlyOpenedFiles = @[]
+  result.singleInstancePort = 55679
 
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
@@ -83,6 +84,7 @@ proc save*(win: MainWin) =
 
     f.writeSection("other")
     f.writeKeyVal("searchMethod", $int(settings.search))
+    f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     
     f.writeSection("auto")
     f.write("; Stuff which is saved automatically," & 
@@ -150,6 +152,8 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "autoindent": result.autoIndent = isTrue(e.value)
       of "suggestfeature": result.suggestFeature = isTrue(e.value)
       of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
+      of "singleinstanceport":
+        result.singleInstancePort = int32(e.value.parseInt())
       of "winmaximized": result.winMaximized = isTrue(e.value)
       of "vpanedpos": result.VPanedPos = int32(e.value.parseInt())
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)

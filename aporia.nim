@@ -7,8 +7,10 @@
 #    distribution, for details about the copyright.
 #
 
+# Stdlib imports:
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
-import pegs, streams, times, parseopt, parseutils
+import pegs, streams, times, parseopt, parseutils, asyncio, sockets
+# Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes
 
 {.push callConv:cdecl.}
@@ -16,7 +18,7 @@ import settings, utils, cfg, search, suggest, AboutDialog, processes
 const
   NimrodProjectExt = ".nimprj"
   GTKVerReq = (2'i32, 12'i32, 0'i32) # Version of GTK required for Aporia to run.
-  aporiaVersion = "0.1.2"
+  aporiaVersion = "0.1.3"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
   -h  --help Shows this message
@@ -1430,13 +1432,17 @@ proc initSourceViewTabs() =
     
     for f in loadFiles:
       if existsFile(f):
-        addTab("", f)
+        var absPath = f
+        if not isAbsolute(absPath):
+          absPath = getCurrentDir() / f
+        addTab("", absPath)
       else:
         dialogs.error(win.w, "Could not open " & f)
         quit(QuitFailure)
     
     if loadFiles.len() != 0:
       # Select the tab that was opened.
+      # TODO: This causes a Gdk-Critical for some reason.
       win.sourceViewTabs.setCurrentPage(int32(win.tabs.len())-1)
     
   else:
@@ -1676,6 +1682,31 @@ proc initTempStuff() =
   win.tempStuff.errorList = @[]
   win.tempStuff.lastTab = 0
 
+{.pop.}
+proc initSocket() =
+  win.IODispatcher = newDispatcher()
+  win.oneInstSock = AsyncSocket()
+  win.oneInstSock.handleAccept =
+    proc (s: PAsyncSocket, arg: system.PObject) =
+      var client: PAsyncSocket
+      new(client)
+      s.accept(client)
+      client.handleRead =
+        proc (c: PAsyncSocket, arg: system.PObject) =
+          var line = ""
+          if c.recvLine(line):
+            if line == "":
+              c.close()
+            else:
+              addTab("", line, true)
+              win.w.present()
+      win.IODispatcher.register(client)
+      
+  win.IODispatcher.register(win.oneInstSock)
+  win.oneInstSock.bindAddr(TPort(win.settings.singleInstancePort.toU16), "localhost")
+  win.oneInstSock.listen()
+{.push: cdecl.}
+
 proc initControls() =
   # Load up the language style
   var langMan = languageManagerGetDefault()
@@ -1683,7 +1714,7 @@ proc initControls() =
   
   var defLangManPaths = langMan.getSearchPath()
   for i in 0..len(defLangManPaths.cstringArrayToSeq)-1:
-    if deflangManPaths[i] == nil: echo("bazinga")
+    if deflangManPaths[i] == nil: echod("[Warning] language manager path is nil")
     langManPaths.add($defLangManPaths[i])
     
   var newLangPaths = allocCStringArray(langManPaths)
@@ -1738,6 +1769,30 @@ proc initControls() =
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
 
+  try:
+    initSocket()
+  except:
+    echo getStackTrace()
+    dialogs.warning(win.w, 
+      "Unable to bind socket. Aporia will not " &
+      "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
+  discard gIdleAdd(
+    proc (dummy: pointer): bool =
+      result = win.IODispatcher.poll(50), nil)
+
+proc checkAlreadyRunning(): bool =
+  result = false
+  if loadFiles.len() > 0:
+    var client = socket()
+    try:
+      client.connect("localhost", TPort(win.settings.singleInstancePort.toU16))
+    except EOS:
+      return false
+    for file in loadFiles:
+      client.send(file & "\c\L")
+    client.close()
+    result = true
+
 proc afterInit() =
   win.Tabs[0].sourceView.grabFocus()
 
@@ -1746,6 +1801,9 @@ if versionReply != nil:
   # Incorrect GTK version.
   quit("Aporia requires GTK $#.$#.$#. Call to check_version failed with: $#" %
        [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
+
+if checkAlreadyRunning():
+  quit(QuitSuccess)
 
 createProcessThreads()
 nimrod_init()

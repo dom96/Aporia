@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, osproc, streams, AboutDialog
+import gtk2, gtksourceview, osproc, streams, AboutDialog, asyncio
 
 type
   TSettings* = object
@@ -38,6 +38,7 @@ type
     customCmd3*: string # command template to use to exec a custom command
     
     recentlyOpenedFiles*: seq[string] # paths of recently opened files
+    singleInstancePort*: int32 # Port used for listening socket to get filepaths
     
   MainWin* = object
     # Widgets
@@ -73,6 +74,8 @@ type
     tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
     
     settings*: TSettings
+    oneInstSock*: PAsyncSocket
+    IODispatcher*: PDispatcher
 
   TSuggestDialog* = object
     dialog*: gtk2.PWindow
