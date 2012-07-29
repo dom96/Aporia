@@ -965,7 +965,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
 proc onPageReordered(notebook: PNotebook, child: PWidget, pageNum: cuint, 
                      userData: pointer) =
   let oldPos = win.Tabs[win.tempStuff.lastTab]
-  win.Tabs.delete(win.tempStuff.lastTab)
+  system.delete(win.Tabs, win.tempStuff.lastTab)
   win.Tabs.insert(oldPos, int(pageNum))
   
   win.tempStuff.lastTab = int(pageNum)
@@ -1778,9 +1778,9 @@ proc initControls() =
     dialogs.warning(win.w, 
       "Unable to bind socket. Aporia will not " &
       "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
-  discard gIdleAdd(
+  discard gTimeoutAddFull(500, GPriorityLow, 
     proc (dummy: pointer): bool =
-      result = win.IODispatcher.poll(50), nil)
+      result = win.IODispatcher.poll(5), nil, nil)
 
 proc checkAlreadyRunning(): bool =
   result = false

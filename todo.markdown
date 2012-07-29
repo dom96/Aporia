@@ -8,6 +8,7 @@
 * Fix drag and drop of files onto Notebook.
 * Fix other encodings. (Selection for encodings like in gedit)
 * UI shouldn't freeze when opening large files.
+* Try to emit the "move-cursor" signal on the gtksourceview at startup to get it to scroll.
 
 ## Miscellaneous
 
