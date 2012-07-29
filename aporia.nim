@@ -231,9 +231,8 @@ proc closeTab(tab: int) =
         close = False
   
   if close:
-    win.sourceViewTabs.removePage(int32(tab))
-
     system.delete(win.Tabs, tab)
+    win.sourceViewTabs.removePage(int32(tab))
 
 proc window_keyPress(widg: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
@@ -285,7 +284,7 @@ proc onCloseTab(btn: PButton, user_data: PWidget)
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
                        userDat: pwidget): bool
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
-                    label: PLabel] =                  
+                    label: PLabel, closeBtn: PButton] =                  
   var eventBox = eventBoxNew()
   eventBox.setVisibleWindow(false)
   discard signal_connect(eventBox, "button-release-event",
@@ -307,7 +306,7 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
   box.showAll()
 
   eventBox.add(box)
-  return (eventBox, label)
+  return (eventBox, label, closeBtn)
 
 proc onChanged(buffer: PTextBuffer, user_data: pgpointer) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -557,20 +556,23 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
   var scrollWindow: PScrolledWindow
   initSourceView(sourceView, scrollWindow, buffer)
 
-  var (TabLabel, labelText) = createTabLabel(nam, scrollWindow)
+  var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow)
   if filename != "": TabLabel.setTooltipText(filename)
   # Add a tab
-  let res = win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
-  assert res != -1
-  win.SourceViewTabs.setTabReorderable(scrollWindow, true)
-
   var nTab: Tab
   nTab.buffer = buffer
   nTab.sourceView = sourceView
   nTab.label = labelText
   nTab.saved = (filename != "")
   nTab.filename = filename
+  nTab.closeBtn = closeBtn
+  nTab.closeBtn.hide()
   win.Tabs.add(nTab)
+  
+  # Add the tab to the GtkNotebook
+  let res = win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
+  assert res != -1
+  win.SourceViewTabs.setTabReorderable(scrollWindow, true)
 
   PTextView(SourceView).setBuffer(nTab.buffer)
 
@@ -918,6 +920,10 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
+  # hide close button of last active tab
+  if win.tempStuff.lastTab < win.Tabs.len:
+    win.Tabs[win.tempStuff.lastTab].closeBtn.hide()
+  
   win.tempStuff.lastTab = pageNum
   updateMainTitle(pageNum)
   
@@ -928,6 +934,9 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   
   # Hide the suggest dialog
   win.suggest.hide()
+  
+  # Show close button of tab
+  win.Tabs[pageNum].closeBtn.show()
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext, 
                         x: gint, y: gint, data: PSelectionData, info: guint,
@@ -953,7 +962,6 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
 
 proc onPageReordered(notebook: PNotebook, child: PWidget, pageNum: cuint, 
                      userData: pointer) =
-  echod($pageNum, " <- ", $win.tempStuff.lastTab)
   let oldPos = win.Tabs[win.tempStuff.lastTab]
   win.Tabs.delete(win.tempStuff.lastTab)
   win.Tabs.insert(oldPos, int(pageNum))
@@ -1666,6 +1674,7 @@ proc initTempStuff() =
 
   win.tempStuff.compilationErrorBuffer = ""
   win.tempStuff.errorList = @[]
+  win.tempStuff.lastTab = 0
 
 proc initControls() =
   # Load up the language style

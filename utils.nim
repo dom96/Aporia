@@ -128,8 +128,10 @@ type
     buffer*: PSourceBuffer
     sourceView*: PSourceView
     label*: PLabel
+    closeBtn*: PButton # This is so that the close btn is only shown on selected tabs.
     saved*: bool
     filename*: string
+    
     
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*: string
