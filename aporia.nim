@@ -1697,6 +1697,8 @@ proc initSocket() =
           if c.recvLine(line):
             if line == "":
               c.close()
+            elif line == "\c\L":
+              win.w.present()
             else:
               addTab("", line, true)
               win.w.present()
@@ -1782,16 +1784,19 @@ proc initControls() =
 
 proc checkAlreadyRunning(): bool =
   result = false
+  var client = socket()
+  try:
+    client.connect("localhost", TPort(win.settings.singleInstancePort.toU16))
+  except EOS:
+    return false
   if loadFiles.len() > 0:
-    var client = socket()
-    try:
-      client.connect("localhost", TPort(win.settings.singleInstancePort.toU16))
-    except EOS:
-      return false
     for file in loadFiles:
       client.send(file & "\c\L")
     client.close()
     result = true
+  else:
+    result = true
+    client.send("\c\L")
 
 proc afterInit() =
   win.Tabs[0].sourceView.grabFocus()
