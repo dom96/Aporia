@@ -248,6 +248,18 @@ proc autoIndent_Toggled(button: PToggleButton, user_data: pgpointer) =
 proc suggestFeature_Toggled(button: PToggleButton, user_data: pgpointer) =
   win.settings.suggestFeature = button.getActive()
 
+proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: pgpointer) =
+  win.settings.showCloseOnAllTabs = button.getActive()
+  # Loop through each tab, and change the setting.
+  for i in 0..len(win.Tabs)-1:
+    if win.settings.showCloseOnAllTabs:
+      win.Tabs[i].closeBtn.show()
+    else:
+      if i == win.SourceViewTabs.getCurrentPage():
+        win.Tabs[i].closeBtn.show()
+      else:
+        win.Tabs[i].closeBtn.hide()
+
 proc initEditor(settingsTabs: PNotebook) =
   var editorLabel = labelNew("Editor")
   var editorVBox = vboxNew(False, 5)
@@ -341,6 +353,18 @@ proc initEditor(settingsTabs: PNotebook) =
     G_CALLBACK(suggestFeature_Toggled), nil)
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, False, False, 20)
   suggestFeatureCheckBox.show()
+
+  # show close button on all tabs - checkbox
+  var showCloseOnAllTabsHBox = hboxNew(False, 0)
+  editorVBox.packStart(showCloseOnAllTabsHBox, False, False, 0)
+  showCloseOnAllTabsHBox.show()
+  
+  var showCloseOnAllTabsCheckBox = checkButtonNew("Show close button on all tabs")
+  showCloseOnAllTabsCheckBox.setActive(win.settings.showCloseOnAllTabs)
+  discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
+  showCloseOnAllTabsHBox.packStart(showCloseOnAllTabsCheckBox, False, False, 20)
+  showCloseOnAllTabsCheckBox.show()
 
 var
   dialog: gtk2.PWindow

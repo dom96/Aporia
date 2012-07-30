@@ -245,7 +245,7 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
   if (event.state and modifiers) == CONTROL_MASK:
     # Ctrl pressed.
     case event.keyval
-    of KeyF5:
+    of KeyTab:
       # Ctrl + Tab
       win.cycleTab()
       return true
@@ -568,7 +568,8 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
   nTab.saved = (filename != "")
   nTab.filename = filename
   nTab.closeBtn = closeBtn
-  nTab.closeBtn.hide()
+  if not win.settings.showCloseOnAllTabs:
+    nTab.closeBtn.hide()
   win.Tabs.add(nTab)
   
   # Add the tab to the GtkNotebook
@@ -923,7 +924,8 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
   # hide close button of last active tab
-  if win.tempStuff.lastTab < win.Tabs.len:
+  if not win.settings.showCloseOnAllTabs and 
+      win.tempStuff.lastTab < win.Tabs.len:
     win.Tabs[win.tempStuff.lastTab].closeBtn.hide()
   
   win.tempStuff.lastTab = pageNum
@@ -937,8 +939,9 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   # Hide the suggest dialog
   win.suggest.hide()
   
-  # Show close button of tab
-  win.Tabs[pageNum].closeBtn.show()
+  if not win.settings.showCloseOnAllTabs:
+    # Show close button of tab
+    win.Tabs[pageNum].closeBtn.show()
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext, 
                         x: gint, y: gint, data: PSelectionData, info: guint,
@@ -1771,16 +1774,17 @@ proc initControls() =
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
 
-  try:
-    initSocket()
-  except:
-    echo getStackTrace()
-    dialogs.warning(win.w, 
-      "Unable to bind socket. Aporia will not " &
-      "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
-  discard gTimeoutAddFull(500, GPriorityLow, 
-    proc (dummy: pointer): bool =
-      result = win.IODispatcher.poll(5), nil, nil)
+  when not defined(noSingleInstance):
+    try:
+      initSocket()
+    except:
+      echo getStackTrace()
+      dialogs.warning(win.w, 
+        "Unable to bind socket. Aporia will not " &
+        "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
+    discard gTimeoutAddFull(500, GPriorityLow, 
+      proc (dummy: pointer): bool =
+        result = win.IODispatcher.poll(5), nil, nil)
 
 proc checkAlreadyRunning(): bool =
   result = false
@@ -1807,8 +1811,9 @@ if versionReply != nil:
   quit("Aporia requires GTK $#.$#.$#. Call to check_version failed with: $#" %
        [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
 
-if checkAlreadyRunning():
-  quit(QuitSuccess)
+when not defined(noSingleInstance):
+  if checkAlreadyRunning():
+    quit(QuitSuccess)
 
 createProcessThreads()
 nimrod_init()

@@ -39,6 +39,8 @@ type
     
     recentlyOpenedFiles*: seq[string] # paths of recently opened files
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
+    showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
+    
     
   MainWin* = object
     # Widgets

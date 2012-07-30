@@ -31,6 +31,7 @@ proc defaultSettings*(): TSettings =
   result.customCmd3 = ""
   result.recentlyOpenedFiles = @[]
   result.singleInstancePort = 55679
+  result.showCloseOnAllTabs = false
 
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
@@ -81,6 +82,7 @@ proc save*(win: MainWin) =
     f.writeKeyVal("highlightCurrentLine", $settings.highlightCurrentLine)
     f.writeKeyVal("autoIndent", $settings.autoIndent)
     f.writeKeyVal("suggestFeature", $settings.suggestFeature)
+    f.writeKeyVal("showCloseOnAllTabs", $settings.showCloseOnAllTabs)
 
     f.writeSection("other")
     f.writeKeyVal("searchMethod", $int(settings.search))
@@ -151,6 +153,7 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "highlightcurrentline": result.highlightCurrentLine = isTrue(e.value)
       of "autoindent": result.autoIndent = isTrue(e.value)
       of "suggestfeature": result.suggestFeature = isTrue(e.value)
+      of "showcloseonalltabs": result.showCloseOnAllTabs = isTrue(e.value)
       of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
       of "singleinstanceport":
         result.singleInstancePort = int32(e.value.parseInt())
