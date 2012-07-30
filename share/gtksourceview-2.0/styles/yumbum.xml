@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Copyright (C) 2009
+ Original Author: Andreas Rumpf
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Library General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Library General Public License for more details.
+
+ You should have received a copy of the GNU Library General Public
+ License along with this library; if not, write to the
+ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ Boston, MA 02111-1307, USA.
+
+-->
+<!-- This theme was based off of Darknim 1.0 -->
+<style-scheme id="yumbum" _name="Yumbum" version="1.0">
+  <author>Fowl</author>
+  <_description>Color scheme Yumbum, for dark backgrounds</_description>
+
+<!--
+  Colors from the Darknim palette.
+-->
+  <color name="gray" value="#bbbbbb"/>
+  <color name="white" value="#eeeeee"/>
+  <color name="yellow" value="#fce94f"/>
+  <color name="senape" value="#acc900"/>
+  <color name="lime" value="#96ff00"/>
+  <color name="green" value="#00c900"/>
+  <color name="alga" value="#00c99b"/>
+  <color name="aqua" value="#00d8ff"/>
+  <color name="cyan" value="#009cff"/>
+  <color name="violet" value="#9e91ff"/>
+  <color name="purple" value="#bb66ff"/>
+  <color name="fuchsia" value="#ff44cc"/>
+  <color name="magenta" value="#ff79d9"/>
+  <color name="red" value="#ff2f6a"/>
+  <color name="orange" value="#ff6100"/>
+  <color name="ambra" value="#ff9900"/>
+  <color name="asfalto" value="#555753"/>
+  <color name="carbon" value="#000000"/>
+  
+  <color name="purp" value="#555C90"/>
+  <color name="purp2" value="#8E7C96"/>
+  <color name="darkpurp" value="#6F6E69"/>
+  <color name="tealdark" value="#218067"/>
+  <color name="teal" value="#62AF9A"/>
+  <color name="blau" value="#1B4446"/>
+  <color name="greenish" value="#E2EFC0"/>
+  <color name="foo" value="#DCD7D3"/>
+
+<!--
+        GUI styles 
+-->
+  <style name="text" foreground="white" background="carbon"/>
+  <style name="selection" background="asfalto"/>
+  <style name="selection-unfocused" foreground="white" background="gray"/>
+  <style name="cursor" foreground="white" bold = "true"/>
+  <style name="secondary-cursor" foreground="magenta" bold = "true"/>
+  <style name="current-line" background="carbon"/>
+  <style name="line-numbers" foreground="asfalto" background="gray"/>
+  <style name="bracket-match" foreground="white" background="purple" bold="true"/>
+  <style name="bracket-mismatch" foreground="white" background="magenta" bold="true"/>
+  <style name="search-match" foreground="carbon" background="yellow"/>
+
+<!--
+        Default styles 
+-->
+  <style name="doc-comment" foreground="cyan" italic="true" />
+
+  <style name="def:keyword" foreground="greenish" bold="true"/>
+  <style name="def:module-handler" foreground="white" bold="true"/>
+  <style name="def:statement" foreground="white" bold="true"/>
+  <style name="def:function" foreground="white" bold="true"/>
+  <style name="def:preprocessor" foreground="yellow"/>
+  <style name="def:type" foreground="purp2" bold="true"/>
+  
+  <style name="def:character" foreground="orange"/>
+
+  <style name="def:comment" foreground="blau" italic = "true"/>
+  <style name="def:number" foreground="foo"/>
+  <style name="def:string" foreground="teal"/>
+  <style name="def:net-address-in-comment" foreground="violet" underline="true"/>
+  <style name="def:note" foreground="white" background="darkpurp" bold="true"/>
+  <style name="def:error" background="red" bold="true"/>
+  <style name="def:escape" foreground="violet"/>
+  <style name="def:shebang" foreground="alga" bold="true"/>
+  <style name="def:doc-comment-element" italic="false"/>
+  <style name="def:identifier" foreground="white"/>
+
+  <style name="def:specials" foreground="white"/>
+  
+  <style name="def:variable" foreground="teal"/>
+  <style name="def:boolean" foreground="purp"/>
+  <style name="def:constant" foreground="purp"/>
+  <style name="def:special-constant" foreground="white"/>
+   
+  <style name="diff:added-line" foreground="lime"/>
+  <style name="diff:removed-line" foreground="magenta"/>
+  <style name="diff:changed-line" foreground="ambra"/>
+  <style name="diff:special-case" use-style="def:string"/>
+  <style name="diff:location" use-style="def:keyword"/>
+
+</style-scheme>
