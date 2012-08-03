@@ -2,7 +2,7 @@ Version 0.1.3
 =============
 
 * Tabs can now be reordered.
-* Close button is now only shown on the selected tab.
+* Close button can now only shown on the selected tab. (This is configurable)
 * Error list.
 * Many bug fixes for handling of processes.
 * Aporia is now a single instance application. This means you can easily

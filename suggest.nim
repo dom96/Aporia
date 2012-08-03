@@ -110,13 +110,28 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   if tab.filename == "": return False
   var currentTabSplit = splitFile(tab.filename)
   
-  # Save tabs that are in the same directory as the file being suggested to /tmp
+  var aporiaTmpDir = getTempDir() / "aporia"
+  var prefixDir = aporiaTmpDir / "suggest"
+  
+  # Create /tmp/aporia if it doesn't exist
+  if not existsDir(aporiaTmpDir):
+    createDir(prefixDir)
+  
+  # Remove and Create /tmp/aporia/suggest
+  if existsDir(prefixDir):
+    # Empty this to get rid of stale files.
+    removeDir(prefixDir)
+  # Recreate it.
+  createDir(prefixDir)
+  
+  # Save tabs that are in the same directory as the file
+  # being suggested to /tmp/aporia/suggest
   for t in items(win.Tabs):
     if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
       var f: TFile
       var fileSplit = splitFile(t.filename)
-      echo("Saving ", getTempDir() / fileSplit.name & fileSplit.ext)
-      if f.open(getTempDir() / fileSplit.name & fileSplit.ext, fmWrite):
+      echo("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
+      if f.open(prefixDir / fileSplit.name & fileSplit.ext, fmWrite):
         # Save everything.
         # - Get the text from the TextView.
         var startIter: TTextIter
@@ -134,12 +149,12 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         return False
       f.close()
   
-  # Copy over nimrod.cfg if it exists to /tmp
+  # Copy over nimrod.cfg if it exists to `prefixDir`.
   if existsFile(currentTabSplit.dir / "nimrod".addFileExt("cfg")):
     copyFile(currentTabSplit.dir / "nimrod".addFileExt("cfg"), 
-             getTempDir() / "nimrod".addFileExt("cfg"))
+             prefixDir / "nimrod".addFileExt("cfg"))
   
-  var file = getTempDir() / currentTabSplit.name & ".nim"
+  var file = prefixDir / currentTabSplit.name & ".nim"
   win.suggest.items = execNimSuggest(file, splitFile(tab.filename).dir,
                                      start.getLine(),
                                      start.getLineOffset())
@@ -148,9 +163,6 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   if win.suggest.items.len == 0:
     echo("[Warning] No items found for suggest")
     return False
-  
-  # Remove the temporary file.
-  #removeFile(file)
   
   for i in items(win.suggest.items):
     win.addSuggestItem(i)
@@ -223,7 +235,7 @@ proc doSuggest*(win: var MainWin) =
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
-
+  echod("Populating suggest.")
   if win.populateSuggest(addr(start), tab):
     win.suggest.show()
     moveSuggest(win, addr(start), tab)
