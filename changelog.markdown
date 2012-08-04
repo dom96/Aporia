@@ -7,3 +7,4 @@ Version 0.1.3
 * Many bug fixes for handling of processes.
 * Aporia is now a single instance application. This means you can easily
 use open documents from the file manager and it will open in the same window.
+* Scrolling when restoring a session **finally** works

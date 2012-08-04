@@ -1423,13 +1423,9 @@ proc initSourceViewTabs() =
         
         var mark = win.Tabs[count].buffer.getInsert()
         
-        # This only seems to work with those last 3 params.
-        # TODO: Get it to center. Inspect gedit's source code to see how it does
-        # this.
-        win.Tabs[count].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
-        #win.Tabs[count].sourceView.scroll_mark_onscreen(mark)
-        #win.Tabs[i].sourceView.scrollToMark(mark, 0.25, true, 0.0, 0.5)
-        #win.Tabs[i].sourceView.scrollMarkOnscreen(mark)
+        # The reason why this didn't work was because the GtkWindow was being
+        # shown too quickly.
+        win.Tabs[count].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
         inc(count)
       else: dialogs.error(win.w, "Could not restore file from session, file not found: " & filename)
     
@@ -1738,10 +1734,6 @@ proc initControls() =
   win.w.setDefaultSize(win.settings.winWidth, win.settings.winHeight)
   win.w.setTitle("Aporia")
   if win.settings.winMaximized: win.w.maximize()
-  
-  win.w.show() # The window has to be shown before
-               # setting the position of the VPaned so that
-               # it gets set correctly, when the window is maximized.
     
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(aporia.destroy), nil)
   discard win.w.signalConnect("delete_event", 
@@ -1773,6 +1765,13 @@ proc initControls() =
   MainBox.show()
   if confParseFail:
     dialogs.warning(win.w, "Error parsing config file, using default settings.")
+
+  # TODO: The fact that this call was above all initializations was because of
+  # the VPaned position. I had to move it here because showing the Window
+  # before initializing (I presume, could be another widget) the GtkSourceView
+  # (maybe the ScrolledView) means that the stupid thing won't scroll on startup.
+  # This took me a VERY long time to find.
+  win.w.show() 
 
   when not defined(noSingleInstance):
     try:
