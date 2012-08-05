@@ -9,6 +9,8 @@
 * Fix other encodings. (Selection for encodings like in gedit)
 * UI shouldn't freeze when opening large files.
 * set_smart_home_end
+* Make sure suggest dialog gets moved up if we're at the bottom of the screen
+* Icons in context menus
 
 ## Miscellaneous
 
@@ -31,3 +33,5 @@
 * Syntax highlighting selection
 * Detection of files being edited outside of aporia.
 * Fix VPaned after that change to win.show().
+* docking with http://developer.gnome.org/gdl/
+* minimum mode -- look at screenshots dir

@@ -451,6 +451,40 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
 proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
   win.suggest.hide()
 
+proc addTab(name, filename: string, setCurrent: bool = False)
+proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
+  createSeparator(menu)
+  createMenuItem(menu, "Go to definition...",
+    proc (i: PMenuItem, p: pointer) =
+      let currentPage = win.sourceViewTabs.getCurrentPage()
+      let tab = win.Tabs[currentPage]
+      var cursor: TTextIter
+      tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
+      var def: TSuggestItem
+      if findDef(tab.filename, getLine(addr cursor), 
+           getLineOffset(addr cursor), def):
+        
+        let existingTab = win.findTab(def.file, true)
+        if existingTab != -1:
+          win.sourceViewTabs.setCurrentPage(existingTab.gint)
+        else:
+          addTab("", def.file, true)
+        
+        let currentPage = win.sourceViewTabs.getCurrentPage()
+        # Go to that line/col
+        var iter: TTextIter
+        win.tabs[currentPage].buffer.getIterAtLineIndex(addr(iter),
+            def.line-1, def.col-1)
+        
+        win.tabs[currentPage].buffer.placeCursor(addr(iter))
+        
+        win.scrollToInsert()
+        
+        echod(def.repr())
+      else:
+        echod("Found nothing")
+  )
+
 # Other(Helper) functions
 
 proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWindow,
@@ -473,6 +507,8 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   SourceView.setAutoIndent(win.settings.autoIndent)
   discard signalConnect(SourceView, "button-press-event",
                         signalFunc(SourceViewMousePress), nil)
+  discard gSignalConnect(sourceView, "populate-popup",
+                         GCallback(sourceViewPopulatePopup), nil)
 
   var font = font_description_from_string(win.settings.font)
   SourceView.modifyFont(font)
@@ -495,19 +531,6 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc findTab(filename: string, absolute: bool = true): int =
-  for i in 0..win.Tabs.len()-1:
-    if absolute:
-      if win.Tabs[i].filename == filename: 
-        return i
-    else:
-      if filename in win.Tabs[i].filename:
-        return i 
-      elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
-        return i
-
-  return -1
-
 proc addTab(name, filename: string, setCurrent: bool = False) =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
@@ -519,7 +542,7 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
   if filename != nil and filename != "":
     if setCurrent:
       # If a tab with the same filename already exists select it.
-      var existingTab = findTab(filename)
+      var existingTab = win.findTab(filename)
       if existingTab != -1:
         # Select the existing tab
         win.sourceViewTabs.setCurrentPage(int32(existingTab))
@@ -955,7 +978,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
         if line != "" and line.startswith("file://"):
           var path = line[7 .. -1]
           echod(path)
-          var existingTab = findTab(path)
+          var existingTab = win.findTab(path)
           if existingTab != -1:
             win.sourceViewTabs.setCurrentPage(int32(existingTab))
           else:
@@ -979,8 +1002,8 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
             column: PTreeViewColumn, d: pointer) =
   let selectedIndex = path.getIndices()[]
   let item = win.tempStuff.errorList[selectedIndex]
-  var existingTab = findTab(item.file, false)
-  if existingTab == -1:
+  var existingTab = win.findTab(item.file, false)
+  if existingTab == -1 or item.file == "":
     win.w.error("Could not find correct tab.")
   else:
     win.sourceViewTabs.setCurrentPage(int32(existingTab))
@@ -1139,22 +1162,6 @@ proc goLineClose_clicked(button: PButton, user_data: pgpointer) =
   win.goLineBar.bar.hide()
 
 # GUI Initialization
-
-
-proc createAccelMenuItem(toolsMenu: PMenu, accGroup: PAccelGroup, 
-                         label: string, acc: gint,
-                         action: proc (i: PMenuItem, p: pgpointer),
-                         mask: gint = 0) = 
-  var result = menu_item_new(label)
-  result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
-  ToolsMenu.append(result)
-  show(result)
-  discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
-
-proc createSeparator(menu: PMenu) =
-  var sep = separator_menu_item_new()
-  menu.append(sep)
-  sep.show()
 
 proc initTopMenu(MainBox: PBox) =
   # Create a accelerator group, used for shortcuts

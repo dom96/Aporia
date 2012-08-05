@@ -70,19 +70,34 @@ proc doMoveSuggest*(win: var MainWin) =
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
   moveSuggest(win, addr(start), tab)
 
-proc execNimSuggest(file, addToPath: string, line: int, column: int): 
+proc execIDETools(file, addToPath, cmd: string, line: int, column: int): 
     seq[TSuggestItem] =
   result = @[]
-  echo(findExe("nimrod") & 
-                " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
-                [file, $(line+1), $column, getTempDir(), addToPath])
-  var output = execProcess(findExe("nimrod") & 
-                " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
-                [file, $(line+1), $column, getTempDir(), addToPath])
+  var execCmd = ""
+  var outType = ""
+  case cmd
+  of "suggest":
+    outType = "sug"
+    execCmd = findExe("nimrod") & 
+      " idetools --path:$4 --path:$5 --track:$1,$2,$3 --$6 $1" % 
+      [file, $(line+1), $column, getTempDir(), addToPath, cmd]
+  else:
+    outType = cmd
+    if addToPath != "":
+      execCmd = findExe("nimrod") & 
+        " idetools --path:$4 --track:$1,$2,$3 --$5 $1" % 
+        [file, $(line+1), $column, addToPath, cmd]
+    else:
+      execCmd = findExe("nimrod") & 
+        " idetools --track:$1,$2,$3 --$4 $1" % 
+        [file, $(line+1), $column, cmd]
+  
+  echod(execCmd)
+  var output = execProcess(execCmd)
 
   for line in splitLines(output):
-    #echo(repr(line))
-    if line.startswith("sug\t"):
+    echod(line)
+    if line.startswith(outType & "\t"):
       var s = line.split('\t')
       if s.len == 7:
         var item: TSuggestItem
@@ -98,7 +113,7 @@ proc execNimSuggest(file, addToPath: string, line: int, column: int):
         if dots.len() == 2:
           item.nmName = item.name[dots[0].len()+1.. -1]
         else:
-          echo("[Suggest] Unknown module name for ", item.name)
+          echod("[Suggest] Unknown module name for ", item.name)
           #continue
           item.nmName = item.name
         
@@ -155,7 +170,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
              prefixDir / "nimrod".addFileExt("cfg"))
   
   var file = prefixDir / currentTabSplit.name & ".nim"
-  win.suggest.items = execNimSuggest(file, splitFile(tab.filename).dir,
+  win.suggest.items = execIDETools(file, splitFile(tab.filename).dir, "suggest",
                                      start.getLine(),
                                      start.getLineOffset())
   win.suggest.allitems = win.suggest.items
@@ -170,6 +185,13 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   win.suggest.currentFilter = ""
 
   return True
+
+proc findDef*(file: string, line, col: int, definition: var TSuggestItem): bool =
+  var defs = execIDETools(file, "", "def", line, col)
+  if defs.len == 0:
+    return false
+  definition = defs[0]
+  return true
 
 proc clear*(suggest: var TSuggestDialog) =
   var TreeModel = suggest.TreeView.getModel()

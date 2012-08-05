@@ -68,12 +68,18 @@ proc get_search_path*(lm: PSourceLanguageManager): cstringarray {.cdecl, dynlib:
 proc set_language*(buffer: PSourceBuffer, language: PSourceLanguage) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_language".}
 
+proc get_language*(buffer: PSourceBuffer): PSourceLanguage {.cdecl, dynlib: lib,
+  importc: "gtk_source_buffer_get_language".}
+
 proc set_scheme*(buffer: PSourceBuffer, scheme: PSourceStyleScheme) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_style_scheme".}
   
 proc set_highlight_syntax*(buffer: PSourceBuffer, highlight: gboolean) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_highlight_syntax".}
-  
+
+proc get_highlight_syntax*(buffer: PSourceBuffer): gboolean {.cdecl, dynlib: lib,
+  importc: "gtk_source_buffer_get_highlight_syntax".}
+
 proc set_insert_spaces_instead_of_tabs*(view: PSourceView, enable: gboolean) {.cdecl, dynlib: lib,
   importc: "gtk_source_view_set_insert_spaces_instead_of_tabs".}
   
@@ -165,5 +171,6 @@ proc get_name*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
 proc get_description*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_get_description".}
 
-
+proc get_globs*(lang: PSourceLanguage): cstringarray {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_get_globs".}
 

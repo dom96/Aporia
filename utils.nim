@@ -7,7 +7,8 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, osproc, streams, AboutDialog, asyncio
+import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio
+from strutils import endsWith
 
 type
   TSettings* = object
@@ -156,6 +157,9 @@ type
     kind*: TErrorType
     desc*, file*, line*, column*: string
 
+  TLanguage* = enum
+    LangNimrod = "nim"
+
 # -- Debug
 proc echod*[T](s: openarray[T]) =
   when not defined(release):
@@ -189,11 +193,25 @@ proc addText*(textView: PTextView, text: string,
       textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
 
 proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = -1
   if tabIndex != -1: current = tabIndex
+  else: current = win.SourceViewTabs.getCurrentPage()
 
   var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.0, False, 0.0, 0.0)
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
+
+proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
+  for i in 0..win.Tabs.len()-1:
+    if absolute:
+      if win.Tabs[i].filename == filename: 
+        return i
+    else:
+      if filename in win.Tabs[i].filename:
+        return i 
+      elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
+        return i
+
+  return -1
 
 # -- Useful TreeView function
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
@@ -208,3 +226,47 @@ proc createTextColumn*(tv: PTreeView, title: string, column: int,
   c.columnSetAttributes(renderer, "text", column, nil)
   assert tv.appendColumn(c) == column+1
 
+# -- Useful Menu functions
+proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup, 
+                         label: string, acc: gint,
+                         action: proc (i: PMenuItem, p: pgpointer) {.cdecl.},
+                         mask: gint = 0) = 
+  var result = menu_item_new(label)
+  result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
+  ToolsMenu.append(result)
+  show(result)
+  discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
+
+proc createMenuItem*(menu: PMenu, label: string, 
+                     action: proc (i: PMenuItem, p: pointer) {.cdecl.}) =
+  var result = menuItemNew(label)
+  menu.append(result)
+  show(result)
+  discard signalConnect(result, "activate", SIGNALFUNC(action), nil)
+
+proc createSeparator*(menu: PMenu) =
+  var sep = separator_menu_item_new()
+  menu.append(sep)
+  sep.show()
+
+# -- Others
+
+proc isCurrentLanguage*(win: var MainWin, lang: TLanguage): bool =
+  ## Determines whether the current tab contains a file which is of ``lang``.
+  result = false
+  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
+  if isHighlighted:
+    var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
+    var globs = sourceLanguage.getGlobs()
+    # TODO: Apparently `globs` needs to be freed. I'm not sure if Nimrod will
+    # do that for me.
+    var globsSeq = globs.cstringArrayToSeq()
+    for i in globsSeq:
+      if i.endsWith($lang):
+        return true
+  else:
+    # When a language cannot be guessed Nimrod is used, but highlighting is
+    # disabled. That's why need to check the filename ourselves here.
+    result = win.Tabs[currentPage].filename.endsWith($lang)
+      

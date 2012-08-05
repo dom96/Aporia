@@ -76,7 +76,19 @@ proc parseError(err: string,
   ## <(x: int64, y: int64): bool
   ## <(x: uint64, y: uint64): bool
   ## <(x: int8, y: int8): bool
+  ##
+  ## or:
+  ##
+  ## Error: execution of an external program failed
   var i = 0
+  if err.startsWith("Error: "):
+    res.theType = TETError
+    res.desc = err[7 .. -1]
+    res.file = ""
+    res.line = ""
+    res.col = ""
+    return
+    
   res.file = ""
   i += parseUntil(err, res.file, '(', i)
   inc(i) # Skip (
