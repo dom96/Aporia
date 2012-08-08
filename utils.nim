@@ -7,8 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio
-from strutils import endsWith
+import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
 
 type
   TSettings* = object
