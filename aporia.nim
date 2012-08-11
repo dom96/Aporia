@@ -1706,8 +1706,14 @@ proc initSocket() =
             elif line == "\c\L":
               win.w.present()
             else:
-              addTab("", line, true)
-              win.w.present()
+              var filePath = line
+              if not filePath.isAbsolute():
+                filePath = getCurrentDir() / filePath
+              if existsFile(filepath):
+                addTab("", filepath, true)
+                win.w.present()
+              else:
+                win.w.error("File not found: " & filepath)
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)
@@ -1801,7 +1807,10 @@ proc checkAlreadyRunning(): bool =
     return false
   if loadFiles.len() > 0:
     for file in loadFiles:
-      client.send(file & "\c\L")
+      var filepath = file
+      if not filepath.isAbsolute():
+        filepath = getCurrentDir() / filepath
+      client.send(filepath & "\c\L")
     client.close()
     result = true
   else:
