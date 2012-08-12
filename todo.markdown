@@ -2,6 +2,7 @@
 
 ## Version 0.1.3
 
+* Change Ctrl + L to Ctrl + G
 * Get rid of echo; change to `echod`.
 * Go to definition, use gtksourceview to know if clicked on identifier.
 * Find all references
@@ -12,6 +13,7 @@
 * Make sure suggest dialog gets moved up if we're at the bottom of the screen
 * Icons in context menus
 * http://mattgraham.github.com/Midnight/ -- Base theme on that code scheme there.
+* Save the last opened tab.
 
 ## Other language features
 * Ability to pick other syntax highlighting

@@ -1693,12 +1693,12 @@ proc initSocket() =
   win.IODispatcher = newDispatcher()
   win.oneInstSock = AsyncSocket()
   win.oneInstSock.handleAccept =
-    proc (s: PAsyncSocket, arg: system.PObject) =
+    proc (s: PAsyncSocket) =
       var client: PAsyncSocket
       new(client)
       s.accept(client)
       client.handleRead =
-        proc (c: PAsyncSocket, arg: system.PObject) =
+        proc (c: PAsyncSocket) =
           var line = ""
           if c.recvLine(line):
             if line == "":
