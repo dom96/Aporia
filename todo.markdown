@@ -3,10 +3,7 @@
 ## Version 0.1.3
 
 * Get rid of echo; change to `echod`.
-* Go to definition, use gtksourceview to know if clicked on identifier.
 * Find all references
-* Fix drag and drop of files onto Notebook.
-* Fix other encodings. (Selection for encodings like in gedit)
 * UI shouldn't freeze when opening large files.
 * Make sure suggest dialog gets moved up if we're at the bottom of the screen
 * Icons in context menus
@@ -27,6 +24,8 @@
 
 ## Miscellaneous
 
+* Fix other encodings. (Selection for encodings like in gedit)
+* Fix drag and drop of files onto Notebook.
 * When you select a word, the same words should be highlighted in the document.
 * Find all.
 * Different editing modes - html, xml, etc. (These should make editing these particular things easier.)

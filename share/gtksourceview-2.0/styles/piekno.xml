@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Copyright (C) 2012
+ Original Author: Dominik Picheta
+
+ Same license as Aporia.
+
+-->
+<style-scheme id="piekno" _name="Piekno" version="1.0">
+  <author>dom96</author>
+  <_description>Piekno scheme, dark color scheme with pretty colors.</_description>
+
+  <color name="gray" value="#bbbbbb"/>
+  <color name="white" value="#eeeeee"/>
+  <color name="yellow" value="#fce94f"/>
+  <color name="senape" value="#acc900"/>
+  <color name="lime" value="#96ff00"/>
+  <color name="green" value="#00c900"/>
+  <color name="alga" value="#00c99b"/>
+  <color name="aqua" value="#00d8ff"/>
+  <color name="cyan" value="#009cff"/>
+  <color name="violet" value="#9e91ff"/>
+  <color name="purple" value="#bb66ff"/>
+  <color name="fuchsia" value="#ff44cc"/>
+  <color name="magenta" value="#ff79d9"/>
+  
+  <color name="orange" value="#ff6100"/>
+  <color name="ambra" value="#ff9900"/>
+  <color name="asfalto" value="#555753"/>
+  
+  <color name="carbon" value="#191919"/>
+  <color name="lightcarbon" value="#383838"/>
+  <color name="lightgray" value="#8d8d8d"/>
+  <color name="red" value="#E80909"/>
+  
+  <color name="darkturq" value="#24909d"/>
+  <color name="lightblue" value="#9DD5F1"/>
+  <color name="nicegreen" value="#6AB825"/>
+  <color name="darkblue" value="#447FCF"/>
+  <color name="lightturq" value="#40FFFF"/>
+  <color name="coolorange" value="#FFA500"/>
+  <color name="niceblue" value="#09ABEB"/>
+  <color name="yellow-orange" value="#F5CC16"/>
+
+  <color name="pimppurple" value="#470569"/>
+  <color name="weakpimppurple" value="#8D0ECC"/>
+
+<!--
+        GUI styles 
+-->
+  <style name="text" foreground="white" background="carbon"/>
+  <style name="selection" background="pimppurple"/>
+  <style name="selection-unfocused" foreground="white" background="weakpimppurple"/>
+  <style name="cursor" foreground="white" bold = "true"/>
+  <style name="secondary-cursor" foreground="magenta" bold = "true"/>
+  <style name="current-line" background="lightcarbon"/>
+  <style name="line-numbers" foreground="lightgray" background="lightcarbon"/>
+  <style name="bracket-match" foreground="white" background="coolorange" bold="true"/>
+  <style name="bracket-mismatch" foreground="white" background="red" bold="true"/>
+  <style name="search-match" foreground="carbon" background="yellow"/>
+
+<!--
+        Default styles 
+-->
+  <style name="doc-comment" foreground="lightcarbon" italic="true" />
+
+  <style name="def:keyword" foreground="nicegreen" bold="true"/>
+  <style name="def:module-handler" foreground="white" bold="true"/>
+  <style name="def:statement" foreground="white" bold="true"/>
+  <style name="def:function" foreground="white" bold="true"/>
+  <style name="def:preprocessor" foreground="yellow"/>
+  <style name="def:type" foreground="darkturq" bold="true"/>
+  
+  <style name="def:character" foreground="yellow-orange"/>
+
+  <style name="def:comment" foreground="lightcarbon" italic = "true"/>
+  <style name="def:number" foreground="niceblue"/>
+  <style name="def:string" foreground="coolorange"/>
+  <style name="def:net-address-in-comment" foreground="niceblue" underline="true"/>
+  <style name="def:note" bold="true"/>
+  <style name="def:error" background="red" bold="true"/>
+  <style name="def:escape" foreground="pimppurple"/>
+  <style name="def:shebang" foreground="alga" bold="true"/>
+  <style name="def:doc-comment-element" italic="false"/>
+  <style name="def:identifier" foreground="white"/>
+
+  <style name="def:specials" foreground="white"/>
+  
+  <style name="def:variable" foreground="lightblue"/>
+  <style name="def:boolean" foreground="#764EED"/>
+  <style name="def:constant" foreground="darkturq"/>
+  <style name="def:special-constant" foreground="white"/>
+  
+  <style name="diff:added-line" foreground="lime"/>
+  <style name="diff:removed-line" foreground="magenta"/>
+  <style name="diff:changed-line" foreground="ambra"/>
+  <style name="diff:special-case" use-style="def:string"/>
+  <style name="diff:location" use-style="def:keyword"/>
+
+  <style name="nimrod:pragma" use-style="def:preprocessor"/>
+
+</style-scheme>

@@ -2,7 +2,7 @@
 <!--
 
  Author: Andreas Rumpf
- Copyright (C) 2009 Andreas Rumpf, Dominik Picheta
+ Copyright (C) 2012 Andreas Rumpf, Dominik Picheta
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -41,6 +41,7 @@
     <style id="decimal"           _name="Decimal number"        map-to="def:decimal"/>
     <style id="base-n-integer"    _name="Base-N number"         map-to="def:base-n-integer"/>
     <style id="type"              _name="type"                  map-to="def:type"/>
+    <style id="pragma"            _name="pragma"                map-to="nimrod:pragma"/>
   </styles>
 
   <definitions>
@@ -147,6 +148,10 @@
         <context id="boolean" style-ref="boolean">
           <keyword>(f|F)_*(a|A)_*(l|L)_*(s|S)_*(e|E)_*</keyword>
           <keyword>(t|T)_*(r|R)_*(u|U)_*(e|E)_*</keyword>
+        </context>
+
+        <context id="pragma" style-ref="pragma">
+          <match>\{\..*\.\}</match>
         </context>
 
         <context id="types" style-ref="type">
