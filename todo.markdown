@@ -8,7 +8,6 @@
 * Fix drag and drop of files onto Notebook.
 * Fix other encodings. (Selection for encodings like in gedit)
 * UI shouldn't freeze when opening large files.
-* set_smart_home_end
 * Make sure suggest dialog gets moved up if we're at the bottom of the screen
 * Icons in context menus
 * http://mattgraham.github.com/Midnight/ -- Base theme on that code scheme there.
@@ -52,3 +51,4 @@
 * minimum mode -- look at screenshots dir
 * When compiling an unsaved file, make it saved on the frontend. 
   So that when i'm editing it further I can press Ctrl + S without getting angry.
+* Highlight tabs in Nimrod syntax highlighting red.

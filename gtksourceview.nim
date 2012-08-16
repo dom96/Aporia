@@ -35,6 +35,12 @@ type
   TSourceStyleScheme*{.pure, final.} = object
   PSourceStyleScheme* = ptr TSourceStyleScheme
   
+  TSmartHomeEndType* = enum
+    SMART_HOME_END_DISABLED,
+    SMART_HOME_END_BEFORE,
+    SMART_HOME_END_AFTER,
+    SMART_HOME_END_ALWAYS
+  
 const
   TEXT_SEARCH_CASE_INSENSITIVE* = 1 shl 2
   
@@ -174,3 +180,5 @@ proc get_description*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
 proc get_globs*(lang: PSourceLanguage): cstringarray {.cdecl, dynlib: lib,
   importc: "gtk_source_language_get_globs".}
 
+proc set_smart_home_end*(sv: PSourceView, smart_he: TSmartHomeEndType) {.cdecl,
+  dynlib: lib, importc: "gtk_source_view_set_smart_home_end".}
