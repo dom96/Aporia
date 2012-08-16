@@ -83,7 +83,7 @@
   <style name="def:escape" foreground="pimppurple"/>
   <style name="def:shebang" foreground="alga" bold="true"/>
   <style name="def:doc-comment-element" italic="false"/>
-  <style name="def:identifier" foreground="white"/>
+  <style name="def:identifier" foreground="nicegreen"/>
 
   <style name="def:specials" foreground="white"/>
   

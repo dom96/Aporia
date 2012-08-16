@@ -41,7 +41,7 @@
     <style id="decimal"           _name="Decimal number"        map-to="def:decimal"/>
     <style id="base-n-integer"    _name="Base-N number"         map-to="def:base-n-integer"/>
     <style id="type"              _name="type"                  map-to="def:type"/>
-    <style id="pragma"            _name="pragma"                map-to="nimrod:pragma"/>
+    <style id="pragma"            _name="pragma"                />
   </styles>
 
   <definitions>
@@ -151,7 +151,8 @@
         </context>
 
         <context id="pragma" style-ref="pragma">
-          <match>\{\..*\.\}</match>
+          <start>\{\.</start>
+          <end>(\.|)\}</end>
         </context>
 
         <context id="types" style-ref="type">
