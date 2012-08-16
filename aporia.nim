@@ -1259,7 +1259,7 @@ proc initTopMenu(MainBox: PBox) =
   
   var GoLineMenuItem = menu_item_new("Go to line...") # Go to line
   GoLineMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_l, CONTROL_MASK, ACCEL_VISIBLE) 
+                  KEY_g, CONTROL_MASK, ACCEL_VISIBLE) 
   EditMenu.append(GoLineMenuItem)
   show(GoLineMenuItem)
   discard signal_connect(GoLineMenuItem, "activate", 
