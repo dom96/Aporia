@@ -11,6 +11,7 @@
   <author>dom96</author>
   <_description>Piekno scheme, dark color scheme with pretty colors.</_description>
 
+  <!-- TODO: Most of these colors are probably not used. -->
   <color name="gray" value="#bbbbbb"/>
   <color name="white" value="#eeeeee"/>
   <color name="yellow" value="#fce94f"/>
@@ -30,8 +31,9 @@
   <color name="asfalto" value="#555753"/>
   
   <color name="carbon" value="#191919"/>
-  <color name="lightcarbon" value="#383838"/>
+  <color name="lightcarbon" value="#303030"/>
   <color name="lightgray" value="#8d8d8d"/>
+  <color name="lightercarbon" value="#4D4D4D"/>
   <color name="red" value="#E80909"/>
   
   <color name="darkturq" value="#24909d"/>
@@ -63,7 +65,7 @@
 <!--
         Default styles 
 -->
-  <style name="doc-comment" foreground="lightcarbon" italic="true" />
+  <style name="doc-comment" foreground="lightercarbon" italic="true" />
 
   <style name="def:keyword" foreground="nicegreen" bold="true"/>
   <style name="def:module-handler" foreground="white" bold="true"/>
@@ -74,11 +76,11 @@
   
   <style name="def:character" foreground="yellow-orange"/>
 
-  <style name="def:comment" foreground="lightcarbon" italic = "true"/>
+  <style name="def:comment" foreground="lightercarbon" italic = "true"/>
   <style name="def:number" foreground="niceblue"/>
   <style name="def:string" foreground="coolorange"/>
   <style name="def:net-address-in-comment" foreground="niceblue" underline="true"/>
-  <style name="def:note" bold="true"/>
+  <style name="def:note" foreground="white" bold="true"/>
   <style name="def:error" background="red" bold="true"/>
   <style name="def:escape" foreground="pimppurple"/>
   <style name="def:shebang" foreground="alga" bold="true"/>
