@@ -1287,7 +1287,7 @@ proc initTopMenu(MainBox: PBox) =
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFile_activate, 
                                    ControlMask, StockSave)
   
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_o, saveFileAs_Activate,
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
   
   createSeparator(win.FileMenu)
