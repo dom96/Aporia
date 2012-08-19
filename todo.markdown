@@ -4,12 +4,7 @@
 
 * Get rid of echo; change to `echod`.
 * Find all references
-* UI shouldn't freeze when opening large files.
-* Make sure suggest dialog gets moved up if we're at the bottom of the screen
-* Icons in context menus
-* http://mattgraham.github.com/Midnight/ -- Base theme on that code scheme there.
 * Save the last opened tab.
-* Comment out block of selected code. (Shortcut)
 * Test on Windows.
 * Language list in menu.
 * When you select a word, the same words in the doc should be highlighted.
@@ -27,6 +22,8 @@
 
 ## Miscellaneous
 
+* Make sure suggest dialog gets moved up if we're at the bottom of the screen
+* UI shouldn't freeze when opening large files.
 * Fix other encodings. (Selection for encodings like in gedit)
 * Fix drag and drop of files onto Notebook.
 * When you select a word, the same words should be highlighted in the document.

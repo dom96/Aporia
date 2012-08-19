@@ -10,3 +10,4 @@ use open documents from the file manager and it will open in the same window.
 * Scrolling when restoring a session **finally** works.
 * Added 'piekno' and 'yumbum' (Created by fowl) color scheme.
 * Pragmas can now be colored using the "nimrod:pragma" style name.
+* Whole blocks and lines of code can now be commented using Ctrl + /.

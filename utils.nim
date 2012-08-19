@@ -218,7 +218,7 @@ proc moveToEndLine*(iter: PTextIter) =
   ## Unlike gtk2's ``forwardToLineEnd``
   var currentLine = iter.getLine()
   iter.setLineOffset(0)
-  doAssert iter.forwardToLineEnd()
+  discard iter.forwardToLineEnd()
   if currentLine != iter.getLine():
     # This will only happen if iter is on an empty line. We can safely return
     # to its first char, because there is no more chars on that line.

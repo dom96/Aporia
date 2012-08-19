@@ -774,7 +774,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
   template cb(): expr = win.Tabs[currentPage].buffer
   var currentPage = win.sourceViewTabs.GetCurrentPage()
   var start, theEnd: TTextIter
-  template toggleSingle(): stmt =
+  proc toggleSingle() =
     # start and end are the same line no.
     # get the whole
     var line = cb.getText(addr(start), addr(theEnd),
@@ -799,61 +799,66 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
       # Insert the line comment string.
       cb.insert(addr(locNonWSIter), lineComment, lineComment.len.gint)
   
+  proc toggleMultiline() =
+    (addr theEnd).moveToEndLine() # Move to end of line.
+    var selectedTxt = cb.getText(addr(start), addr(theEnd), false)
+    # Check if this language supports block comments.
+    let blockStart = win.tempStuff.commentSyntax.blockStart
+    let blockEnd   = win.tempStuff.commentSyntax.blockEnd
+    if blockStart != "":
+      var firstNonWS = ($selectedTxt).skipWhitespace()
+      if ($selectedTxt)[firstNonWS .. firstNonWS+blockStart.len-1] == blockStart:
+        # Find blockEnd:
+        var blockEndIndex = ($selectedTxt).rfind(blockEnd)
+        if blockEndIndex == -1:
+          win.w.error("You need to select the end of the block comment. TODO: Should be in status bar.")
+          return
+        var startCmntIter, endCmntIter: TTextIter
+        # Create the mark for the start of the blockEnd comment string.
+        cb.getIterAtOffset(addr(startCmntIter), (addr start).getOffset() +
+                 blockEndIndex.gint)
+        var blockEndMark = cb.createMark(nil, addr(startCmntIter), false)
+        # Get the iterators for the start block of comment.
+        cb.getIterAtOffset(addr(startCmntIter), (addr start).getOffset() +
+                           firstNonWS.gint)
+        cb.getIterAtOffset(addr(endCmntIter), (addr start).getOffset() +
+                           gint(firstNonWS+blockStart.len))
+        cb.delete(addr(startCmntIter), addr(endCmntIter))
+        
+        cb.getIterAtMark(addr(startCmntIter), blockEndMark)
+        cb.getIterAtOffset(addr(endCmntIter), (addr startCmntIter).getOffset() +
+                           gint(blockEnd.len))
+        cb.delete(addr(startCmntIter), addr(endCmntIter))
+      else:
+        var locNonWSIter: TTextIter
+        cb.getIterAtOffset(addr(locNonWSIter), (addr start).getOffset() +
+                               firstNonWS.gint)
+        # Creating a mark here because the iter will get invalidated
+        # when I insert the text.
+        var endMark = cb.createMark(nil, addr(theEnd), false)
+        # Insert block start and end
+        cb.insert(addr(locNonWSIter), blockStart, blockStart.len.gint)
+        cb.getIterAtMark(addr(theEnd), endMark)
+        cb.insert(addr(theEnd), blockEnd, blockEnd.len.gint)
+    else:
+      # TODO: Loop through each line and add `lineComment` 
+      # (# in the case of Nimrod) to it.
+  
   if cb.getSelectionBounds(addr(start), addr(theEnd)):
     var startOldLineOffset = (addr start).getLineOffset()
     
     (addr start).setLineOffset(0) # Move to start of line.
-    if (addr start).getLine() == (addr theEnd).getLine():
+    if (addr start).getLine() == (addr theEnd).getLine() and
+       win.tempStuff.commentSyntax.line != "":
       toggleSingle()
     else:
-      (addr theEnd).moveToEndLine() # Move to end of line.
-      var selectedTxt = cb.getText(addr(start), addr(theEnd), false)
-      # Check if this language supports block comments.
-      let blockStart = win.tempStuff.commentSyntax.blockStart
-      let blockEnd   = win.tempStuff.commentSyntax.blockEnd
-      if blockStart != nil and blockStart != "":
-        var firstNonWS = ($selectedTxt).skipWhitespace()
-        if ($selectedTxt)[firstNonWS .. firstNonWS+blockStart.len-1] == blockStart:
-          # Find blockEnd:
-          var blockEndIndex = ($selectedTxt).find(blockEnd,
-                              firstNonWS+blockStart.len-1)
-          if blockEndIndex == -1:
-            win.w.error("You need to select the end of the block comment. TODO: Should be in status bar.")
-            return
-          var startCmntIter, endCmntIter: TTextIter
-          # Create the mark for the start of the blockEnd comment string.
-          cb.getIterAtOffset(addr(startCmntIter), (addr start).getOffset() +
-                   blockEndIndex.gint)
-          var blockEndMark = cb.createMark(nil, addr(startCmntIter), false)
-          # Get the iterators for the start block of comment.
-          cb.getIterAtOffset(addr(startCmntIter), (addr start).getOffset() +
-                             firstNonWS.gint)
-          cb.getIterAtOffset(addr(endCmntIter), (addr start).getOffset() +
-                             gint(firstNonWS+blockStart.len))
-          cb.delete(addr(startCmntIter), addr(endCmntIter))
-          
-          cb.getIterAtMark(addr(startCmntIter), blockEndMark)
-          cb.getIterAtOffset(addr(endCmntIter), (addr startCmntIter).getOffset() +
-                             gint(blockEnd.len))
-          cb.delete(addr(startCmntIter), addr(endCmntIter))
-        else:
-          var locNonWSIter: TTextIter
-          cb.getIterAtOffset(addr(locNonWSIter), (addr start).getOffset() +
-                                 firstNonWS.gint)
-          # Creating a mark here because the iter will get invalidated
-          # when I insert the text.
-          var endMark = cb.createMark(nil, addr(theEnd), false)
-          # Insert block start and end
-          cb.insert(addr(locNonWSIter), blockStart, blockStart.len.gint)
-          cb.getIterAtMark(addr(theEnd), endMark)
-          cb.insert(addr(theEnd), blockEnd, blockEnd.len.gint)
-      else:
-        # TODO: Loop through each line and add `lineComment` 
-        # (# in the case of Nimrod) to it.
-      
+      toggleMultiline()
   else:
     (addr start).setLineOffset(0) # Move to start of line.
-    toggleSingle()
+    if win.tempStuff.commentSyntax.line != "":
+      toggleSingle()
+    else:
+      toggleMultiline()
 
 proc settings_Activate(menuitem: PMenuItem, user_data: pointer) =
   settings.showSettings(win)
