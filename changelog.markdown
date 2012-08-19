@@ -6,8 +6,10 @@ Version 0.1.3
 * Error list.
 * Many bug fixes for handling of processes.
 * Aporia is now a single instance application. This means you can easily
-use open documents from the file manager and it will open in the same window.
+open documents from the file manager and it will open in the same aporia window.
 * Scrolling when restoring a session **finally** works.
-* Added 'piekno' and 'yumbum' (Created by fowl) color scheme.
+* Added 'piekno' and 'yumbum' (Created by fowl) color schemes.
 * Pragmas can now be colored using the "nimrod:pragma" style name.
 * Whole blocks and lines of code can now be commented using Ctrl + /.
+* Tabs and two consecutive underscores are now highlighted as errors when using
+the Nimrod syntax highlighter.

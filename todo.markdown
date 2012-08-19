@@ -49,6 +49,5 @@
 * minimum mode -- look at screenshots dir
 * When compiling an unsaved file, make it saved on the frontend. 
   So that when i'm editing it further I can press Ctrl + S without getting angry.
-* Highlight tabs in Nimrod syntax highlighting red.
 * If search term is misspelled, try to find something close to it and color
   the textbox orange but do go to it.

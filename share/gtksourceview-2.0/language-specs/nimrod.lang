@@ -42,6 +42,7 @@
     <style id="base-n-integer"    _name="Base-N number"         map-to="def:base-n-integer"/>
     <style id="type"              _name="type"                  map-to="def:type"/>
     <style id="pragma"            _name="pragma"                />
+    <style id="error"             _name="Error"                 map-to="def:error"/>
   </styles>
 
   <definitions>
@@ -154,7 +155,11 @@
           <start>\{\.</start>
           <end>(\.|)\}</end>
         </context>
-
+        
+        <context id="error" style-ref="error">
+          <match>(\t|__+)</match>
+        </context>
+        
         <context id="types" style-ref="type">
             <keyword>(i|I)_*(n|N)_*(t|T)_*</keyword>
             <keyword>(i|I)_*(n|N)_*(t|T)_*(8|8)_*</keyword>
