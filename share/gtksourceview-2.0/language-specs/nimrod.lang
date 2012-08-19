@@ -180,7 +180,7 @@
             <keyword>(b|B)_*(y|Y)_*(t|T)_*(e|E)_*</keyword>
             <keyword>(n|N)_*(a|A)_*(t|T)_*(u|U)_*(r|R)_*(a|A)_*(l|L)_*</keyword>
             <keyword>(p|P)_*(o|O)_*(s|S)_*(i|I)_*(t|T)_*(i|I)_*(v|V)_*(e|E)_*</keyword>
-
+            <keyword>(v|V)_?(a|A)_?(r|R)_?(a|A)_?(r|R)_?(g|G)_?(s|S)_?</keyword>
         </context>
 
         <context id="keyword" style-ref="keyword">
