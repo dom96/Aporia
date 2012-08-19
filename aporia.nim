@@ -238,7 +238,6 @@ proc closeTab(tab: int) =
 
 proc window_keyPress(widg: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
-  # TODO: Make sure this doesn't interfere with normal key handling.
   result = false
   var modifiers = acceleratorGetDefaultModMask()
 
@@ -658,9 +657,9 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 
 
-proc newFile(menuItem: PMenuItem, user_data: pgpointer) = addTab("", "", True)
+proc newFile(menuItem: PMenuItem, user_data: pointer) = addTab("", "", True)
   
-proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
+proc openFile(menuItem: PMenuItem, user_data: pointer) =
   var startpath = ""
   var currPage = win.SourceViewTabs.getCurrentPage()
   if currPage <% win.tabs.len: 
@@ -683,7 +682,7 @@ proc openFile(menuItem: PMenuItem, user_data: pgpointer) =
       except EIO:
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
   
-proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
+proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   var startpath = os.splitFile(win.tabs[current].filename).dir
   if startpath == "":
@@ -691,7 +690,7 @@ proc saveFile_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   
   saveTab(current, startpath)
 
-proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pgpointer) =
+proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   var (filename, saved) = (win.Tabs[current].filename, win.Tabs[current].saved)
   var startpath = os.splitFile(win.tabs[current].filename).dir
@@ -717,13 +716,13 @@ proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
-proc undo(menuItem: PMenuItem, user_data: pgpointer) = 
+proc undo(menuItem: PMenuItem, user_data: pointer) = 
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canUndo():
     win.Tabs[current].buffer.undo()
   win.scrollToInsert()
   
-proc redo(menuItem: PMenuItem, user_data: pgpointer) =
+proc redo(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
@@ -747,7 +746,7 @@ proc setFindField() =
                                                    addr(selectIter), false)
     win.findEntry.setText(text)
 
-proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) = 
+proc find_Activate(menuItem: PMenuItem, user_data: pointer) = 
   setFindField()
 
   win.findBar.show()
@@ -757,7 +756,7 @@ proc find_Activate(menuItem: PMenuItem, user_data: pgpointer) =
   win.replaceBtn.hide()
   win.replaceAllBtn.hide()
 
-proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc replace_Activate(menuitem: PMenuItem, user_data: pointer) =
   setFindField()
 
   win.findBar.show()
@@ -767,21 +766,109 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pgpointer) =
   win.replaceBtn.show()
   win.replaceAllBtn.show()
   
-proc GoLine_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.goLineBar.bar.show()
   win.goLineBar.entry.grabFocus()
+
+proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
+  template cb(): expr = win.Tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  var start, theEnd: TTextIter
+  template toggleSingle(): stmt =
+    # start and end are the same line no.
+    # get the whole
+    var line = cb.getText(addr(start), addr(theEnd),
+                  false)
+    # Find first non-whitespace
+    var locNonWS = ($line).skipWhitespace()
+    # Check if the line is commented.
+    let lineComment = win.tempStuff.commentSyntax.line
+    if ($line)[locNonWS .. locNonWS+lineComment.len-1] == lineComment:
+      # Line is commented
+      var startCmntIter, endCmntIter: TTextIter
+      cb.getIterAtLineOffset(addr(startCmntIter), (addr start).getLine(),
+                             locNonWS.gint)
+      cb.getIterAtLineOffset(addr(endCmntIter), (addr start).getLine(),
+                             gint(locNonWS+lineComment.len))
+      # Remove comment char(s)
+      cb.delete(addr(startCmntIter), addr(endCmntIter))
+    else:
+      var locNonWSIter: TTextIter
+      cb.getIterAtLineOffset(addr(locNonWSIter), (addr start).getLine(),
+                             locNonWS.gint)
+      # Insert the line comment string.
+      cb.insert(addr(locNonWSIter), lineComment, lineComment.len.gint)
   
-proc settings_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+  if cb.getSelectionBounds(addr(start), addr(theEnd)):
+    var startOldLineOffset = (addr start).getLineOffset()
+    
+    (addr start).setLineOffset(0) # Move to start of line.
+    if (addr start).getLine() == (addr theEnd).getLine():
+      toggleSingle()
+    else:
+      # We have to move to the first char on line first because if iter is on
+      # the last line and we call forwardToLineEnd then it will move to the next
+      # line. So this is a bit of a hack to make sure it doesn't.
+      (addr start).setLineOffset(0)
+      doAssert((addr theEnd).forwardToLineEnd()) # Move to end of line.
+      var selectedTxt = cb.getText(addr(start), addr(theEnd), false)
+      # Check if this language supports block comments.
+      let blockStart = win.tempStuff.commentSyntax.blockStart
+      let blockEnd   = win.tempStuff.commentSyntax.blockEnd
+      if blockStart != nil and blockStart != "":
+        var firstNonWS = ($selectedTxt).skipWhitespace()
+        if ($selectedTxt)[firstNonWS .. firstNonWS+blockStart.len-1] == blockStart:
+          # Find blockEnd:
+          var blockEndIndex = ($selectedTxt).find(blockEnd, firstNonWS)
+          if blockEndIndex == -1:
+            win.w.error("You need to select the end of the block comment. TODO: Should be in status bar.")
+          
+          var startCmntIter, endCmntIter: TTextIter
+          # Create the mark for the start of the blockEnd comment string.
+          cb.getIterAtOffset(addr(startCmntIter), (addr start).getOffset() +
+                   blockEndIndex.gint)
+          var blockEndMark = cb.createMark(nil, addr(startCmntIter), false)
+          # Get the iterators for the start block of comment.
+          cb.getIterAtOffset(addr(startCmntIter), (addr start).getOffset() +
+                             firstNonWS.gint)
+          cb.getIterAtOffset(addr(endCmntIter), (addr start).getOffset() +
+                             gint(firstNonWS+blockStart.len))
+          cb.delete(addr(startCmntIter), addr(endCmntIter))
+          
+          cb.getIterAtMark(addr(startCmntIter), blockEndMark)
+          cb.getIterAtOffset(addr(endCmntIter), (addr startCmntIter).getOffset() +
+                             gint(blockEnd.len))
+          cb.delete(addr(startCmntIter), addr(endCmntIter))
+        else:
+          var locNonWSIter: TTextIter
+          cb.getIterAtOffset(addr(locNonWSIter), (addr start).getOffset() +
+                                 firstNonWS.gint)
+          # Creating a mark here because the iter will get invalidated
+          # when I instert the text.
+          var endMark = cb.createMark(nil, addr(theEnd), false)
+          # Insert block start and end
+          cb.insert(addr(locNonWSIter), blockStart, blockStart.len.gint)
+          cb.getIterAtMark(addr(theEnd), endMark)
+          cb.insert(addr(theEnd), blockEnd, blockEnd.len.gint)
+      else:
+        # TODO: Loop through each line and add `lineComment` 
+        # (# in the case of Nimrod) to it.
+      
+  else:
+    (addr start).setLineOffset(0) # Move to start of line.
+    toggleSingle()
+
+proc settings_Activate(menuitem: PMenuItem, user_data: pointer) =
   settings.showSettings(win)
 
-proc viewToolBar_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
+proc viewToolBar_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
   win.settings.toolBarVisible = menuitem.itemGetActive()
   if win.settings.toolBarVisible:
     win.toolBar.show()
   else:
     win.toolBar.hide()
 
-proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pgpointer) =
+proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
   win.settings.bottomPanelVisible = menuitem.itemGetActive()
   if win.settings.bottomPanelVisible:
     win.bottomPanelTabs.show()
@@ -841,23 +928,23 @@ proc compileRun(filename: string, shouldRun: bool) =
     ifSuccess = changeFileExt(filename, os.ExeExt)
   execProcAsync(cmd, ExecNimrod, ifSuccess)
 
-proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
   compileRun(filename, false)
   
-proc CompileRunCurrent_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc CompileRunCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
   compileRun(filename, true)
 
-proc CompileProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc CompileProject_Activate(menuitem: PMenuItem, user_data: pointer) =
   let filename = saveAllForCompile(getProjectTab())
   compileRun(filename, false)
   
-proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pointer) =
   let filename = saveAllForCompile(getProjectTab())
   compileRun(filename, true)
 
-proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
+proc StopProcess_Activate(menuitem: PMenuItem, user_data: pointer) =
 
   if win.tempStuff.execMode != ExecNone and 
      win.tempStuff.execProcess != nil:
@@ -872,6 +959,7 @@ proc StopProcess_Activate(menuitem: PMenuItem, user_data: pgpointer) =
     win.outputTextView.addText("> Process terminated\n", errorTag)
   else:
     echod("No process running.")
+    win.w.error("No process running.")
 
 proc RunCustomCommand(cmd: string) = 
   if win.tempStuff.execMode != ExecNone:
@@ -888,16 +976,16 @@ proc RunCustomCommand(cmd: string) =
   
   execProcAsync(GetCmd(cmd, win.Tabs[currentTab].filename), ExecCustom)
 
-proc RunCustomCommand1(menuitem: PMenuItem, user_data: pgpointer) =
+proc RunCustomCommand1(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.settings.customCmd1)
 
-proc RunCustomCommand2(menuitem: PMenuItem, user_data: pgpointer) =
+proc RunCustomCommand2(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.settings.customCmd2)
 
-proc RunCustomCommand3(menuitem: PMenuItem, user_data: pgpointer) =
+proc RunCustomCommand3(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.settings.customCmd3)
 
-proc RunCheck(menuItem: PMenuItem, user_data: pgpointer) =
+proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
   if filename.len == 0: return
   if win.tempStuff.execMode != ExecNone:
@@ -911,14 +999,14 @@ proc RunCheck(menuItem: PMenuItem, user_data: pgpointer) =
   var cmd = GetCmd("$findExe(nimrod) check $#", filename)
   execProcAsync(cmd, ExecNimrod)
 
-proc memUsage_click(menuitem: PMenuItem, user_data: pgpointer) =
+proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
   echo("Memory usage: ")
   gMemProfile()
   var stats = "Memory usage: "
   stats.add gcGetStatistics()
   win.w.info(stats)
 
-proc about_click(menuitem: PMenuItem, user_data: pgpointer) =
+proc about_click(menuitem: PMenuItem, user_data: pointer) =
   # About dialog
   var aboutDialog = newAboutDialog("Aporia " & aporiaVersion, 
       "Aporia is an IDE for the \nNimrod programming language.",
@@ -967,6 +1055,9 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
     # Show close button of tab
     win.Tabs[pageNum].closeBtn.show()
 
+  # Get info about the current tabs language. Comment syntax etc.
+  win.getCurrentLanguageComment(win.tempStuff.commentSyntax, pageNum)
+
 proc onDragDataReceived(widget: PWidget, context: PDragContext, 
                         x: gint, y: gint, data: PSelectionData, info: guint,
                         time: guint, userData: pointer) =
@@ -1010,12 +1101,18 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
     win.sourceViewTabs.setCurrentPage(int32(existingTab))
     
     # Move cursor to where the error is.
+    var insertIndex = int32(item.column.parseInt)-1
+    var selectionBound = int32(item.column.parseInt)
+    if insertIndex < 0:
+      insertIndex = 0
+      selectionBound = 1
+    
     var iter: TTextIter
     var iterPlus1: TTextIter 
     win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
-        int32(item.line.parseInt)-1, int32(item.column.parseInt))
+        int32(item.line.parseInt)-1, insertIndex)
     win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
-        int32(item.line.parseInt)-1, int32(item.column.parseInt)+1)
+        int32(item.line.parseInt)-1, selectionBound)
     
     win.Tabs[existingTab].buffer.moveMarkByName("insert", addr(iter))
     win.Tabs[existingTab].buffer.moveMarkByName("selection_bound",
@@ -1175,43 +1272,21 @@ proc initTopMenu(MainBox: PBox) =
   
   # FileMenu
   win.FileMenu = menuNew()
-
-  var NewMenuItem = menu_item_new("New") # New
-  NewMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_n, CONTROL_MASK, ACCEL_VISIBLE)
-  win.FileMenu.append(NewMenuItem)
-  show(NewMenuItem)
-  discard signal_connect(NewMenuItem, "activate", 
-                          SIGNAL_FUNC(newFile), nil)
+  
+  # New
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_n, newFile, ControlMask,
+                                   StockNew)
 
   createSeparator(win.FileMenu)
 
-  var OpenMenuItem = menu_item_new("Open...") # Open...
-  # CTRL + O
-  OpenMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_o, CONTROL_MASK, ACCEL_VISIBLE) 
-  win.FileMenu.append(OpenMenuItem)
-  show(OpenMenuItem)
-  discard signal_connect(OpenMenuItem, "activate", 
-                          SIGNAL_FUNC(aporia.openFile), nil)
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_o, openFile, ControlMask,
+                                   StockOpen)
   
-  var SaveMenuItem = menu_item_new("Save") # Save
-  # CTRL + S
-  SaveMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_s, CONTROL_MASK, ACCEL_VISIBLE) 
-  win.FileMenu.append(SaveMenuItem)
-  show(SaveMenuItem)
-  discard signal_connect(SaveMenuItem, "activate", 
-                          SIGNAL_FUNC(saveFile_activate), nil)
-
-  var SaveAsMenuItem = menu_item_new("Save As...") # Save as...
-
-  SaveAsMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_s, CONTROL_MASK or gdk2.SHIFT_MASK, ACCEL_VISIBLE) 
-  win.FileMenu.append(SaveAsMenuItem)
-  show(SaveAsMenuItem)
-  discard signal_connect(SaveAsMenuItem, "activate", 
-                          SIGNAL_FUNC(saveFileAs_Activate), nil)
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFile_activate, 
+                                   ControlMask, StockSave)
+  
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_o, saveFileAs_Activate,
+                                   ControlMask or gdk2.ShiftMask, StockSaveAs)
   
   createSeparator(win.FileMenu)
   
@@ -1225,55 +1300,36 @@ proc initTopMenu(MainBox: PBox) =
   
   # Edit menu
   var EditMenu = menuNew()
-
-  var UndoMenuItem = menu_item_new("Undo") # Undo
-  EditMenu.append(UndoMenuItem)
-  show(UndoMenuItem)
-  discard signal_connect(UndoMenuItem, "activate", 
-                          SIGNAL_FUNC(aporia.undo), nil)
   
-  var RedoMenuItem = menu_item_new("Redo") # Undo
-  EditMenu.append(RedoMenuItem)
-  show(RedoMenuItem)
-  discard signal_connect(RedoMenuItem, "activate", 
-                          SIGNAL_FUNC(aporia.redo), nil)
+  # Undo/Redo
+  EditMenu.createImageMenuItem(STOCK_UNDO, aporia.undo)
+  
+  EditMenu.createImageMenuItem(STOCK_Redo, aporia.redo)
 
   createSeparator(EditMenu)
   
-  var FindMenuItem = menu_item_new("Find") # Find
-  FindMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_f, CONTROL_MASK, ACCEL_VISIBLE) 
-  EditMenu.append(FindMenuItem)
-  show(FindMenuItem)
-  discard signal_connect(FindMenuItem, "activate", 
-                          SIGNAL_FUNC(aporia.find_Activate), nil)
+  # Find/Find & Replace
+  EditMenu.createAccelMenuItem(accGroup, "", KEY_f, aporia.find_Activate,
+      ControlMask, StockFind)
 
-  var ReplaceMenuItem = menu_item_new("Replace") # Replace
-  ReplaceMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_h, CONTROL_MASK, ACCEL_VISIBLE) 
-  EditMenu.append(ReplaceMenuItem)
-  show(ReplaceMenuItem)
-  discard signal_connect(ReplaceMenuItem, "activate", 
-                          SIGNAL_FUNC(aporia.replace_Activate), nil)
+  EditMenu.createAccelMenuItem(accGroup, "", KEY_h, aporia.replace_Activate,
+      ControlMask, StockFindAndReplace)
 
   createSeparator(EditMenu)
   
-  var GoLineMenuItem = menu_item_new("Go to line...") # Go to line
-  GoLineMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_g, CONTROL_MASK, ACCEL_VISIBLE) 
-  EditMenu.append(GoLineMenuItem)
-  show(GoLineMenuItem)
-  discard signal_connect(GoLineMenuItem, "activate", 
-                          SIGNAL_FUNC(GoLine_Activate), nil)
+  EditMenu.createAccelMenuItem(accGroup, "Go to line...", KEY_g, 
+      GoLine_Activate, ControlMask, "")
   
   createSeparator(EditMenu)
   
-  var SettingsMenuItem = menu_item_new("Settings...") # Settings
-  EditMenu.append(SettingsMenuItem)
-  show(SettingsMenuItem)
-  discard signal_connect(SettingsMenuItem, "activate", 
-                          SIGNAL_FUNC(aporia.Settings_Activate), nil)
-
+  EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", KEY_slash, 
+      CommentLines_Activate, ControlMask, "")
+  
+  createSeparator(EditMenu)
+  
+  # Settings
+  EditMenu.createImageMenuItem(StockPreferences, aporia.settings_Activate)
+  
   var EditMenuItem = menuItemNewWithMnemonic("_Edit")
 
   EditMenuItem.setSubMenu(EditMenu)
@@ -1349,11 +1405,7 @@ proc initTopMenu(MainBox: PBox) =
   discard signal_connect(MemMenuItem, "activate", 
                          SIGNAL_FUNC(aporia.memUsage_click), nil)
   
-  var AboutMenuItem = menu_item_new("About")
-  HelpMenu.append(AboutMenuItem)
-  show(AboutMenuItem)
-  discard signal_connect(AboutMenuItem, "activate", 
-                         SIGNAL_FUNC(aporia.About_click), nil)
+  HelpMenu.createImageMenuItem(StockAbout, aporia.About_click)
   
   var HelpMenuItem = menuItemNewWithMnemonic("_Help")
   

@@ -170,7 +170,10 @@ proc get_search_path*(manager: PSourceStyleSchemeManager): cstringarray {.cdecl,
   
 proc force_rescan*(scheme: PSourceStyleSchemeManager) {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_manager_force_rescan".}
-  
+
+proc get_id*(scheme: PSourceLanguage): cstring {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_get_id".}
+
 proc get_name*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_get_name".}
 
@@ -179,6 +182,9 @@ proc get_description*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
 
 proc get_globs*(lang: PSourceLanguage): cstringarray {.cdecl, dynlib: lib,
   importc: "gtk_source_language_get_globs".}
+
+proc get_metadata*(lang: PSourceLanguage, name: cstring): cstring {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_get_metadata".}
 
 proc set_smart_home_end*(sv: PSourceView, smart_he: TSmartHomeEndType) {.cdecl,
   dynlib: lib, importc: "gtk_source_view_set_smart_home_end".}

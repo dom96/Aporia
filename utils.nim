@@ -128,6 +128,8 @@ type
 
     recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
     lastTab*: int # For reordering tabs, the last tab that was selected.
+    commentSyntax*: tuple[line: string, blockStart: string, blockEnd: string]
+    
 
   Tab* = object
     buffer*: PSourceBuffer
@@ -156,11 +158,8 @@ type
     kind*: TErrorType
     desc*, file*, line*, column*: string
 
-  TLanguage* = enum
-    LangNimrod = "nim"
-
 # -- Debug
-proc echod*[T](s: openarray[T]) =
+proc echod*(s: varargs[string, `$`]) =
   when not defined(release):
     for i in items(s): stdout.write(i)
     echo()
@@ -228,9 +227,15 @@ proc createTextColumn*(tv: PTreeView, title: string, column: int,
 # -- Useful Menu functions
 proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup, 
                          label: string, acc: gint,
-                         action: proc (i: PMenuItem, p: pgpointer) {.cdecl.},
-                         mask: gint = 0) = 
-  var result = menu_item_new(label)
+                         action: proc (i: PMenuItem, p: pointer) {.cdecl.},
+                         mask: gint = 0,
+                         stockid: string = "") = 
+  var result: PMenuItem
+  if stockid != "":
+    result = imageMenuItemNewFromStock(stockid, nil)
+  else:
+    result = menu_item_new(label)
+  
   result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
   ToolsMenu.append(result)
   show(result)
@@ -243,6 +248,13 @@ proc createMenuItem*(menu: PMenu, label: string,
   show(result)
   discard signalConnect(result, "activate", SIGNALFUNC(action), nil)
 
+proc createImageMenuItem*(menu: PMenu, stockid: string,
+                          action: proc (i: PMenuItem, p: pointer) {.cdecl.}) =
+  var result = imageMenuItemNewFromStock(stockid, nil)
+  menu.append(result)
+  show(result)
+  discard signalConnect(result, "activate", SIGNALFUNC(action), nil)
+
 proc createSeparator*(menu: PMenu) =
   var sep = separator_menu_item_new()
   menu.append(sep)
@@ -250,22 +262,46 @@ proc createSeparator*(menu: PMenu) =
 
 # -- Others
 
-proc isCurrentLanguage*(win: var MainWin, lang: TLanguage): bool =
-  ## Determines whether the current tab contains a file which is of ``lang``.
-  result = false
-  var currentPage = win.sourceViewTabs.GetCurrentPage()
+proc getCurrentTab*(win: var MainWin): int =
+  result = win.sourceViewTabs.GetCurrentPage()
+  if result < 0:
+    result = 0
+
+proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
+  ## Returns the current language ID.
+  ##
+  ## ``""`` is returned if there is no syntax highlighting for the current doc.
+  var currentPage = pageNum
+  if currentPage == -1:
+    currentPage = win.getCurrentTab()
   var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
   if isHighlighted:
     var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
-    var globs = sourceLanguage.getGlobs()
-    # TODO: Apparently `globs` needs to be freed. I'm not sure if Nimrod will
-    # do that for me.
-    var globsSeq = globs.cstringArrayToSeq()
-    for i in globsSeq:
-      if i.endsWith($lang):
-        return true
+    return $sourceLanguage.getID()
   else:
-    # When a language cannot be guessed Nimrod is used, but highlighting is
-    # disabled. That's why need to check the filename ourselves here.
-    result = win.Tabs[currentPage].filename.endsWith($lang)
-      
+    return ""
+
+proc getCurrentLanguageComment*(win: var MainWin,
+          syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
+  ## Gets the current line comment string and block comment string.
+  ## If no comment can be found ``false`` is returned.
+  ##
+  ## **Warning**: Strings in ``syntax`` may become nil.
+  
+  var currentLang = getCurrentLanguage(win)
+  if currentLang != "":
+    case currentLang.normalize()
+    of "nimrod":
+      syntax.blockStart = "discard \"\"\""
+      syntax.blockEnd = "\"\"\""
+      syntax.line = "#"
+    else:
+      var currentPage = win.sourceViewTabs.GetCurrentPage()
+      var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
+      syntax.blockStart  = $sourceLanguage.getMetadata("block-comment-start")
+      syntax.blockEnd    = $sourceLanguage.getMetadata("block-comment-end")
+      syntax.line = $sourceLanguage.getMetadata("line-comment-start")
+  else:
+    syntax.blockStart = ""
+    syntax.blockEnd = ""
+    syntax.line = ""

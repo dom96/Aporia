@@ -10,6 +10,9 @@
 * http://mattgraham.github.com/Midnight/ -- Base theme on that code scheme there.
 * Save the last opened tab.
 * Comment out block of selected code. (Shortcut)
+* Test on Windows.
+* Language list in menu.
+* When you select a word, the same words in the doc should be highlighted.
 
 ## Other language features
 * Ability to pick other syntax highlighting
@@ -51,3 +54,5 @@
 * When compiling an unsaved file, make it saved on the frontend. 
   So that when i'm editing it further I can press Ctrl + S without getting angry.
 * Highlight tabs in Nimrod syntax highlighting red.
+* If search term is misspelled, try to find something close to it and color
+  the textbox orange but do go to it.
