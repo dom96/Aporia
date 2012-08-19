@@ -211,6 +211,19 @@ proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
 
   return -1
 
+# -- TreeIter functions
+proc moveToEndLine*(iter: PTextIter) =
+  ## Moves ``iter`` to the end of the current line.
+  ## This guarantees that the iter will stay on the same line.
+  ## Unlike gtk2's ``forwardToLineEnd``
+  var currentLine = iter.getLine()
+  iter.setLineOffset(0)
+  doAssert iter.forwardToLineEnd()
+  if currentLine != iter.getLine():
+    # This will only happen if iter is on an empty line. We can safely return
+    # to its first char, because there is no more chars on that line.
+    iter.setLine(currentLine)
+
 # -- Useful TreeView function
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
                       expand = false, resizable = true) =
@@ -285,10 +298,8 @@ proc getCurrentLanguageComment*(win: var MainWin,
           syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
   ## Gets the current line comment string and block comment string.
   ## If no comment can be found ``false`` is returned.
-  ##
-  ## **Warning**: Strings in ``syntax`` may become nil.
   
-  var currentLang = getCurrentLanguage(win)
+  var currentLang = getCurrentLanguage(win, pageNum)
   if currentLang != "":
     case currentLang.normalize()
     of "nimrod":
@@ -296,12 +307,15 @@ proc getCurrentLanguageComment*(win: var MainWin,
       syntax.blockEnd = "\"\"\""
       syntax.line = "#"
     else:
-      var currentPage = win.sourceViewTabs.GetCurrentPage()
-      var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
-      syntax.blockStart  = $sourceLanguage.getMetadata("block-comment-start")
-      syntax.blockEnd    = $sourceLanguage.getMetadata("block-comment-end")
-      syntax.line = $sourceLanguage.getMetadata("line-comment-start")
+      var SourceLanguage = win.Tabs[pageNum].buffer.getLanguage()
+      var bs = sourceLanguage.getMetadata("block-comment-start")
+      var be = sourceLanguage.getMetadata("block-comment-end")
+      var lc = sourceLanguage.getMetadata("line-comment-start")
+      syntax.blockStart  = if bs != nil: $bs else: ""
+      syntax.blockEnd    = if be != nil: $be else: ""
+      syntax.line = if lc != nil: $lc else: ""
   else:
     syntax.blockStart = ""
     syntax.blockEnd = ""
     syntax.line = ""
+  echod(currentLang, " ", repr(syntax))

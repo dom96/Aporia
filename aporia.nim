@@ -806,11 +806,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     if (addr start).getLine() == (addr theEnd).getLine():
       toggleSingle()
     else:
-      # We have to move to the first char on line first because if iter is on
-      # the last line and we call forwardToLineEnd then it will move to the next
-      # line. So this is a bit of a hack to make sure it doesn't.
-      (addr start).setLineOffset(0)
-      doAssert((addr theEnd).forwardToLineEnd()) # Move to end of line.
+      (addr theEnd).moveToEndLine() # Move to end of line.
       var selectedTxt = cb.getText(addr(start), addr(theEnd), false)
       # Check if this language supports block comments.
       let blockStart = win.tempStuff.commentSyntax.blockStart
@@ -819,10 +815,11 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
         var firstNonWS = ($selectedTxt).skipWhitespace()
         if ($selectedTxt)[firstNonWS .. firstNonWS+blockStart.len-1] == blockStart:
           # Find blockEnd:
-          var blockEndIndex = ($selectedTxt).find(blockEnd, firstNonWS)
+          var blockEndIndex = ($selectedTxt).find(blockEnd,
+                              firstNonWS+blockStart.len-1)
           if blockEndIndex == -1:
             win.w.error("You need to select the end of the block comment. TODO: Should be in status bar.")
-          
+            return
           var startCmntIter, endCmntIter: TTextIter
           # Create the mark for the start of the blockEnd comment string.
           cb.getIterAtOffset(addr(startCmntIter), (addr start).getOffset() +
@@ -844,7 +841,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
           cb.getIterAtOffset(addr(locNonWSIter), (addr start).getOffset() +
                                  firstNonWS.gint)
           # Creating a mark here because the iter will get invalidated
-          # when I instert the text.
+          # when I insert the text.
           var endMark = cb.createMark(nil, addr(theEnd), false)
           # Insert block start and end
           cb.insert(addr(locNonWSIter), blockStart, blockStart.len.gint)
