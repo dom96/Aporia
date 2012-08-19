@@ -2,7 +2,6 @@
 
 ## Version 0.1.3
 
-* Get rid of echo; change to `echod`.
 * Find all references
 * Save the last opened tab.
 * Test on Windows.

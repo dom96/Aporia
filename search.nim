@@ -87,7 +87,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
   if win.settings.search == SearchStyleInsens:
     reOptions = reOptions + {reIgnoreCase}
     newPattern = styleInsensitive(newPattern)
-    echo(newPattern)
+    echod(newPattern)
     isRegex = True  
     
   var matches: array[0..re.MaxSubpatterns, string]

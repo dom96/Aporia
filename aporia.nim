@@ -1002,7 +1002,7 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   execProcAsync(cmd, ExecNimrod)
 
 proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
-  echo("Memory usage: ")
+  echod("Memory usage: ")
   gMemProfile()
   var stats = "Memory usage: "
   stats.add gcGetStatistics()
@@ -1158,7 +1158,7 @@ proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
   var count = replaceAll(find, replace)
-  echo("Replaced $1 matches." % $count)
+  echod("Replaced $1 matches." % $count)
   
 proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = 
   win.findBar.hide()

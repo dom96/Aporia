@@ -112,7 +112,7 @@ proc parseError(err: string,
   of "hint", "warning":
     res.theType = TETWarning
   else:
-    echo(theType)
+    echod(theType)
     assert(false)
   inc(i) # Skip :
   i += skipWhitespace(err, i)
@@ -241,7 +241,7 @@ proc execProcAsync*(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   echod("Spawning new process.")
   win.tempStuff.ifSuccess = ifSuccess
   # Execute the process
-  echo(cmd)
+  echod(cmd)
   var task: TExecThrTask
   task.typ = ThrRun
   task.command = cmd

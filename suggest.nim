@@ -145,7 +145,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
       var f: TFile
       var fileSplit = splitFile(t.filename)
-      echo("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
+      echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
       if f.open(prefixDir / fileSplit.name & fileSplit.ext, fmWrite):
         # Save everything.
         # - Get the text from the TextView.
@@ -160,7 +160,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         # - Save it.
         f.write(text)
       else:
-        echo("[Warning] Unable to save one or more files, suggest won't work.")
+        echod("[Warning] Unable to save one or more files, suggest won't work.")
         return False
       f.close()
   
@@ -176,7 +176,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   win.suggest.allitems = win.suggest.items
   
   if win.suggest.items.len == 0:
-    echo("[Warning] No items found for suggest")
+    echod("[Warning] No items found for suggest")
     return False
   
   for i in items(win.suggest.items):
@@ -233,7 +233,7 @@ proc filterSuggest*(win: var MainWin) =
                                 addr(startMatch), addr(endMatch), nil)
   assert(matched)
   var text = (addr(endMatch)).getText(addr(cursor))
-  echo("[Suggest] Filtering ", text)
+  echod("[Suggest] Filtering ", text)
   win.suggest.currentFilter = normalize($text)
   # Filter the items.
   var allItems = win.suggest.allItems
