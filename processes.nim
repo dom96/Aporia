@@ -264,7 +264,7 @@ proc execProcAsync*(cmd: string, mode: TExecMode, ifSuccess: string = "") =
 
 template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt =
   ## Sends a thrEvent of type ``t``, does ``todo`` before sending.
-  var event: TExecThrEvent
+  var event {.inject.}: TExecThrEvent
   event.typ = t
   todo
   execThrEventChan.send(event)
