@@ -173,7 +173,7 @@ proc peekProcOutput*(dummy: pointer): bool =
         of EvStarted:
           win.tempStuff.execProcess = event.p
         of EvRecv:
-          event.line = event.line.strip()
+          event.line = event.line.strip(leading = false)
           if win.tempStuff.execMode == execNimrod:
             if event.line != "":
               echod("Line is: " & event.line.repr)

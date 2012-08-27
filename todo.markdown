@@ -7,6 +7,7 @@
 * Test on Windows.
 * Language list in menu.
 * When you select a word, the same words in the doc should be highlighted.
+* Font settings for output text view.
 
 ## Other language features
 * Ability to pick other syntax highlighting
