@@ -15,6 +15,7 @@ type
     wrapAround*: bool # Whether to wrap the search around.
     
     font*: string # font used by the sourceview
+    outputFont*: string # font used by the output textview
     colorSchemeID*: string # color scheme used by the sourceview
     indentWidth*: int32 # how many spaces used for indenting code (in sourceview)
     showLineNumbers*: bool # whether to show line numbers in the sourceview

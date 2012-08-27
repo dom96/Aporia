@@ -17,6 +17,7 @@ proc defaultSettings*(): TSettings =
   result.search = SearchCaseInsens
   result.wrapAround = true
   result.font = "Monospace 10"
+  result.outputFont = "Monospace 10"
   result.colorSchemeID = "classic"
   result.indentWidth = 2
   result.showLineNumbers = True
@@ -73,6 +74,7 @@ proc save*(win: MainWin) =
 
     f.writeSection("editor")
     f.writeKeyVal("font", settings.font)
+    f.writeKeyVal("outputFont", settings.outputFont)
     f.writeKeyVal("scheme", settings.colorSchemeID)
     f.writeKeyVal("indentWidth", settings.indentWidth)
     f.writeKeyVal("showLineNumbers", $settings.showLineNumbers)
@@ -144,6 +146,7 @@ proc load*(lastSession: var seq[string]): TSettings =
     of cfgKeyValuePair:
       case normalize(e.key)
       of "font": result.font = e.value
+      of "outputfont": result.outputFont = e.value
       of "scheme": result.colorSchemeID = e.value
       of "indentwidth": result.indentWidth = int32(e.value.parseInt())
       of "showlinenumbers": result.showLineNumbers = isTrue(e.value)

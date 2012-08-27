@@ -1527,6 +1527,9 @@ proc initBottomTabs() =
   win.outputTextView = textviewNew()
   outputScrolledWindow.add(win.outputTextView)
   win.outputTextView.show()
+  var font = font_description_from_string(win.settings.outputFont)
+  win.outputTextView.modifyFont(font)
+  
   # Create a mark at the end of the outputTextView.
   var endIter: TTextIter
   win.outputTextView.getBuffer().getEndIter(addr(endIter))
