@@ -791,7 +791,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
       cb.getIterAtLineOffset(addr(endCmntIter), (addr start).getLine(),
                              gint(locNonWS+lineComment.len))
       # Remove comment char(s)
-      cb.delete(addr(startCmntIter), addr(endCmntIter))
+      gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
     else:
       var locNonWSIter: TTextIter
       cb.getIterAtLineOffset(addr(locNonWSIter), (addr start).getLine(),
@@ -823,12 +823,12 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
                            firstNonWS.gint)
         cb.getIterAtOffset(addr(endCmntIter), (addr start).getOffset() +
                            gint(firstNonWS+blockStart.len))
-        cb.delete(addr(startCmntIter), addr(endCmntIter))
+        gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
         
         cb.getIterAtMark(addr(startCmntIter), blockEndMark)
         cb.getIterAtOffset(addr(endCmntIter), (addr startCmntIter).getOffset() +
                            gint(blockEnd.len))
-        cb.delete(addr(startCmntIter), addr(endCmntIter))
+        gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
       else:
         var locNonWSIter: TTextIter
         cb.getIterAtOffset(addr(locNonWSIter), (addr start).getOffset() +
