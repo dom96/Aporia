@@ -1033,6 +1033,15 @@ proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
 proc onTabsPressed(widg: PWidget, ev: PEventButton,
                        userDat: pwidget):bool =
   if ev.button == 1 and ev.`type` == BUTTON2_PRESS:
+    let galloc = win.tabs[win.tabs.len-1].closeBtn.allocation
+    if galloc.x == -1:
+      # Use the label x instead
+      let labelAlloc = win.tabs[win.tabs.len-1].label.allocation
+      assert labelAlloc.x != -1
+      if ev.x < labelAlloc.x.float: return # Didn't click on empty space.
+    else:
+      if ev.x < galloc.x.float: return # Didn't click on empty space.
+    
     addTab("", "", true)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
@@ -1463,7 +1472,6 @@ proc initSourceViewTabs() =
   discard win.sourceViewTabs.signalConnect("page-reordered",
           SIGNAL_FUNC(onPageReordered), nil)
   
-  # TODO: only create new tab when double-clicking in empty space
   discard win.SourceViewTabs.signalConnect("button-press-event",
           SIGNAL_FUNC(onTabsPressed), nil)
   

@@ -319,4 +319,3 @@ proc getCurrentLanguageComment*(win: var MainWin,
     syntax.blockStart = ""
     syntax.blockEnd = ""
     syntax.line = ""
-  echod(currentLang, " ", repr(syntax))

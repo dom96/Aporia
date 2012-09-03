@@ -13,3 +13,6 @@ open documents from the file manager and it will open in the same aporia window.
 * Whole blocks and lines of code can now be commented using Ctrl + /.
 * Tabs and two consecutive underscores are now highlighted as errors when using
 the Nimrod syntax highlighter.
+* Recent file list in File menu.
+* Fixed a bug where clicking a new tab would be created when double clicking on 
+  the scrollbar.
