@@ -8,6 +8,7 @@
 * Language list in menu.
 * When you select a word, the same words in the doc should be highlighted.
 * Font settings for output text view.
+* Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 
 ## Other language features
 * Ability to pick other syntax highlighting
@@ -52,3 +53,13 @@
   So that when i'm editing it further I can press Ctrl + S without getting angry.
 * If search term is misspelled, try to find something close to it and color
   the textbox orange but do go to it.
+* Ctrl+Shift up/down should move the current line up or down.
+* Commands?
+* Better status bottom bar, need a framework for notifying user of events.
+  * allow for it to go red, blue, whatever.
+* Make the find bar text boxes span the whole find bar.
+* c2nim integration. Select text, right click, "convert to Nimrod code using c2nim" option.
+* Text macros. I want to be able to with a press of a button start some kind of
+  pre-written macro which can do cool things like inspect my clipboard. In the case
+  of updating the gtk wrapper, I copy the "gtk_some_object_some_function" I want
+  to press Ctrl+B+Something and get a nice wrapped function without the "gtk_"

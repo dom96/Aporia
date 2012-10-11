@@ -9,7 +9,7 @@
 
 # Stdlib imports:
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
-import pegs, streams, times, parseopt, parseutils, asyncio, sockets
+import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes
 
@@ -17,7 +17,7 @@ import settings, utils, cfg, search, suggest, AboutDialog, processes
 
 const
   NimrodProjectExt = ".nimprj"
-  GTKVerReq = (2'i32, 12'i32, 0'i32) # Version of GTK required for Aporia to run.
+  GTKVerReq = (2'i32, 18'i32, 0'i32) # Version of GTK required for Aporia to run.
   aporiaVersion = "0.1.3"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
@@ -450,7 +450,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
 proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
   win.suggest.hide()
 
-proc addTab(name, filename: string, setCurrent: bool = False)
+proc addTab(name, filename: string, setCurrent: bool = False, encoding = "utf-8")
 proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
   createSeparator(menu)
   createMenuItem(menu, "Go to definition...",
@@ -530,13 +530,15 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
+  
 
-proc addTab(name, filename: string, setCurrent: bool = False) =
+proc addTab(name, filename: string, setCurrent: bool = False, encoding = "utf-8") =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
   ## of the filename.
   ## If filename doesn't exist EIO is raised.
   assert(win.nimLang != nil)
+  
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
   
   if filename != nil and filename != "":
@@ -563,12 +565,18 @@ proc addTab(name, filename: string, setCurrent: bool = False) =
     # Disable the undo/redo manager.
     buffer.begin_not_undoable_action()
     
-    # Load the file.
+    # Read the file first so that we can affirm its encoding.
     try:
-      var file: string = readFile(filename)
-      buffer.set_text(file, len(file).int32)
-    except EIO:
-      raise
+      var fileTxt: string = readFile(filename)
+      if encoding.ToLower() != "utf-8":
+        fileTxt = convert(fileTxt, "UTF-8", encoding)
+      if not g_utf8_validate(fileTxt, fileTxt.len().gssize, nil):
+        win.tempStuff.pendingFilename = filename
+        win.infobar.show()
+        return
+      # Read in the file.
+      buffer.set_text(fileTxt, len(fileTxt).int32)
+    except EIO: raise
     finally:
       # Enable the undo/redo manager.
       buffer.end_not_undoable_action()
@@ -1015,6 +1023,27 @@ proc about_click(menuitem: PMenuItem, user_data: pointer) =
       "Copyright (c) 2010-2012 Dominik Picheta")
   aboutDialog.show()
 
+# -- Infobar
+proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
+  # (Encodings) info bar button pressed.
+  var comboBox = cast[PComboBoxText](cb)
+  assert win.tempStuff.pendingFilename != ""
+  case respID
+  of ResponseOK:
+    let active = comboBox.getActive().int
+    assert active >= 0 and active <= Windows1251.int
+    comboBox.setActive(0) # Reset selection.
+    infobar.hide()
+    addTab("", win.tempStuff.pendingFilename, true,
+           $TEncodingsAvailable(active))
+    # addTab may set pendingFilename so we can't reset it here.
+    # bad things shouldn't happen if it doesn't get reset though.
+  of ResponseCancel:
+    comboBox.setActive(0) # Reset selection.
+    win.tempStuff.pendingFilename = ""
+    infobar.hide()
+  else: assert false
+
 # -- SourceViewTabs - Notebook.
 
 proc closeTab(child: PWidget) =
@@ -1449,6 +1478,44 @@ proc initToolBar(MainBox: PBox) =
   if win.settings.toolBarVisible == true:
     win.toolBar.show()
 
+proc initInfoBar(MainBox: PBox) =
+  win.infobar = infoBarNewWithButtons(STOCK_OPEN, ResponseOK, STOCK_CANCEL, ResponseCancel, nil)
+  win.infobar.setMessageType(MessageInfo)
+  var vbox = vboxNew(false, 0);vbox.show()
+  let msgText = "File could not be opened because its encoding " &
+                         "could not be established."
+  var messageLabel = labelNew(nil)
+  messageLabel.setUseMarkup(true)
+  messageLabel.setMarkup("<span style=\"oblique\" font=\"13.5\">" & msgText &
+                         "</span>")
+  messageLabel.setAlignment(0.0, 0.5) # Left align.
+  messageLabel.show()
+  vbox.packStart(messageLabel, False, False, 0)
+  
+  var hbox = hboxNew(false, 0); hbox.show()
+  var chooseEncodingLabel = labelNew("Choose encoding: ")
+  chooseEncodingLabel.setAlignment(0.0, 0.5) # Left align.
+  chooseEncodingLabel.show()
+  hbox.packStart(chooseEncodingLabel, false, false, 0)
+
+  var encodingsComboBox = comboBoxTextNew()
+  encodingsComboBox.appendText($UTF8)
+  encodingsComboBox.appendText($ISO88591)
+  encodingsComboBox.appendText($GB2312)
+  encodingsComboBox.appendText($Windows1251)
+  encodingsComboBox.setActive(UTF8.guint)
+  encodingsComboBox.show()
+  hbox.packStart(encodingsComboBox, false, false, 0)
+  
+  vbox.packStart(hbox, False, False, 10)
+  var contentArea = win.infobar.getContentArea()
+  contentArea.add(vbox)
+  
+  MainBox.packStart(win.infobar, False, False, 0)
+
+  discard win.infobar.signalConnect("response",
+         SIGNAL_FUNC(InfoBarResponse), encodingsComboBox)
+
 proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
   result.target = target
   result.flags = flags.int32
@@ -1753,6 +1820,7 @@ proc initTempStuff() =
   win.tempStuff.compilationErrorBuffer = ""
   win.tempStuff.errorList = @[]
   win.tempStuff.lastTab = 0
+  win.tempStuff.pendingFilename = ""
 
 {.pop.}
 proc initSocket() =
@@ -1836,6 +1904,7 @@ proc initControls() =
   
   initTopMenu(MainBox)
   initToolBar(MainBox)
+  initInfoBar(MainBox)
   initTAndBP(MainBox)
   initFindBar(MainBox)
   initGoLineBar(MainBox)

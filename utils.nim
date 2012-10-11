@@ -53,6 +53,8 @@ type
     bottomBar*: PStatusBar 
     bottomProgress*: PProgressBar
     
+    infobar*: PInfoBar ## For encoding selection
+    
     toolBar*: PToolBar # FIXME: should be notebook?
     bottomPanelTabs*: PNotebook
     outputTextView*: PTextView
@@ -130,6 +132,7 @@ type
     recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
     lastTab*: int # For reordering tabs, the last tab that was selected.
     commentSyntax*: tuple[line: string, blockStart: string, blockEnd: string]
+    pendingFilename*: string # Filename which could not be opened due to encoding.
     
 
   Tab* = object
@@ -158,6 +161,10 @@ type
   TError* = object
     kind*: TErrorType
     desc*, file*, line*, column*: string
+
+  TEncodingsAvailable* = enum
+    UTF8 = "UTF-8", ISO88591 = "ISO-8859-1", GB2312 = "GB2312",
+    Windows1251 = "Windows-1251"
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
@@ -237,6 +244,12 @@ proc createTextColumn*(tv: PTreeView, title: string, column: int,
   c.columnSetResizable(resizable)
   c.columnSetAttributes(renderer, "text", column, nil)
   assert tv.appendColumn(c) == column+1
+
+# -- Useful ListStore functions
+proc add*(ls: PListStore, val: String, col = 0) =
+  var iter: TTreeIter
+  ls.append(addr(iter))
+  ls.set(addr(iter), col, val, -1)
 
 # -- Useful Menu functions
 proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup, 
