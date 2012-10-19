@@ -16,3 +16,5 @@ the Nimrod syntax highlighter.
 * Recent file list in File menu.
 * Fixed a bug where clicking a new tab would be created when double clicking on 
   the scrollbar.
+* Opening documents which are non-utf8 now works, aporia prompts the user for
+  the encoding.

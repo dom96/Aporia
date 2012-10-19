@@ -9,6 +9,7 @@
 * When you select a word, the same words in the doc should be highlighted.
 * Font settings for output text view.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
+* Save file as "blah", then "blah.nim", nimrod syntax highlighting gone?
 
 ## Other language features
 * Ability to pick other syntax highlighting
@@ -63,3 +64,4 @@
   pre-written macro which can do cool things like inspect my clipboard. In the case
   of updating the gtk wrapper, I copy the "gtk_some_object_some_function" I want
   to press Ctrl+B+Something and get a nice wrapped function without the "gtk_"
+* Jump to proc/temp/iterator. Ctrl + P ?

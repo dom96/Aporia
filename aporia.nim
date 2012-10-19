@@ -11,7 +11,8 @@
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
 # Local imports:
-import settings, utils, cfg, search, suggest, AboutDialog, processes
+import settings, utils, cfg, search, suggest, AboutDialog, processes,
+       CustomStatusBar
 
 {.push callConv:cdecl.}
 
@@ -265,17 +266,20 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
 # -- SourceView(PSourceView) & SourceBuffer
 proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
   # Incase this event gets fired before
-  # bottomBar is initialized
-  if win.bottomBar != nil and not win.tempStuff.stopSBUpdates:
-    var iter: TTextIter
-    
-    win.bottomBar.pop(0)
-    buffer.getIterAtMark(addr(iter), buffer.getInsert())
-
-    var row = getLine(addr(iter)) + 1
-    var col = getLineOffset(addr(iter))
-
-    discard win.bottomBar.push(0, "Line: " & $row & " Column: " & $col)
+  # statusBar is initialized
+  if win.statusbar != nil and not win.tempStuff.stopSBUpdates:
+    var insert, selectBound: TTextIter
+    if buffer.getSelectionBounds(addr(insert), addr(selectBound)):
+      # There is a selection
+      let frmLn = getLine(addr(insert)) + 1
+      let toLn = getLine(addr(selectBound)) + 1
+      let frmChar = getLineOffset(addr(insert))
+      let toChar = getLineOffset(addr(selectBound))
+      win.statusbar.setDocInfoSelected(frmLn, toLn, frmChar, toChar)
+    else:
+      let ln = getLine(addr(insert)) + 1
+      let ch = getLineOffset(addr(insert))
+      win.statusbar.setDocInfo(ln, ch)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
@@ -1082,7 +1086,7 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   
   win.tempStuff.lastTab = pageNum
   updateMainTitle(pageNum)
-  
+  updateStatusBar(win.Tabs[pageNum].buffer)
   # Set the lastSavedDir
   if win.tabs.len > pageNum:
     if win.Tabs[pageNum].filename.len != 0:
@@ -1667,12 +1671,12 @@ proc initFindBar(MainBox: PBox) =
 
   # Add a Label 'Find'
   var findLabel = labelNew("Find:")
-  win.findBar.packStart(findLabel, False, False, 0)
+  win.findBar.packStart(findLabel, False, False, 5)
   findLabel.show()
 
   # Add a (find) text entry
   win.findEntry = entryNew()
-  win.findBar.packStart(win.findEntry, False, False, 0)
+  win.findBar.packStart(win.findEntry, True, True, 0)
   # The following event gets fired when Enter is pressed.
   discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(
                                       aporia.nextBtn_Clicked), nil)
@@ -1692,7 +1696,7 @@ proc initFindBar(MainBox: PBox) =
   # Add a (replace) text entry 
   # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceEntry = entryNew()
-  win.findBar.packStart(win.replaceEntry, False, False, 0)
+  win.findBar.packStart(win.replaceEntry, True, True, 0)
   var rq1: TRequisition 
   win.replaceEntry.sizeRequest(addr(rq1))
 
@@ -1768,7 +1772,7 @@ proc initGoLineBar(MainBox: PBox) =
 
   # Add a Label 'Go to line'
   var goLineLabel = labelNew("Go to line:")
-  win.goLineBar.bar.packStart(goLineLabel, False, False, 0)
+  win.goLineBar.bar.packStart(goLineLabel, False, False, 5)
   goLineLabel.show()
 
   # Add a text entry
@@ -1794,18 +1798,6 @@ proc initGoLineBar(MainBox: PBox) =
   closeBtn.show()
 
   MainBox.packStart(win.goLineBar.bar, False, False, 0)
-
-proc initStatusBar(MainBox: PBox) =
-  win.bottomBar = statusbarNew()
-  MainBox.packStart(win.bottomBar, False, False, 0)
-  win.bottomBar.show()
-  
-  win.bottomProgress = progressBarNew()
-  win.bottomProgress.hide()
-  win.bottomProgress.setText("Executing...")
-  win.bottomBar.packEnd(win.bottomProgress, false, false, 0)
-  
-  discard win.bottomBar.push(0, "Line: 0 Column: 0")
 
 proc initTempStuff() =
   win.tempStuff.lastSaveDir = ""
@@ -1908,7 +1900,8 @@ proc initControls() =
   initTAndBP(MainBox)
   initFindBar(MainBox)
   initGoLineBar(MainBox)
-  initStatusBar(MainBox)
+  #initStatusBar(MainBox)
+  win.statusbar = initCustomStatusBar(mainBox)
   
   MainBox.show()
   if confParseFail:

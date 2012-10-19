@@ -3,7 +3,7 @@
 
 import pegs, times, osproc, streams, parseutils, strutils, re
 import gtk2, glib2
-import utils
+import utils, CustomStatusBar
 
 
 var win*: ptr utils.MainWin
@@ -161,7 +161,7 @@ proc peekProcOutput*(dummy: pointer): bool =
     var events = execThrEventChan.peek()
     
     if epochTime() - win.tempStuff.lastProgressPulse >= 0.1:
-      win.bottomProgress.pulse()
+      win.statusbar.progressbar.pulse()
       win.tempStuff.lastProgressPulse = epochTime()
     if events > 0:
       var successTag = createColor(win.outputTextView, "successTag",
@@ -215,7 +215,7 @@ proc peekProcOutput*(dummy: pointer): bool =
             printProcOutput(win.tempStuff.compilationErrorBuffer)
           
           win.tempStuff.execMode = ExecNone
-          win.bottomProgress.hide()
+          win.statusbar.restorePrevious()
           
           if event.exitCode == QuitSuccess:
             win.outputTextView.addText("> Process terminated with exit code " & 
@@ -255,8 +255,8 @@ proc execProcAsync*(cmd: string, mode: TExecMode, ifSuccess: string = "") =
   win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, nil)
   echod("gTimeoutAdd id = ", $win.tempStuff.idleFuncId)
 
-  win.bottomProgress.show()
-  win.bottomProgress.pulse()
+  win.statusbar.setProgress("Executing")
+  win.statusbar.progressbar.pulse()
   win.tempStuff.lastProgressPulse = epochTime()
   # Clear errors
   clearErrors()

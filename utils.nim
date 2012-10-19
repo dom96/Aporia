@@ -9,6 +9,8 @@
 
 import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
 
+from CustomStatusBar import PCustomStatusBar
+
 type
   TSettings* = object
     search*: TSearchEnum # Search mode.
@@ -50,8 +52,7 @@ type
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
     SourceViewTabs*: PNotebook # Tabs which hold the sourceView
-    bottomBar*: PStatusBar 
-    bottomProgress*: PProgressBar
+    statusBar*: PCustomStatusBar
     
     infobar*: PInfoBar ## For encoding selection
     
@@ -165,6 +166,7 @@ type
   TEncodingsAvailable* = enum
     UTF8 = "UTF-8", ISO88591 = "ISO-8859-1", GB2312 = "GB2312",
     Windows1251 = "Windows-1251"
+
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
