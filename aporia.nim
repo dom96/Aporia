@@ -446,7 +446,6 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       win.doMoveSuggest()
   else:
     if key.toLower() notin ["up", "down", "page_up", "page_down", "home", "end"]:
-      echod("Key released: ", key)
 
       if win.settings.suggestFeature and win.suggest.shown:
         win.filterSuggest()
@@ -457,37 +456,38 @@ proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
 
 proc addTab(name, filename: string, setCurrent: bool = False, encoding = "utf-8")
 proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
-  createSeparator(menu)
-  createMenuItem(menu, "Go to definition...",
-    proc (i: PMenuItem, p: pointer) =
-      let currentPage = win.sourceViewTabs.getCurrentPage()
-      let tab = win.Tabs[currentPage]
-      var cursor: TTextIter
-      tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
-      var def: TSuggestItem
-      if findDef(tab.filename, getLine(addr cursor), 
-           getLineOffset(addr cursor), def):
-        
-        let existingTab = win.findTab(def.file, true)
-        if existingTab != -1:
-          win.sourceViewTabs.setCurrentPage(existingTab.gint)
-        else:
-          addTab("", def.file, true)
-        
+  if win.getCurrentLanguage() == "nimrod":
+    createSeparator(menu)
+    createMenuItem(menu, "Go to definition...",
+      proc (i: PMenuItem, p: pointer) =
         let currentPage = win.sourceViewTabs.getCurrentPage()
-        # Go to that line/col
-        var iter: TTextIter
-        win.tabs[currentPage].buffer.getIterAtLineIndex(addr(iter),
-            def.line-1, def.col-1)
-        
-        win.tabs[currentPage].buffer.placeCursor(addr(iter))
-        
-        win.scrollToInsert()
-        
-        echod(def.repr())
-      else:
-        echod("Found nothing")
-  )
+        let tab = win.Tabs[currentPage]
+        var cursor: TTextIter
+        tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
+        var def: TSuggestItem
+        if findDef(tab.filename, getLine(addr cursor), 
+             getLineOffset(addr cursor), def):
+          
+          let existingTab = win.findTab(def.file, true)
+          if existingTab != -1:
+            win.sourceViewTabs.setCurrentPage(existingTab.gint)
+          else:
+            addTab("", def.file, true)
+          
+          let currentPage = win.sourceViewTabs.getCurrentPage()
+          # Go to that line/col
+          var iter: TTextIter
+          win.tabs[currentPage].buffer.getIterAtLineIndex(addr(iter),
+              def.line-1, def.col-1)
+          
+          win.tabs[currentPage].buffer.placeCursor(addr(iter))
+          
+          win.scrollToInsert()
+          
+          echod(def.repr())
+        else:
+          echod("Found nothing")
+    )
 
 # Other(Helper) functions
 
@@ -1201,7 +1201,7 @@ proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
   var count = replaceAll(find, replace)
-  echod("Replaced $1 matches." % $count)
+  win.statusbar.setTemp("Replaced $1 matches." % $count, false, 5000)
   
 proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = 
   win.findBar.hide()
@@ -1923,7 +1923,7 @@ proc initControls() =
       dialogs.warning(win.w, 
         "Unable to bind socket. Aporia will not " &
         "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
-    discard gTimeoutAddFull(500, GPriorityLow, 
+    discard gTimeoutAddFull(GPriorityLow, 500, 
       proc (dummy: pointer): bool =
         result = win.IODispatcher.poll(5), nil, nil)
 

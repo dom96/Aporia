@@ -8,7 +8,7 @@
 #
 
 import gtk2, glib2, gtksourceview, gdk2, pegs, re, strutils
-import utils
+import utils, CustomStatusBar
 
 {.push callConv:cdecl.}
 
@@ -203,6 +203,9 @@ proc findText*(forward: bool) =
     # Reset the findEntry color
     win.findEntry.modifyBase(STATE_NORMAL, nil)
     win.findEntry.modifyText(STATE_NORMAL, nil)
+    
+    # Reset statusbar
+    win.statusbar.restorePrevious()
   else:
     # Change the findEntry color to red
     var red: Gdk2.TColor
@@ -212,6 +215,9 @@ proc findText*(forward: bool) =
     
     win.findEntry.modifyBase(STATE_NORMAL, addr(red))
     win.findEntry.modifyText(STATE_NORMAL, addr(white))
+    
+    # Set the status bar
+    win.statusbar.setTemp("Match not found.", true, 5000)
     
 proc replaceAll*(find, replace: cstring): Int =
   # gedit-document.c, gedit_document_replace_all

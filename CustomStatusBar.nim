@@ -1,4 +1,4 @@
-import gtk2, times, strutils
+import gtk2, glib2, times, strutils
 
 type
   TStatusKind = enum
@@ -54,7 +54,7 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
   case st.kind
   of StatusPerm, StatusTemp:
     if st.error:
-      bar.statusLabel.setMarkup("<span underline='single' underline_color='F20A30'>" &
+      bar.statusLabel.setMarkup("<span bgcolor='#F20A30' fgcolor='white'>" &
           st.text & "</span>")
       bar.statusLabel.setUseMarkup(true)
     else:
@@ -69,7 +69,16 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
     bar.progressbar.setText(st.text)
   
   if st.kind == StatusTemp:
-    ## TODO: Timeout idle add
+    discard gTimeoutAddFull(GPriorityLow, 500, 
+      proc (barP: pointer): bool =
+        let b = cast[PCustomStatusBar](barP)
+        if b.status.kind == StatusTemp:
+          if epochTime() - b.status.startTime > (b.status.timeout/1000):
+            b.setStatus(defaultStatus())
+            return false
+        else:
+          return false
+        result = true, addr(bar[]), nil)
   
 
 proc setPerm*(bar: PCustomStatusBar, text: string, error: bool) =
