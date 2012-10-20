@@ -9,7 +9,6 @@
 * When you select a word, the same words in the doc should be highlighted.
 * Font settings for output text view.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
-* Save file as "blah", then "blah.nim", nimrod syntax highlighting gone?
 
 ## Other language features
 * Ability to pick other syntax highlighting
@@ -28,12 +27,10 @@
 * UI shouldn't freeze when opening large files.
 * Fix other encodings. (Selection for encodings like in gedit)
 * Fix drag and drop of files onto Notebook.
-* When you select a word, the same words should be highlighted in the document.
 * Find all.
 * Different editing modes - html, xml, etc. (These should make editing these particular things easier.)
 * Track history of file. When you edit and then undo the file should not be marked as being unsaved.
 * Use threads when executing the compiler.
-* Read cmd line args to check for file paths.
 * Finish the suggest feature.
 * Project management.
 * Ability to split vertically into two separate tab views.
@@ -45,7 +42,6 @@
 * Variable inspection in the editor; being able to hover over a variable and see its type
   * This requires better Nimrod compiler integration!
 * It should be easier to close the bottom panel. Add an X button.
-* Syntax highlighting selection
 * Detection of files being edited outside of aporia.
 * Fix VPaned after that change to win.show().
 * docking with http://developer.gnome.org/gdl/
@@ -56,8 +52,6 @@
   the textbox orange but do go to it.
 * Ctrl+Shift up/down should move the current line up or down.
 * Commands?
-* Better status bottom bar, need a framework for notifying user of events.
-  * allow for it to go red, blue, whatever.
 * Make the find bar text boxes span the whole find bar.
 * c2nim integration. Select text, right click, "convert to Nimrod code using c2nim" option.
 * Text macros. I want to be able to with a press of a button start some kind of

@@ -92,6 +92,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       var lang = langMan.guessLanguage(path, nil)
       if lang != nil:
         win.Tabs[tabNr].buffer.setLanguage(lang)
+        win.Tabs[tabNr].buffer.setHighlightSyntax(True)
       else:
         win.Tabs[tabNr].buffer.setHighlightSyntax(False)
   else: 
