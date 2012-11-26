@@ -9,6 +9,14 @@
 * When you select a word, the same words in the doc should be highlighted.
 * Font settings for output text view.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
+* Use the status bar more:
+  * File could not be opened due to encoding.
+  * File was opened successfully (green)
+  * Cannot undo anymore?
+  * Cannot redo anymore?
+* Error list doesn't work in release mode?
+* Update language definition files.
+* Saving files should add them to the Recently opened files list?
 
 ## Other language features
 * Ability to pick other syntax highlighting
@@ -59,3 +67,6 @@
   of updating the gtk wrapper, I copy the "gtk_some_object_some_function" I want
   to press Ctrl+B+Something and get a nice wrapped function without the "gtk_"
 * Jump to proc/temp/iterator. Ctrl + P ?
+* Instead of project files, each file can have options specified as a comment?
+  Like in vim.
+  * Evaluate how to handle projects.

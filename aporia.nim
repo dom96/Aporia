@@ -454,7 +454,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
 proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
   win.suggest.hide()
 
-proc addTab(name, filename: string, setCurrent: bool = False, encoding = "utf-8")
+proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
 proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
   if win.getCurrentLanguage() == "nimrod":
     createSeparator(menu)
@@ -537,7 +537,7 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   buffer.setScheme(win.scheme)
   
 
-proc addTab(name, filename: string, setCurrent: bool = False, encoding = "utf-8") =
+proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8") =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
   ## of the filename.
@@ -1554,7 +1554,7 @@ proc initSourceViewTabs() =
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
-        addTab("", filename)
+        addTab("", filename, False)
       
         var iter: TTextIter
         # TODO: Save last cursor position as line and column offset combo.
@@ -1581,13 +1581,8 @@ proc initSourceViewTabs() =
         dialogs.error(win.w, "Could not open " & f)
         quit(QuitFailure)
     
-    if loadFiles.len() != 0:
-      # Select the tab that was opened.
-      # TODO: This causes a Gdk-Critical for some reason.
-      win.sourceViewTabs.setCurrentPage(int32(win.tabs.len())-1)
-    
   else:
-    addTab("", "")
+    addTab("", "", False)
 
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
@@ -1846,7 +1841,7 @@ proc initSocket() =
   win.IODispatcher.register(win.oneInstSock)
   win.oneInstSock.bindAddr(TPort(win.settings.singleInstancePort.toU16), "localhost")
   win.oneInstSock.listen()
-{.push: cdecl.}
+{.push cdecl.}
 
 proc initControls() =
   # Load up the language style
