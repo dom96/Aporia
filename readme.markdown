@@ -50,5 +50,19 @@ copy it into aporia's directory or somewhere into your PATH.
 ### Linux
 Use your package manager to install the dependencies.
 ### Mac OS X
-I don't have a Mac. So I have no idea, if you could write a guide and let me 
-know of its existence it would be greatly appreciated.
+Since Aporia uses gtk, and gtk is not easy to compile natively under MacOSX
+(yet), your best bet is to install [Macports](http://www.macports.org/) and
+then install the gtk libraries through the following commands:
+
+    port install gtksourceview2 libiconv
+
+That will likely install most, if not all dependencies required by Aporia. Now,
+you may also need to run the following command to let the OS find the path to
+the macports libraries when invoking aporia:
+
+    export LD_LIBRARY_PATH=/opt/local/lib/
+
+If running now ``aporia`` tells you about a missing dynamic library,
+dependencies might have changed and you could need to ``port install`` another
+package (tell us this is broken creating an issue and we will update the
+documentation).
