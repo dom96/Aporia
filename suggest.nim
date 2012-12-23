@@ -7,8 +7,6 @@
 #    distribution, for details about the copyright.
 #
 
-{.push callConv:cdecl.}
-
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,
@@ -312,12 +310,12 @@ proc showTooltip*(win: var MainWin, tab: Tab, markup: string,
 
 # -- Signals
 proc TreeView_RowActivated(tv: PTreeView, path: PTreePath, 
-            column: PTreeViewColumn, win: ptr MainWin) =
+            column: PTreeViewColumn, win: ptr MainWin) {.cdecl.} =
   var index = path.getIndices()[]
   if win.suggest.items.len() > index:
     win[].insertSuggestItem(index)
 
-proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) =
+proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl.} =
   var selectedIter: TTreeIter
   var TreeModel: PTreeModel
   if selection.getSelected(addr(TreeModel), addr(selectedIter)):
@@ -330,7 +328,7 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) =
       if win.suggest.shown:
         win[].showTooltip(tab, win.suggest.items[index].nimType, selectedPath)
 
-proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) =
+proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
   win.w.present()
   var current = win.SourceViewTabs.getCurrentPage()
   win.Tabs[current].sourceView.grabFocus()
