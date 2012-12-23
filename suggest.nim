@@ -7,6 +7,8 @@
 #    distribution, for details about the copyright.
 #
 
+{.push callConv:cdecl.}
+
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,

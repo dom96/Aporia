@@ -8,7 +8,7 @@
 #
 
 import gtk2, glib2
-
+{.push callConv:cdecl.}
 when defined(windows):
   const lib = "libgtksourceview-2.0-0.dll"
 elif defined(macosx):
