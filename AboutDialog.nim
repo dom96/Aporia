@@ -10,7 +10,7 @@ type
 
   PAboutDialog* = ref TAboutDialog
 
-proc closeBtn_click(btn: PButton, dummy: pointer) =
+proc closeBtn_click(btn: PButton, dummy: pointer) {.cdecl.} =
   # Kinda hackish.
   btn.parent.parent.parent.destroy()
 
