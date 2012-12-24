@@ -245,7 +245,7 @@ proc createTextColumn*(tv: PTreeView, title: string, column: int,
   c.columnSetExpand(expand)
   c.columnSetResizable(resizable)
   c.columnSetAttributes(renderer, "text", column, nil)
-  assert tv.appendColumn(c) == column+1
+  doAssert tv.appendColumn(c) == column+1
 
 # -- Useful ListStore functions
 proc add*(ls: PListStore, val: String, col = 0) =

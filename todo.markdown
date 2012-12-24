@@ -1,6 +1,6 @@
 # Aporia's Todo list
 
-## Version 0.1.3
+## Version 0.2.0
 
 * Find all references
 * Save the last opened tab.
@@ -17,6 +17,7 @@
 * Error list doesn't work in release mode?
 * Update language definition files.
 * Saving files should add them to the Recently opened files list?
+* Bug: Search for '[]' in style insensitive mode, it will match '[].'
 
 ## Other language features
 * Ability to pick other syntax highlighting
@@ -70,3 +71,4 @@
 * Instead of project files, each file can have options specified as a comment?
   Like in vim.
   * Evaluate how to handle projects.
+* Feature: Select a block of code, split it up into 80 char lines.
