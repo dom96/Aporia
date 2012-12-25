@@ -1389,6 +1389,10 @@ proc initTopMenu(MainBox: PBox) =
   
   createSeparator(EditMenu)
   
+  EditMenu.createMenuItem("Raw Preferences",
+    proc (i: PMenuItem, p: pointer) {.cdecl.} =
+      addTab("", joinPath(os.getConfigDir(), "Aporia", "config.ini")))
+  
   # Settings
   EditMenu.createImageMenuItem(StockPreferences, aporia.settings_Activate)
   

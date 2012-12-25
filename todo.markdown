@@ -7,10 +7,8 @@
 * Test on Windows.
 * Language list in menu.
 * When you select a word, the same words in the doc should be highlighted.
-* Font settings for output text view.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * Update language definition files.
-* Error list, go to error is broken when file changes, check bounds.
 
 ## Other language features
 * Ability to pick other syntax highlighting
