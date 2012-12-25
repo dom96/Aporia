@@ -1145,18 +1145,36 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
     win.sourceViewTabs.setCurrentPage(int32(existingTab))
     
     # Move cursor to where the error is.
+    var line = item.line.parseInt-1
     var insertIndex = int32(item.column.parseInt)-1
     var selectionBound = int32(item.column.parseInt)
     if insertIndex < 0:
       insertIndex = 0
       selectionBound = 1
     
+    # Validate that this line/col combo is not outside bounds
+    var endIter: TTextIter
+    win.Tabs[existingTab].buffer.getEndIter(addr(endIter))
+    let lastLine = getLine(addr(endIter))
+    if line > lastLine:
+      line = lastLine
+    
+    var colEndAtLine: TTextIter
+    win.Tabs[existingTab].buffer.getIterAtLine(addr(colEndAtLine), line.gint)
+    moveToEndLine(addr(colEndAtLine))
+    let lastColumnAtLine = getLineOffset(addr(colEndAtLine))
+    if selectionBound > lastColumnAtLine:
+      win.statusbar.setTemp("Line " & $(line+1) & " and column " & $selectionBound &
+                            " is outside the bounds of the available text.",
+                            UrgError, 5000)
+      return
+    
     var iter: TTextIter
     var iterPlus1: TTextIter 
     win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
-        int32(item.line.parseInt)-1, insertIndex)
+        line.int32, insertIndex)
     win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
-        int32(item.line.parseInt)-1, selectionBound)
+        line.int32, selectionBound)
     
     win.Tabs[existingTab].buffer.moveMarkByName("insert", addr(iter))
     win.Tabs[existingTab].buffer.moveMarkByName("selection_bound",
