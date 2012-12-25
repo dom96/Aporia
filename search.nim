@@ -217,7 +217,7 @@ proc findText*(forward: bool) =
     win.findEntry.modifyText(STATE_NORMAL, addr(white))
     
     # Set the status bar
-    win.statusbar.setTemp("Match not found.", true, 5000)
+    win.statusbar.setTemp("Match not found.", UrgError, 5000)
     
 proc replaceAll*(find, replace: cstring): Int =
   # gedit-document.c, gedit_document_replace_all

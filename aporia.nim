@@ -127,8 +127,9 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         cTab.label.setTooltipText(path)
         
         updateMainTitle(tabNr)
+        win.statusbar.setTemp("File saved successfully.", UrgSuccess, 5000)
     else:
-      error(win.w, "Unable to write to file: " & OSErrorMsg())  
+      error(win.w, "Unable to write to file: " & OSErrorMsg())
 
 proc saveAllTabs() =
   for i in 0..high(win.tabs): 
@@ -577,6 +578,8 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
         fileTxt = convert(fileTxt, "UTF-8", encoding)
       if not g_utf8_validate(fileTxt, fileTxt.len().gssize, nil):
         win.tempStuff.pendingFilename = filename
+        win.statusbar.setTemp("Could not open file with " &
+                              encoding & " encoding.", UrgError, 5000)
         win.infobar.show()
         return
       # Read in the file.
@@ -733,12 +736,16 @@ proc undo(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canUndo():
     win.Tabs[current].buffer.undo()
+  else:
+    win.statusbar.setTemp("Nothing to undo.", UrgError, 5000)
   win.scrollToInsert()
   
 proc redo(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
+  else:
+    win.statusbar.setTemp("Nothing to redo.", UrgError, 5000)
   win.scrollToInsert()
 
 proc setFindField() =
@@ -824,7 +831,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
         # Find blockEnd:
         var blockEndIndex = ($selectedTxt).rfind(blockEnd)
         if blockEndIndex == -1:
-          win.w.error("You need to select the end of the block comment. TODO: Should be in status bar.")
+          win.statusbar.setTemp("You need to select the end of the block comment.", UrgError, 5000)
           return
         var startCmntIter, endCmntIter: TTextIter
         # Create the mark for the start of the blockEnd comment string.
@@ -928,7 +935,7 @@ proc saveAllForCompile(projectTab: int): string =
 proc compileRun(filename: string, shouldRun: bool) =
   if filename.len == 0: return
   if win.tempStuff.execMode != ExecNone:
-    win.w.error("Process already running!")
+    win.statusbar.setTemp("Process already running!", UrgError, 5000)
     return
   
   # Clear the outputTextView
@@ -974,11 +981,11 @@ proc StopProcess_Activate(menuitem: PMenuItem, user_data: pointer) =
     win.outputTextView.addText("> Process terminated\n", errorTag)
   else:
     echod("No process running.")
-    win.w.error("No process running.")
+    win.statusbar.setTemp("No process running.", UrgError, 5000)
 
 proc RunCustomCommand(cmd: string) = 
   if win.tempStuff.execMode != ExecNone:
-    win.w.error("Process already running!")
+    win.statusbar.setTemp("Process already running!", UrgError, 5000)
     return
   
   saveFile_Activate(nil, nil)
@@ -1004,7 +1011,7 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
   if filename.len == 0: return
   if win.tempStuff.execMode != ExecNone:
-    win.w.error("Process already running!")
+    win.statusbar.setTemp("Process already running!", UrgError, 5000)
     return
   
   # Clear the outputTextView
@@ -1141,7 +1148,7 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
   let item = win.tempStuff.errorList[selectedIndex]
   var existingTab = win.findTab(item.file, false)
   if existingTab == -1 or item.file == "":
-    win.w.error("Could not find correct tab.")
+    win.statusbar.setTemp("Could not find correct tab.", UrgError, 5000)
   else:
     win.sourceViewTabs.setCurrentPage(int32(existingTab))
     
@@ -1201,7 +1208,7 @@ proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
   var count = replaceAll(find, replace)
-  win.statusbar.setTemp("Replaced $1 matches." % $count, false, 5000)
+  win.statusbar.setTemp("Replaced $1 matches." % $count, UrgNormal, 5000)
   
 proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = 
   win.findBar.hide()
@@ -1836,6 +1843,7 @@ proc initSocket() =
                 win.w.present()
               else:
                 win.w.error("File not found: " & filepath)
+                win.w.present()
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)

@@ -9,15 +9,8 @@
 * When you select a word, the same words in the doc should be highlighted.
 * Font settings for output text view.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
-* Use the status bar more:
-  * File could not be opened due to encoding.
-  * File was opened successfully (green)
-  * Cannot undo anymore?
-  * Cannot redo anymore?
-* Error list doesn't work in release mode?
 * Update language definition files.
-* Saving files should add them to the Recently opened files list?
-* Bug: Search for '[]' in style insensitive mode, it will match '[].'
+* Error list, go to error is broken when file changes, check bounds.
 
 ## Other language features
 * Ability to pick other syntax highlighting

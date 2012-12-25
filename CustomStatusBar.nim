@@ -3,10 +3,13 @@ import gtk2, glib2, times, strutils
 type
   TStatusKind = enum
     StatusPerm, StatusTemp, StatusProgress
+  
+  TUrgency* = enum
+    UrgNormal, UrgError, UrgSuccess
 
   TStatus = object
     text: string
-    error: bool
+    urgency: TUrgency
     case kind: TStatusKind
     of StatusPerm:
       nil
@@ -26,7 +29,7 @@ type
 proc defaultStatus(): TStatus =
   result.kind = StatusPerm
   result.text = "Ready"
-  result.error = false
+  result.urgency = UrgNormal
 
 proc initCustomStatusBar*(MainBox: PBox): PCustomStatusBar =
   ## Creates a new custom status bar.
@@ -53,13 +56,18 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
   bar.status = st
   case st.kind
   of StatusPerm, StatusTemp:
-    if st.error:
+    case st.urgency
+    of UrgError:
       bar.statusLabel.setMarkup("<span bgcolor='#F20A30' fgcolor='white'>" &
           st.text & "</span>")
       bar.statusLabel.setUseMarkup(true)
-    else:
+    of UrgNormal:
       bar.statusLabel.setText(st.text)
       bar.statusLabel.setUseMarkup(false)
+    of UrgSuccess:
+      bar.statusLabel.setMarkup("<span bgcolor='#259C05' fgcolor='white'>" &
+          st.text & "</span>")
+      bar.statusLabel.setUseMarkup(true)
     bar.statusLabel.show()
     bar.progressBar.hide()
   of StatusProgress:
@@ -70,7 +78,7 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
   
   if st.kind == StatusTemp:
     discard gTimeoutAddFull(GPriorityLow, 500, 
-      proc (barP: pointer): bool =
+      proc (barP: pointer): bool {.cdecl.} =
         let b = cast[PCustomStatusBar](barP)
         if b.status.kind == StatusTemp:
           if epochTime() - b.status.startTime > (b.status.timeout/1000):
@@ -81,21 +89,21 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
         result = true, addr(bar[]), nil)
   
 
-proc setPerm*(bar: PCustomStatusBar, text: string, error: bool) =
+proc setPerm*(bar: PCustomStatusBar, text: string, urgency: TUrgency) =
   ## Sets a permanent status which only gets overriden by another ``set*``.
   var st: TStatus
   st.kind = StatusPerm
   st.text = text
-  st.error = error
+  st.urgency = urgency
   setStatus(bar, st)
 
-proc setTemp*(bar: PCustomStatusBar, text: string, error: bool, timeout: int) =
+proc setTemp*(bar: PCustomStatusBar, text: string, urgency: TUrgency, timeout: int) =
   ## Sets a temporary status, after ``timeout`` the status will be disappear
   ## automatically and the previous one will be set.
   var st: TStatus
   st.kind = StatusTemp
   st.text = text
-  st.error = error
+  st.urgency = urgency
   st.timeout = timeout
   st.startTime = epochTime()
   setStatus(bar, st)
@@ -105,7 +113,7 @@ proc setProgress*(bar: PCustomStatusBar, text: string) =
   var st: TStatus
   st.kind = StatusProgress
   st.text = text
-  st.error = false
+  st.urgency = UrgNormal
   setStatus(bar, st)
 
 proc restorePrevious*(bar: PCustomStatusBar) =
