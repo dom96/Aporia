@@ -149,22 +149,14 @@ proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
   main_quit()
 
 proc confirmUnsaved(win: var MainWin, t: Tab): int =
-  var askSave = dialogNewWithButtons("", win.w, 0,
-                        STOCK_SAVE, RESPONSE_ACCEPT, STOCK_CANCEL, 
-                        RESPONSE_CANCEL,
-                        "Close without saving", RESPONSE_REJECT, nil)
+  var askSave = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
+  askSave.addButtons(STOCK_SAVE, ResponseAccept, STOCK_CANCEL, ResponseCancel,
+      "Close without saving", ResponseReject, nil)
   askSave.setTransientFor(win.w)
-  # TODO: Make this dialog look better
-  var labelText = ""
   if t.filename != "":
-    labelText = t.filename.extractFilename & 
-        " is unsaved, would you like to save it?"
+    askSave.setMarkup(t.filename.extractFilename & " is unsaved, would you like to save it?")
   else:
-    labelText = "Would you like to save this tab?"
-  
-  var label = labelNew(labelText)
-  askSave.vbox.pack_start(label, False, False, 0)
-  label.show()
+    askSave.setMarkup("Would you like to save this tab?")
 
   result = askSave.run()
   gtk2.destroy(PWidget(askSave))
