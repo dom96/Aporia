@@ -10,6 +10,7 @@
 # Stdlib imports:
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
+import tables
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes,
        CustomStatusBar
@@ -664,6 +665,10 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       win.FileMenu.append(moreMenuItem)
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 
+proc viewMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
+  assert win.tempStuff.plMenuItems.len > 0
+
+
 
 proc newFile(menuItem: PMenuItem, user_data: pointer) = addTab("", "", True)
   
@@ -889,6 +894,27 @@ proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
   else:
     win.bottomPanelTabs.hide()
 
+proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, lang: PSourceLanguage]) =
+  if not win.tempStuff.stopPLToggle:
+    # TODO: Consider using onclick event instead of variables...
+    # Stop from toggling to no language.
+    if not menuitem.itemGetActive():
+      win.tempStuff.stopPLToggle = true
+      menuitem.itemSetActive(true)
+      win.tempStuff.stopPLToggle = false
+      return
+  
+    let currentLang = win.getCurrentLanguage()
+    win.tempStuff.stopPLToggle = true
+    win.tempStuff.plMenuItems[currentLang].mi.itemSetActive(false)
+    win.tempStuff.stopPLToggle = false
+    let currentTab = win.getCurrentTab()
+    if plItem.lang.isNil:
+      win.Tabs[currentTab].buffer.setHighlightSyntax(False)
+    else:
+      win.Tabs[currentTab].buffer.setHighlightSyntax(True)
+      win.Tabs[currentTab].buffer.setLanguage(plItem.lang)
+
 proc GetCmd(cmd, filename: string): string = 
   var f = quoteIfContainsWhite(filename)
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
@@ -1083,6 +1109,18 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   if not win.settings.showCloseOnAllTabs and 
       win.tempStuff.lastTab < win.Tabs.len:
     win.Tabs[win.tempStuff.lastTab].closeBtn.hide()
+  
+  # Toggle the "Syntax Highlighting" check menu item based in the new tabs
+  # syntax highlighting.
+  # Doing this here because we need lastTab
+  let lastLang = win.getCurrentLanguage(win.tempStuff.lastTab)
+  let currentLang = win.getCurrentLanguage(pageNum)
+  assert win.tempStuff.plMenuItems.hasKey(lastLang)
+  assert win.tempStuff.plMenuItems.hasKey(currentLang)
+  win.tempStuff.stopPLToggle = true
+  win.tempStuff.plMenuItems[lastLang].mi.itemSetActive(false)
+  win.tempStuff.plMenuItems[currentLang].mi.itemSetActive(true)
+  win.tempStuff.stopPLToggle = false
   
   win.tempStuff.lastTab = pageNum
   updateMainTitle(pageNum)
@@ -1323,6 +1361,19 @@ proc goLineClose_clicked(button: PButton, user_data: pgpointer) =
 
 # GUI Initialization
 
+proc loadLanguageSections(): 
+      tables.TTable[string, seq[PSourceLanguage]] =
+  result = initTable[string, seq[PSourceLanguage]]()
+  var langMan = languageManagerGetDefault()
+  var languages = langMan.getLanguageIDs()
+  for i in 0..len(languages.cstringArrayToSeq)-1:
+    var lang = langMan.getLanguage(languages[i])
+    assert lang != nil
+    let section = $lang.getSection()
+    if not result.hasKey(section):
+      result[section] = @[]
+    result.mget(section).add(lang)
+
 proc initTopMenu(MainBox: PBox) =
   # Create a accelerator group, used for shortcuts
   # like CTRL + S in SaveMenuItem
@@ -1422,8 +1473,40 @@ proc initTopMenu(MainBox: PBox) =
   show(win.viewBottomPanelMenuItem)
   discard signal_connect(win.viewBottomPanelMenuItem, "toggled", 
                           SIGNAL_FUNC(aporia.viewBottomPanel_Toggled), nil)
+  createSeparator(ViewMenu)
+  # -- Syntax Highlighting sections
+  
+  let langSections = loadLanguageSections()
+  win.tempStuff.plMenuItems = initTable[string, tuple[mi: PCheckMenuItem, lang: PSourceLanguage]]()
+  var SyntaxHighlightingMenuItem = menuItemNew("Syntax Highlighting")
+  SyntaxHighlightingMenuItem.show()
+  var SyntaxHighlightingMenu = menuNew(); SyntaxHighlightingMenu.show()
+  SyntaxHighlightingMenuItem.setSubMenu(SyntaxHighlightingMenu)
+  ViewMenu.append(SyntaxHighlightingMenuItem)
+  # Add plain text.
+  var plainTextItem = checkMenuItemNew("Plain text"); plainTextItem.show()
+  SyntaxHighlightingMenu.append(plainTextItem)
+  win.tempStuff.plMenuItems[""] = (plainTextItem, nil)
+  discard signalConnect(plainTextItem, "toggled",
+                        SignalFunc(pl_Toggled),
+          addr(win.tempStuff.plMenuItems.mget("")))
+  
+  for section, langs in langSections:
+    var sectionMenuItem = menuItemNew(section); sectionMenuItem.show()
+    var sectionMenu = menuNew(); sectionMenu.show()
+    sectionMenuItem.setSubMenu(sectionMenu)
+    for lang in langs:
+      var langMenuItem = checkMenuItemNew(lang.getName()); langMenuItem.show()
+      sectionMenu.append(langMenuItem)
+      win.tempStuff.plMenuItems[$lang.getID()] = (langMenuItem, lang)
+      discard signalConnect(langMenuItem, "toggled",
+                            SignalFunc(pl_Toggled),
+              addr(win.tempStuff.plMenuItems.mget($lang.getID())))
+    SyntaxHighlightingMenu.append(sectionMenuItem)
   
   var ViewMenuItem = menuItemNewWithMnemonic("_View")
+  discard signalConnect(ViewMenuItem, "activate",
+                        SIGNAL_FUNC(viewMenuItem_Activate), nil)
 
   ViewMenuItem.setSubMenu(ViewMenu)
   ViewMenuItem.show()

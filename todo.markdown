@@ -5,13 +5,11 @@
 * Find all references
 * Save the last opened tab.
 * Test on Windows.
-* Language list in menu.
 * When you select a word, the same words in the doc should be highlighted.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * Update language definition files.
 
 ## Other language features
-* Ability to pick other syntax highlighting
 * Ability to change to hard tabs.
 * Per file type space vs tab settings and indent width. Also languages should have
   sane defaults.

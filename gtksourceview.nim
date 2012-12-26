@@ -71,6 +71,9 @@ proc set_search_path*(lm: PSourceLanguageManager, dirs: cstringarray) {.cdecl, d
 proc get_search_path*(lm: PSourceLanguageManager): cstringarray {.cdecl, dynlib: lib,
   importc: "gtk_source_language_manager_get_search_path".}
 
+proc get_language_ids*(lm: PSourceLanguageManager): cstringarray {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_manager_get_language_ids".}
+
 proc set_language*(buffer: PSourceBuffer, language: PSourceLanguage) {.cdecl, dynlib: lib,
   importc: "gtk_source_buffer_set_language".}
 
@@ -180,11 +183,17 @@ proc get_name*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
 proc get_description*(scheme: PSourceStyleScheme): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_style_scheme_get_description".}
 
+proc get_name*(lang: PSourceLanguage): cstring {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_get_name".}
+
 proc get_globs*(lang: PSourceLanguage): cstringarray {.cdecl, dynlib: lib,
   importc: "gtk_source_language_get_globs".}
 
 proc get_metadata*(lang: PSourceLanguage, name: cstring): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_language_get_metadata".}
+
+proc get_section*(lang: PSourceLanguage): cstring {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_get_section".}
 
 proc set_smart_home_end*(sv: PSourceView, smart_he: TSmartHomeEndType) {.cdecl,
   dynlib: lib, importc: "gtk_source_view_set_smart_home_end".}

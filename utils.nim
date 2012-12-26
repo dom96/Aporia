@@ -8,6 +8,7 @@
 #
 
 import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
+import tables
 
 from CustomStatusBar import PCustomStatusBar
 
@@ -134,7 +135,8 @@ type
     lastTab*: int # For reordering tabs, the last tab that was selected.
     commentSyntax*: tuple[line: string, blockStart: string, blockEnd: string]
     pendingFilename*: string # Filename which could not be opened due to encoding.
-    
+    plMenuItems*: tables.TTable[string, tuple[mi: PCheckMenuItem, lang: PSourceLanguage]]
+    stopPLToggle*: bool
 
   Tab* = object
     buffer*: PSourceBuffer
@@ -306,6 +308,7 @@ proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
   if isHighlighted:
     var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
+    if SourceLanguage == nil: return ""
     return $sourceLanguage.getID()
   else:
     return ""
