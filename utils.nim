@@ -148,6 +148,7 @@ type
     pendingFilename*: string # Filename which could not be opened due to encoding.
     plMenuItems*: tables.TTable[string, tuple[mi: PCheckMenuItem, lang: PSourceLanguage]]
     stopPLToggle*: bool
+    currentToggledLang*: string # ID of the currently active pl
 
   Tab* = object
     buffer*: PSourceBuffer

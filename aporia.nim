@@ -908,6 +908,7 @@ proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
 proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, lang: PSourceLanguage]) =
   if not win.tempStuff.stopPLToggle:
     # TODO: Consider using onclick event instead of variables...
+    
     # Stop from toggling to no language.
     if not menuitem.itemGetActive():
       win.tempStuff.stopPLToggle = true
@@ -922,9 +923,11 @@ proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, 
     let currentTab = win.getCurrentTab()
     if plItem.lang.isNil:
       win.Tabs[currentTab].buffer.setHighlightSyntax(False)
+      win.tempStuff.currentToggledLang = ""
     else:
       win.Tabs[currentTab].buffer.setHighlightSyntax(True)
       win.Tabs[currentTab].buffer.setLanguage(plItem.lang)
+      win.tempStuff.currentToggledLang = $plItem.lang.getID()
 
 proc GetCmd(cmd, filename: string): string = 
   var f = quoteIfContainsWhite(filename)
@@ -1121,18 +1124,6 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
       win.tempStuff.lastTab < win.Tabs.len:
     win.Tabs[win.tempStuff.lastTab].closeBtn.hide()
   
-  # Toggle the "Syntax Highlighting" check menu item based in the new tabs
-  # syntax highlighting.
-  # Doing this here because we need lastTab
-  let lastLang = win.getCurrentLanguage(win.tempStuff.lastTab)
-  let currentLang = win.getCurrentLanguage(pageNum)
-  assert win.tempStuff.plMenuItems.hasKey(lastLang)
-  assert win.tempStuff.plMenuItems.hasKey(currentLang)
-  win.tempStuff.stopPLToggle = true
-  win.tempStuff.plMenuItems[lastLang].mi.itemSetActive(false)
-  win.tempStuff.plMenuItems[currentLang].mi.itemSetActive(true)
-  win.tempStuff.stopPLToggle = false
-  
   win.tempStuff.lastTab = pageNum
   updateMainTitle(pageNum)
   updateStatusBar(win.Tabs[pageNum].buffer)
@@ -1150,6 +1141,18 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
 
   # Get info about the current tabs language. Comment syntax etc.
   win.getCurrentLanguageComment(win.tempStuff.commentSyntax, pageNum)
+  # Toggle the "Syntax Highlighting" check menu item based in the new tabs
+  # syntax highlighting.
+  let currentToggledLang = win.tempStuff.currentToggledLang
+  let newLang = win.getCurrentLanguage(pageNum)
+  assert win.tempStuff.plMenuItems.hasKey(currentToggledLang)
+  assert win.tempStuff.plMenuItems.hasKey(newLang)
+  win.tempStuff.stopPLToggle = true
+  win.tempStuff.plMenuItems[currentToggledLang].mi.itemSetActive(false)
+  win.tempStuff.plMenuItems[newLang].mi.itemSetActive(true)
+  win.tempStuff.currentToggledLang = newLang
+  win.tempStuff.stopPLToggle = false
+
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext, 
                         x: gint, y: gint, data: PSelectionData, info: guint,
@@ -1922,6 +1925,7 @@ proc initTempStuff() =
   win.tempStuff.errorList = @[]
   win.tempStuff.lastTab = 0
   win.tempStuff.pendingFilename = ""
+  win.tempStuff.currentToggledLang = ""
 
 {.pop.}
 proc initSocket() =
