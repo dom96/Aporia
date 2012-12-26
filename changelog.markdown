@@ -1,8 +1,8 @@
-Version 0.1.3
+Version 0.2
 =============
 
 * Tabs can now be reordered.
-* Close button can now only shown on the selected tab. (This is configurable)
+* Close button can now only be shown on the selected tab. (This is configurable)
 * Error list.
 * Many bug fixes for handling of processes.
 * Aporia is now a single instance application. This means you can easily
@@ -24,3 +24,6 @@ the Nimrod syntax highlighter.
   amount of lines/characters that are selected.
 * Fixed a bug where Save As did not properly change the syntax highlighting of
   the file.
+* Syntax highlighting can now be changed by going to View -> Syntax Highlighting.
+* Aporia's config file can now be opened in Aporia easily through the Edit menu.
+* Suggest and Go to definition is now executed asynchronously.

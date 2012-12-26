@@ -1,12 +1,13 @@
+# Aporia
+# Copyright (C) Dominik Picheta
+# Look at copying.txt for more info.
+
 ## This module contains functions which deal with running processes, such as the Nimrod process.
 ## There are also some functions for gathering errors as given by the nimrod compiler and putting them into the error list.
 
 import pegs, times, osproc, streams, parseutils, strutils, re
 import gtk2, glib2
 import utils, CustomStatusBar
-
-
-var win*: ptr utils.MainWin
 
 # Threading channels
 var execThrTaskChan: TChannel[TExecThrTask]
@@ -29,13 +30,14 @@ proc `$`(theType: TErrorType): string =
   of TETError: result = "Error"
   of TETWarning: result = "Warning"
 
-proc clearErrors*() =
+proc clearErrors*(win: var MainWin) =
   var TreeModel = win.errorListWidget.getModel()
   # TODO: Why do I have to cast it? Why can't I just do PListStore(TreeModel)?
   cast[PListStore](TreeModel).clear()
   win.tempStuff.errorList = @[]
 
-proc addError*(theType: TErrorType, desc, file, line, col: string) =
+proc addError*(win: var MainWin, theType: TErrorType, desc,
+               file, line, col: string) =
   var ls = cast[PListStore](win.errorListWidget.getModel())
   var iter: TTreeIter
   ls.append(addr(iter))
@@ -118,8 +120,8 @@ proc parseError(err: string,
   i += skipWhitespace(err, i)
   res.desc = err.substr(i, err.len()-1)
 
-proc execProcAsync*(cmd: string, mode: TExecMode, ifSuccess: string = "")
-proc printProcOutput(line: string) =
+proc execProcAsync*(win: var MainWin, exec: PExecOptions)
+proc printProcOutput(win: var MainWin, line: string) =
   ## This shouldn't have to worry about receiving broken up errors (into new lines)
   ## continuous errors should be received, errors which span multiple lines
   ## should be received as one continuous message.
@@ -127,7 +129,7 @@ proc printProcOutput(line: string) =
   template paErr(): stmt =
     var parseRes: tuple[theType: TErrorType, desc, file, line, col: string]
     parseError(line, parseRes)
-    addError(parseRes.theType, parseRes.desc,
+    win.addError(parseRes.theType, parseRes.desc,
              parseRes.file, parseRes.line, parseRes.col)
 
   # Colors
@@ -136,7 +138,9 @@ proc printProcOutput(line: string) =
   var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
   var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
   
-  case win.tempStuff.execMode:
+  assert win.tempStuff.currentExec != nil
+  
+  case win.tempStuff.currentExec.mode:
   of ExecNimrod:
     if line =~ pegLineError / pegOtherError / pegLineInfo:
       win.outputTextView.addText(line & "\n", errorTag)
@@ -152,12 +156,43 @@ proc printProcOutput(line: string) =
       win.outputTextView.addText(line & "\n", normalTag)
   of ExecRun, ExecCustom:
     win.outputTextView.addText(line & "\n", normalTag)
-  of ExecNone:
-    assert(false)
 
-proc peekProcOutput*(dummy: pointer): bool =
+proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
+  if event.line != "":
+    echod("Line is: " & event.line.repr)
+  if event.line == "" or event.line.startsWith(pegSuccess) or
+      event.line =~ pegOtherHint:
+    echod(1)
+    if win.tempStuff.errorMsgStarted:
+      win.tempStuff.errorMsgStarted = false
+      win.printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
+      win.tempStuff.compilationErrorBuffer = ""
+    if event.line != "":
+      win.printProcOutput(event.line)
+  elif event.line.startsWith(reLineMessage):
+    echod(2)
+    if not win.tempStuff.errorMsgStarted:
+      echod(2.1)
+      win.tempStuff.errorMsgStarted = true
+      win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
+    elif win.tempStuff.compilationErrorBuffer != "":
+      echod(2.2)
+      win.printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
+      win.tempStuff.compilationErrorBuffer = ""
+      win.tempStuff.errorMsgStarted = false
+      win.printProcOutput(event.line)
+    else:
+      win.printProcOutput(event.line)
+  else:
+    echod(3)
+    if win.tempStuff.errorMsgStarted:
+      win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
+    else:
+      win.printProcOutput(event.line)
+
+proc peekProcOutput*(win: ptr MainWin): bool =
   result = True
-  if win.tempStuff.execMode != ExecNone:
+  if win.tempStuff.currentExec != nil:
     var events = execThrEventChan.peek()
     
     if epochTime() - win.tempStuff.lastProgressPulse >= 0.1:
@@ -174,93 +209,90 @@ proc peekProcOutput*(dummy: pointer): bool =
           win.tempStuff.execProcess = event.p
         of EvRecv:
           event.line = event.line.strip(leading = false)
-          if win.tempStuff.execMode == execNimrod:
-            if event.line != "":
-              echod("Line is: " & event.line.repr)
-            if event.line == "" or event.line.startsWith(pegSuccess) or
-                event.line =~ pegOtherHint:
-              echod(1)
-              if win.tempStuff.errorMsgStarted:
-                win.tempStuff.errorMsgStarted = false
-                printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
-                win.tempStuff.compilationErrorBuffer = ""
-              if event.line != "":
-                printProcOutput(event.line)
-            elif event.line.startsWith(reLineMessage):
-              echod(2)
-              if not win.tempStuff.errorMsgStarted:
-                echod(2.1)
-                win.tempStuff.errorMsgStarted = true
-                win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
-              elif win.tempStuff.compilationErrorBuffer != "":
-                echod(2.2)
-                printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
-                win.tempStuff.compilationErrorBuffer = ""
-                win.tempStuff.errorMsgStarted = false
-                printProcOutput(event.line)
-              else:
-                printProcOutput(event.line)
+          if win.tempStuff.currentExec.onLine != nil:
+            win.tempStuff.currentExec.onLine(win[], win.tempStuff.currentExec, event.line)
+          if win.tempStuff.currentExec.output:
+            if win.tempStuff.currentExec.mode == execNimrod:
+              win[].parseCompilerOutput(event)
             else:
-              echod(3)
-              if win.tempStuff.errorMsgStarted:
-                win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
-              else:
-                printProcOutput(event.line)
-          else:
-            if event.line != "":
-              printProcOutput(event.line)
+              # TODO: Print "" as a \n?
+              if event.line != "":
+                win[].printProcOutput(event.line)
+          
         of EvStopped:
           echod("[Idle] Process has quit")
-          if win.tempStuff.compilationErrorBuffer.len() > 0:
-            printProcOutput(win.tempStuff.compilationErrorBuffer)
+          if win.tempStuff.currentExec.onExit != nil:
+            win.tempStuff.currentExec.onExit(win[], win.tempStuff.currentExec, event.exitCode)
           
-          win.tempStuff.execMode = ExecNone
+          if win.tempStuff.currentExec.output:
+            if win.tempStuff.compilationErrorBuffer.len() > 0:
+              win[].printProcOutput(win.tempStuff.compilationErrorBuffer)
+          
+            if event.exitCode == QuitSuccess:
+              win.outputTextView.addText("> Process terminated with exit code " & 
+                                               $event.exitCode & "\n", successTag)
+            else:
+              win.outputTextView.addText("> Process terminated with exit code " & 
+                                               $event.exitCode & "\n", errorTag)
+          
+          
+          let runAfter = win.tempStuff.currentExec.runAfter
+          let runAfterSuccess = win.tempStuff.currentExec.runAfterSuccess
+          win.tempStuff.currentExec = nil
           win.statusbar.restorePrevious()
-          
-          if event.exitCode == QuitSuccess:
-            win.outputTextView.addText("> Process terminated with exit code " & 
-                                             $event.exitCode & "\n", successTag)
-          else:
-            win.outputTextView.addText("> Process terminated with exit code " & 
-                                             $event.exitCode & "\n", errorTag)
+          # TODO: Remove idle proc here?
           
           # Execute another process in queue (if any)
-          if win.tempStuff.ifSuccess != "" and win.tempStuff.compileSuccess:
-            echod("Starting new process?")
-            execProcAsync(win.tempStuff.ifSuccess, ExecRun)
+          if runAfter != nil:
+            if runAfterSuccess and (not win.tempStuff.compileSuccess):
+              return
+            echod("Exec Run-after.")
+            win[].execProcAsync(runAfter)
   else:
     echod("idle proc exiting")
     return false
 
-proc execProcAsync*(cmd: string, mode: TExecMode, ifSuccess: string = "") =
+proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   ## This function executes a process in a new thread, using only idle time
   ## to add the output of the process to the `outputTextview`.
-  assert(win.tempStuff.execMode == ExecNone)
+  assert(win.tempStuff.currentExec == nil)
   
   # Reset some things; and set some flags.
   echod("Spawning new process.")
-  win.tempStuff.ifSuccess = ifSuccess
   # Execute the process
-  echod(cmd)
+  win.tempStuff.currentExec = exec
+  echod(exec.command)
   var task: TExecThrTask
   task.typ = ThrRun
-  task.command = cmd
+  task.command = exec.command
   execThrTaskChan.send(task)
-  win.tempStuff.execMode = mode
   # Output
-  var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
-  win.outputTextView.addText("> " & cmd & "\n", normalTag)
-  
+  if exec.output:
+    var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
+    win.outputTextView.addText("> " & exec.command & "\n", normalTag)
+    
   # Add a function which will be called when the UI is idle.
-  win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, nil)
+  win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, addr(win))
   echod("gTimeoutAdd id = ", $win.tempStuff.idleFuncId)
 
   win.statusbar.setProgress("Executing")
   win.statusbar.progressbar.pulse()
   win.tempStuff.lastProgressPulse = epochTime()
   # Clear errors
-  clearErrors()
+  win.clearErrors()
 
+proc newExec*(command: string, mode: TExecMode, output = true, 
+              onLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.} = nil,
+              onExit: proc (win: var MainWin, opts: PExecOptions, exitcode: int) {.closure.} = nil,
+              runAfter: PExecOptions = nil, runAfterSuccess = true): PExecOptions =
+  new(result)
+  result.command = command
+  result.mode = mode
+  result.output = output
+  result.onLine = onLine
+  result.onExit = onExit
+  result.runAfter = runAfter
+  result.runAfterSuccess = runAfterSuccess
 
 template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt =
   ## Sends a thrEvent of type ``t``, does ``todo`` before sending.
@@ -323,5 +355,5 @@ proc execThreadProc(){.thread.} =
       createExecThrEvent(EvRecv):
         event.line = line
 
-proc createProcessThreads*() =
+proc createProcessThreads*(win: var MainWin) =
   createThread[void](win.tempStuff.execThread, execThreadProc)

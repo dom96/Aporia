@@ -90,12 +90,23 @@ type
     items*: seq[TSuggestItem] ## Visible items (In the treeview)
     allItems*: seq[TSuggestItem] ## All items found in current context.
     shown*: bool
+    gotAll*: bool # Whether all suggest items have been read.
     currentFilter*: string
     tooltip*: PWindow
     tooltipLabel*: PLabel
   
   TExecMode* = enum
-    ExecNone, ExecNimrod, ExecRun, ExecCustom
+    ExecNimrod, ExecRun, ExecCustom
+  
+  PExecOptions* = ref TExecOptions
+  TExecOptions* = object
+    command*: string
+    mode*: TExecMode
+    output*: bool
+    onLine*: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.}
+    onExit*: proc (win: var MainWin, opts: PExecOptions, exitcode: int) {.closure.}
+    runAfterSuccess*: bool # If true, ``runAfter`` will only be ran on success.
+    runAfter*: PExecOptions
   
   TExecThrTaskType* = enum
     ThrRun, ThrStop
@@ -120,8 +131,7 @@ type
     lastSaveDir*: string # Last saved directory/last active directory
     stopSBUpdates*: Bool
     
-    execMode*: TExecMode
-    ifSuccess*: string
+    currentExec*: PExecOptions # nil if nothing is being executed.
     compileSuccess*: bool
     execThread*: TThread[void]
     execProcess*: PProcess
@@ -130,6 +140,7 @@ type
     errorMsgStarted*: bool
     compilationErrorBuffer*: string # holds error msg if it spans multiple lines.
     errorList*: seq[TError]
+    gotDefinition*: bool
 
     recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
     lastTab*: int # For reordering tabs, the last tab that was selected.

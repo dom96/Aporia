@@ -29,8 +29,7 @@ const
 var win: utils.MainWin
 win.Tabs = @[]
 
-search.win = addr(win)
-processes.win = addr(win)
+search.win = addr(win) # TODO: Stop doing this.
 
 var lastSession: seq[string] = @[]
 
@@ -452,35 +451,47 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
 proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
   if win.getCurrentLanguage() == "nimrod":
     createSeparator(menu)
+    
     createMenuItem(menu, "Go to definition...",
       proc (i: PMenuItem, p: pointer) =
         let currentPage = win.sourceViewTabs.getCurrentPage()
         let tab = win.Tabs[currentPage]
         var cursor: TTextIter
         tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
-        var def: TSuggestItem
-        if findDef(tab.filename, getLine(addr cursor), 
-             getLineOffset(addr cursor), def):
-          
-          let existingTab = win.findTab(def.file, true)
-          if existingTab != -1:
-            win.sourceViewTabs.setCurrentPage(existingTab.gint)
-          else:
-            addTab("", def.file, true)
-          
-          let currentPage = win.sourceViewTabs.getCurrentPage()
-          # Go to that line/col
-          var iter: TTextIter
-          win.tabs[currentPage].buffer.getIterAtLineIndex(addr(iter),
-              def.line-1, def.col-1)
-          
-          win.tabs[currentPage].buffer.placeCursor(addr(iter))
-          
-          win.scrollToInsert()
-          
-          echod(def.repr())
-        else:
-          echod("Found nothing")
+        
+        proc onSugLine(win: var MainWin, opts: PExecOptions, line: string) {.closure.} =
+          if win.tempStuff.gotDefinition:
+            return
+          var def: TSuggestItem
+          if parseIDEToolsLine("def", line, def):
+            win.tempStuff.gotDefinition = true
+            let existingTab = win.findTab(def.file, true)
+            if existingTab != -1:
+              win.sourceViewTabs.setCurrentPage(existingTab.gint)
+            else:
+              addTab("", def.file, true)
+            
+            let currentPage = win.sourceViewTabs.getCurrentPage()
+            # Go to that line/col
+            var iter: TTextIter
+            win.tabs[currentPage].buffer.getIterAtLineIndex(addr(iter),
+                def.line-1, def.col-1)
+            
+            win.tabs[currentPage].buffer.placeCursor(addr(iter))
+            
+            win.scrollToInsert()
+            
+            echod(def.repr())
+        
+        proc onSugExit(win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.} =
+          if not win.tempStuff.gotDefinition:
+            win.statusbar.setTemp("Definition retrieval failed.", UrgError, 5000)
+        
+        var err = win.asyncGetDef(tab.filename, getLine(addr cursor), 
+                          getLineOffset(addr cursor), onSugLine, onSugExit)
+        if err != "":
+          win.statusbar.setTemp(err, UrgError, 5000)
+        
     )
 
 # Other(Helper) functions
@@ -952,7 +963,7 @@ proc saveAllForCompile(projectTab: int): string =
 
 proc compileRun(filename: string, shouldRun: bool) =
   if filename.len == 0: return
-  if win.tempStuff.execMode != ExecNone:
+  if win.tempStuff.currentExec != nil:
     win.statusbar.setTemp("Process already running!", UrgError, 5000)
     return
   
@@ -966,7 +977,7 @@ proc compileRun(filename: string, shouldRun: bool) =
   var ifSuccess = ""
   if shouldRun:
     ifSuccess = changeFileExt(filename, os.ExeExt)
-  execProcAsync(cmd, ExecNimrod, ifSuccess)
+  win.execProcAsync newExec(cmd, ExecNimrod, runAfter = newExec(ifSuccess, ExecRun))
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
@@ -986,13 +997,13 @@ proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pointer) =
 
 proc StopProcess_Activate(menuitem: PMenuItem, user_data: pointer) =
 
-  if win.tempStuff.execMode != ExecNone and 
+  if win.tempStuff.currentExec != nil and 
      win.tempStuff.execProcess != nil:
     echod("Terminating process... ID: ", $win.tempStuff.idleFuncId)
     win.tempStuff.execProcess.terminate()
     win.tempStuff.execProcess.close()
     #assert gSourceRemove(win.tempStuff.idleFuncId)
-    # execMode is set to ExecNone in the idle proc. It must be this way.
+    # currentExec is set to nil in the idle proc. It must be this way.
     # Because otherwise EvStopped stays in the channel.
     
     var errorTag = createColor(win.outputTextView, "errorTag", "red")
@@ -1002,7 +1013,7 @@ proc StopProcess_Activate(menuitem: PMenuItem, user_data: pointer) =
     win.statusbar.setTemp("No process running.", UrgError, 5000)
 
 proc RunCustomCommand(cmd: string) = 
-  if win.tempStuff.execMode != ExecNone:
+  if win.tempStuff.currentExec != nil:
     win.statusbar.setTemp("Process already running!", UrgError, 5000)
     return
   
@@ -1014,7 +1025,7 @@ proc RunCustomCommand(cmd: string) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
   
-  execProcAsync(GetCmd(cmd, win.Tabs[currentTab].filename), ExecCustom)
+  win.execProcAsync newExec(GetCmd(cmd, win.Tabs[currentTab].filename), ExecCustom)
 
 proc RunCustomCommand1(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.settings.customCmd1)
@@ -1028,7 +1039,7 @@ proc RunCustomCommand3(menuitem: PMenuItem, user_data: pointer) =
 proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
   if filename.len == 0: return
-  if win.tempStuff.execMode != ExecNone:
+  if win.tempStuff.currentExec != nil:
     win.statusbar.setTemp("Process already running!", UrgError, 5000)
     return
   
@@ -1037,7 +1048,7 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   showBottomPanel()
 
   var cmd = GetCmd("$findExe(nimrod) check $#", filename)
-  execProcAsync(cmd, ExecNimrod)
+  win.execProcAsync newExec(cmd, ExecNimrod)
 
 proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
   echod("Memory usage: ")
@@ -1902,9 +1913,7 @@ proc initGoLineBar(MainBox: PBox) =
 proc initTempStuff() =
   win.tempStuff.lastSaveDir = ""
   win.tempStuff.stopSBUpdates = false
-  win.tempStuff.execMode = execNone
 
-  win.tempStuff.ifSuccess = ""
   win.tempStuff.compileSuccess = false
 
   win.tempStuff.recentFileMenuItems = @[]
@@ -2059,7 +2068,7 @@ when not defined(noSingleInstance):
   if checkAlreadyRunning():
     quit(QuitSuccess)
 
-createProcessThreads()
+createProcessThreads(win)
 nimrod_init()
 initControls()
 afterInit()

@@ -10,18 +10,7 @@
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,
-  utils
-
-when not defined(os.findExe): 
-  proc findExe*(exe: string): string = 
-    ## returns "" if the exe cannot be found
-    result = addFileExt(exe, os.exeExt)
-    if ExistsFile(result): return
-    var path = os.getEnv("PATH")
-    for candidate in split(path, pathSep): 
-      var x = candidate / result
-      if ExistsFile(x): return x
-    result = ""
+  utils, processes
 
 proc addSuggestItem*(win: var MainWin, name: string, markup: String,
                      tooltipText: string, color: String = "#000000") =
@@ -70,128 +59,25 @@ proc doMoveSuggest*(win: var MainWin) =
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
   moveSuggest(win, addr(start), tab)
 
-proc execIDETools(file, addToPath, cmd: string, line: int, column: int): 
-    seq[TSuggestItem] =
-  result = @[]
-  var execCmd = ""
-  var outType = ""
-  case cmd
-  of "suggest":
-    outType = "sug"
-    execCmd = findExe("nimrod") & 
-      " idetools --path:$4 --path:$5 --track:$1,$2,$3 --$6 $1" % 
-      [file, $(line+1), $column, getTempDir(), addToPath, cmd]
-  else:
-    outType = cmd
-    if addToPath != "":
-      execCmd = findExe("nimrod") & 
-        " idetools --path:$4 --track:$1,$2,$3 --$5 $1" % 
-        [file, $(line+1), $column, addToPath, cmd]
+proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
+  if line.startsWith(cmd):
+    var s = line.split('\t')
+    assert s.len == 7
+    item.nodeType = s[1]
+    item.name = s[2]
+    item.nimType = s[3]
+    item.file = s[4]
+    item.line = int32(s[5].parseInt())
+    item.col = int32(s[6].parseInt())
+
+    # Get the name without the module name in front of it.
+    var dots = item.name.split('.')
+    if dots.len() == 2:
+      item.nmName = item.name[dots[0].len()+1.. -1]
     else:
-      execCmd = findExe("nimrod") & 
-        " idetools --track:$1,$2,$3 --$4 $1" % 
-        [file, $(line+1), $column, cmd]
-  
-  echod(execCmd)
-  var output = execProcess(execCmd)
-
-  for line in splitLines(output):
-    echod(line)
-    if line.startswith(outType & "\t"):
-      var s = line.split('\t')
-      if s.len == 7:
-        var item: TSuggestItem
-        item.nodeType = s[1]
-        item.name = s[2]
-        item.nimType = s[3]
-        item.file = s[4]
-        item.line = int32(s[5].parseInt())
-        item.col = int32(s[6].parseInt())
-        
-        # Get the name without the module name in front of it.
-        var dots = item.name.split('.')
-        if dots.len() == 2:
-          item.nmName = item.name[dots[0].len()+1.. -1]
-        else:
-          echod("[Suggest] Unknown module name for ", item.name)
-          #continue
-          item.nmName = item.name
-        
-        result.add(item)
-
-proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool = 
-  ## Populates the suggestDialog with items, returns true if at least one item 
-  ## has been added.
-  if tab.filename == "": return False
-  var currentTabSplit = splitFile(tab.filename)
-  
-  var aporiaTmpDir = getTempDir() / "aporia"
-  var prefixDir = aporiaTmpDir / "suggest"
-  
-  # Create /tmp/aporia if it doesn't exist
-  if not existsDir(aporiaTmpDir):
-    createDir(prefixDir)
-  
-  # Remove and Create /tmp/aporia/suggest
-  if existsDir(prefixDir):
-    # Empty this to get rid of stale files.
-    removeDir(prefixDir)
-  # Recreate it.
-  createDir(prefixDir)
-  
-  # Save tabs that are in the same directory as the file
-  # being suggested to /tmp/aporia/suggest
-  for t in items(win.Tabs):
-    if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
-      var f: TFile
-      var fileSplit = splitFile(t.filename)
-      echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
-      if f.open(prefixDir / fileSplit.name & fileSplit.ext, fmWrite):
-        # Save everything.
-        # - Get the text from the TextView.
-        var startIter: TTextIter
-        t.buffer.getStartIter(addr(startIter))
-        
-        var endIter: TTextIter
-        t.buffer.getEndIter(addr(endIter))
-        
-        var text = t.buffer.getText(addr(startIter), addr(endIter), False)
-        
-        # - Save it.
-        f.write(text)
-      else:
-        echod("[Warning] Unable to save one or more files, suggest won't work.")
-        return False
-      f.close()
-  
-  # Copy over nimrod.cfg if it exists to `prefixDir`.
-  if existsFile(currentTabSplit.dir / "nimrod".addFileExt("cfg")):
-    copyFile(currentTabSplit.dir / "nimrod".addFileExt("cfg"), 
-             prefixDir / "nimrod".addFileExt("cfg"))
-  
-  var file = prefixDir / currentTabSplit.name & ".nim"
-  win.suggest.items = execIDETools(file, splitFile(tab.filename).dir, "suggest",
-                                     start.getLine(),
-                                     start.getLineOffset())
-  win.suggest.allitems = win.suggest.items
-  
-  if win.suggest.items.len == 0:
-    echod("[Warning] No items found for suggest")
-    return False
-  
-  for i in items(win.suggest.items):
-    win.addSuggestItem(i)
-
-  win.suggest.currentFilter = ""
-
-  return True
-
-proc findDef*(file: string, line, col: int, definition: var TSuggestItem): bool =
-  var defs = execIDETools(file, "", "def", line, col)
-  if defs.len == 0:
-    return false
-  definition = defs[0]
-  return true
+      echod("[Suggest] Unknown module name for ", item.name)
+      item.nmName = item.name
+    result = true
 
 proc clear*(suggest: var TSuggestDialog) =
   var TreeModel = suggest.TreeView.getModel()
@@ -249,7 +135,112 @@ proc filterSuggest*(win: var MainWin) =
   # Hide the tooltip
   win.suggest.tooltip.hide()
 
-  if win.suggest.items.len() == 0: win.suggest.hide()
+  if win.suggest.items.len() == 0 and win.suggest.gotAll: win.suggest.hide()
+
+proc asyncGetSuggest(win: var MainWin, file, addToPath: string,
+                     line, column: int) =
+  let sugCmd = findExe("nimrod") & 
+        " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
+        [file, $(line+1), $column, getTempDir(), addToPath]
+
+  proc onSugLine(win: var MainWin, opts: PExecOptions, line: string) {.closure.} =
+    var item: TSuggestItem
+    if parseIDEToolsLine("sug", line, item):
+      win.suggest.allItems.add(item)
+      filterSuggest(win)
+      win.suggest.show()
+      
+  proc onSugExit(win: var MainWin, opts: PExecOptions, exit: int) {.closure.} =
+    win.suggest.gotAll = true
+  
+  var execute = newExec(sugCmd, ExecRun, false, onSugLine, onSugExit)
+  # Check if a suggest request is already running:
+  if win.tempStuff.currentExec != nil and 
+     win.tempStuff.execProcess != nil:
+    # Add new request to runAfterSuccess.
+    win.tempStuff.currentExec.runAfter = execute
+    win.tempStuff.currentExec.runAfterSuccess = false
+    # Kill the current suggest process:
+    win.tempStuff.execProcess.terminate()
+    win.tempStuff.execProcess.close()
+  else:
+    # Run now!
+    win.execProcAsync execute 
+
+proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool = 
+  ## Starts the request for suggest items asynchronously.
+  if tab.filename == "": return False
+  var currentTabSplit = splitFile(tab.filename)
+  
+  var aporiaTmpDir = getTempDir() / "aporia"
+  var prefixDir = aporiaTmpDir / "suggest"
+  
+  # Create /tmp/aporia if it doesn't exist
+  if not existsDir(aporiaTmpDir):
+    createDir(prefixDir)
+  
+  # Remove and Create /tmp/aporia/suggest
+  if existsDir(prefixDir):
+    # Empty this to get rid of stale files.
+    removeDir(prefixDir)
+  # Recreate it.
+  createDir(prefixDir)
+  
+  # Save tabs that are in the same directory as the file
+  # being suggested to /tmp/aporia/suggest
+  for t in items(win.Tabs):
+    if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
+      var f: TFile
+      var fileSplit = splitFile(t.filename)
+      echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
+      if f.open(prefixDir / fileSplit.name & fileSplit.ext, fmWrite):
+        # Save everything.
+        # - Get the text from the TextView.
+        var startIter: TTextIter
+        t.buffer.getStartIter(addr(startIter))
+        
+        var endIter: TTextIter
+        t.buffer.getEndIter(addr(endIter))
+        
+        var text = t.buffer.getText(addr(startIter), addr(endIter), False)
+        
+        # - Save it.
+        f.write(text)
+      else:
+        echod("[Warning] Unable to save one or more files, suggest won't work.")
+        return false
+      f.close()
+  
+  # Copy over nimrod.cfg if it exists to `prefixDir`.
+  if existsFile(currentTabSplit.dir / "nimrod".addFileExt("cfg")):
+    copyFile(currentTabSplit.dir / "nimrod".addFileExt("cfg"), 
+             prefixDir / "nimrod".addFileExt("cfg"))
+  
+  var file = prefixDir / currentTabSplit.name & ".nim"
+  asyncGetSuggest(win, file, splitFile(tab.filename).dir, start.getLine(),
+                  start.getLineOffset())
+  
+  win.suggest.currentFilter = ""
+  
+  return true
+
+proc asyncGetDef*(win: var MainWin, file: string,
+                  line, column: int,
+    onSugLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.},
+    onSugExit: proc (win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.}): string =
+  let sugCmd = findExe("nimrod") & 
+        " idetools --path:$4 --track:$1,$2,$3 --def $1" % 
+        [file, $(line+1), $column, getTempDir()]
+  
+  var execute = newExec(sugCmd, ExecRun, false, onSugLine, onSugExit)
+  # Check if something is currently running.
+  if win.tempStuff.currentExec != nil and 
+     win.tempStuff.execProcess != nil:
+    return "Process already running. Use Ctrl + F7 to terminate and try again."
+  else:
+    win.tempStuff.gotDefinition = false
+    win.execProcAsync execute 
+  return ""
 
 proc doSuggest*(win: var MainWin) =
   var current = win.SourceViewTabs.getCurrentPage()
@@ -425,10 +416,6 @@ proc createSuggestDialog*(win: var MainWin) =
   tpHBox.packStart(win.suggest.tooltipLabel, false, false, 3)
   win.suggest.tooltipLabel.show()
   
-when isMainModule:
-  var result = execNimSuggest("aporia.nim", 633, 7)
-  
-  echo repr(result)
 
 
 
