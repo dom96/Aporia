@@ -8,7 +8,6 @@
 * When you select a word, the same words in the doc should be highlighted.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * Update language definition files.
-* Closing last tab crashes aporia
 * Go to definition does not scroll when it opens a new tab. Investigate.
 
 ## Other language features

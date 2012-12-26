@@ -977,10 +977,11 @@ proc compileRun(filename: string, shouldRun: bool) =
   var cmd = GetCmd(win.settings.nimrodCmd, filename)
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
-  var ifSuccess = ""
+  var runAfter: PExecOptions = nil
   if shouldRun:
-    ifSuccess = changeFileExt(filename, os.ExeExt)
-  win.execProcAsync newExec(cmd, ExecNimrod, runAfter = newExec(ifSuccess, ExecRun))
+    let ifSuccess = changeFileExt(filename, os.ExeExt)
+    runAfter = newExec(ifSuccess, ExecRun)
+  win.execProcAsync newExec(cmd, ExecNimrod, runAfter = runAfter)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
