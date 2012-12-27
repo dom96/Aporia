@@ -258,7 +258,8 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
     
 
 # -- SourceView(PSourceView) & SourceBuffer
-proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
+
+proc updateStatusBar(buffer: PTextBuffer) =
   # Incase this event gets fired before
   # statusBar is initialized
   if win.statusbar != nil and not win.tempStuff.stopSBUpdates:
@@ -277,6 +278,7 @@ proc updateStatusBar(buffer: PTextBuffer){.cdecl.} =
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
+  # TODO: Stop this from going crazy when session is being restored.
   updateStatusBar(buffer)
 
 proc onCloseTab(btn: PButton, user_data: PWidget)
@@ -307,21 +309,22 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
   eventBox.add(box)
   return (eventBox, label, closeBtn)
 
-proc onChanged(buffer: PTextBuffer, user_data: pgpointer) =
+proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
   # Change the tabs state to 'unsaved'
   # and add '*' to the Tab Name
   var current = win.SourceViewTabs.getCurrentPage()
-  var name = ""
-  if win.Tabs[current].filename == "":
-    win.Tabs[current].saved = False
-    name = "Untitled *"
-  else:
-    win.Tabs[current].saved = False
-    name = extractFilename(win.Tabs[current].filename) & " *"
-  
-  var cTab = win.Tabs[current]
-  cTab.label.setText(name)
+  if current < win.tabs.len-1:
+    var name = ""
+    if win.Tabs[current].filename == "":
+      win.Tabs[current].saved = False
+      name = "Untitled *"
+    else:
+      win.Tabs[current].saved = False
+      name = extractFilename(win.Tabs[current].filename) & " *"
+    
+    var cTab = win.Tabs[current]
+    cTab.label.setText(name)
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
@@ -529,10 +532,6 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   buffer.setHighlightMatchingBrackets(
       win.settings.highlightMatchingBrackets)
   
-  # UGLY workaround for yet another compiler bug:
-  discard gsignalConnect(buffer, "mark-set", 
-                         GCallback(aporia.cursorMoved), nil)
-  discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), nil)
   discard gsignalConnect(sourceView, "key-press-event", 
                          GCallback(SourceViewKeyPress), nil)
   discard gsignalConnect(sourceView, "key-release-event", 
@@ -540,7 +539,6 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
-  
 
 proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8") =
   ## Adds a tab. If filename is not "", a file is read and set as the content
@@ -567,6 +565,11 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
       buffer.setLanguage(lang)
     else:
       buffer.setHighlightSyntax(False)
+  
+  # Init the sourceview
+  var sourceView: PSourceView
+  var scrollWindow: PScrolledWindow
+  initSourceView(sourceView, scrollWindow, buffer)
   
   var nam = name
   if nam == "": nam = "Untitled"
@@ -595,11 +598,6 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
       
     # Get the name.ext of the filename, for the tabs title
     nam = extractFilename(filename)
-  
-  # Init the sourceview
-  var sourceView: PSourceView
-  var scrollWindow: PScrolledWindow
-  initSourceView(sourceView, scrollWindow, buffer)
 
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow)
   if filename != "": TabLabel.setTooltipText(filename)
@@ -621,6 +619,15 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   win.SourceViewTabs.setTabReorderable(scrollWindow, true)
 
   PTextView(SourceView).setBuffer(nTab.buffer)
+
+  # UGLY workaround for yet another compiler bug:
+  discard gsignalConnect(buffer, "mark-set", 
+                         GCallback(aporia.cursorMoved), nil)
+  
+  # TODO: If the following gets called at any time because text was loaded from a file,
+  # use connect_after to connect "insert-text" signal, and then connect this signal
+  # in the handler of "insert-text".
+  discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), sourceView)
 
   if setCurrent:
     # Select the newly created tab
@@ -675,11 +682,6 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
     if recent.len > 10:
       win.FileMenu.append(moreMenuItem)
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
-
-proc viewMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
-  assert win.tempStuff.plMenuItems.len > 0
-
-
 
 proc newFile(menuItem: PMenuItem, user_data: pointer) = addTab("", "", True)
   
@@ -1051,7 +1053,7 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = GetCmd("$findExe(nimrod) check $#", filename)
+  var cmd = GetCmd("$findExe(nimrod) check --listFullPaths $#", filename)
   win.execProcAsync newExec(cmd, ExecNimrod)
 
 proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
@@ -1191,52 +1193,61 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
             column: PTreeViewColumn, d: pointer) =
   let selectedIndex = path.getIndices()[]
   let item = win.tempStuff.errorList[selectedIndex]
-  var existingTab = win.findTab(item.file, false)
-  if existingTab == -1 or item.file == "":
+  if item.file == "":
     win.statusbar.setTemp("Could not find correct tab.", UrgError, 5000)
-  else:
-    win.sourceViewTabs.setCurrentPage(int32(existingTab))
-    
-    # Move cursor to where the error is.
-    var line = item.line.parseInt-1
-    var insertIndex = int32(item.column.parseInt)-1
-    var selectionBound = int32(item.column.parseInt)
-    if insertIndex < 0:
-      insertIndex = 0
-      selectionBound = 1
-    
-    # Validate that this line/col combo is not outside bounds
-    var endIter: TTextIter
-    win.Tabs[existingTab].buffer.getEndIter(addr(endIter))
-    let lastLine = getLine(addr(endIter))
-    if line > lastLine:
-      line = lastLine
-    
-    var colEndAtLine: TTextIter
-    win.Tabs[existingTab].buffer.getIterAtLine(addr(colEndAtLine), line.gint)
-    moveToEndLine(addr(colEndAtLine))
-    let lastColumnAtLine = getLineOffset(addr(colEndAtLine))
-    if selectionBound > lastColumnAtLine:
-      win.statusbar.setTemp("Line " & $(line+1) & " and column " & $selectionBound &
-                            " is outside the bounds of the available text.",
-                            UrgError, 5000)
+    return
+  var existingTab = win.findTab(item.file, false)
+  if existingTab == -1:
+    if existsFile(item.file):
+      addTab("", item.file, false)
+      existingTab = win.Tabs.len-1
+    else:
+      win.statusbar.setTemp(item.file & " does not exist.", UrgError, 5000)
       return
-    
-    var iter: TTextIter
-    var iterPlus1: TTextIter 
-    win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
-        line.int32, insertIndex)
-    win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
-        line.int32, selectionBound)
-    
-    win.Tabs[existingTab].buffer.moveMarkByName("insert", addr(iter))
-    win.Tabs[existingTab].buffer.moveMarkByName("selection_bound",
-        addr(iterPlus1))
-    
-    # TODO: This should be getting focus, but as usual it's not... FIXME
-    win.Tabs[existingTab].sourceView.grabFocus()
 
-    win.scrollToInsert(int32(existingTab))
+  win.sourceViewTabs.setCurrentPage(int32(existingTab))
+  
+  # Move cursor to where the error is.
+  var line = item.line.parseInt-1
+  var insertIndex = int32(item.column.parseInt)-1
+  var selectionBound = int32(item.column.parseInt)
+  if insertIndex < 0:
+    insertIndex = 0
+    selectionBound = 1
+  
+  # Validate that this line/col combo is not outside bounds
+  var endIter: TTextIter
+  win.Tabs[existingTab].buffer.getEndIter(addr(endIter))
+  let lastLine = getLine(addr(endIter))
+  if line > lastLine:
+    line = lastLine
+  
+  var colEndAtLine: TTextIter
+  win.Tabs[existingTab].buffer.getIterAtLine(addr(colEndAtLine), line.gint)
+  moveToEndLine(addr(colEndAtLine))
+  let lastColumnAtLine = getLineOffset(addr(colEndAtLine))
+  if selectionBound > lastColumnAtLine:
+    win.statusbar.setTemp("Line " & $(line+1) & " and column " & $selectionBound &
+                          " is outside the bounds of the available text.",
+                          UrgError, 5000)
+    return
+  
+  var iter: TTextIter
+  var iterPlus1: TTextIter 
+  win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
+      line.int32, insertIndex)
+  win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
+      line.int32, selectionBound)
+  
+  win.Tabs[existingTab].buffer.selectRange(addr(iter), addr(iterPlus1))
+  
+  # TODO: This should be getting focus, but as usual it's not... FIXME
+  win.Tabs[existingTab].sourceView.grabFocus()
+
+  # TODO: Use an idle proc, get_visible_rect and get_iter_location to determine
+  # whether the scrolling was successful, the idle proc should scroll constantly
+  # until the scrolling occurs.
+  win.scrollToInsert(int32(existingTab))
 
 # -- FindBar
 
@@ -1520,8 +1531,6 @@ proc initTopMenu(MainBox: PBox) =
     SyntaxHighlightingMenu.append(sectionMenuItem)
   
   var ViewMenuItem = menuItemNewWithMnemonic("_View")
-  discard signalConnect(ViewMenuItem, "activate",
-                        SIGNAL_FUNC(viewMenuItem_Activate), nil)
 
   ViewMenuItem.setSubMenu(ViewMenu)
   ViewMenuItem.show()

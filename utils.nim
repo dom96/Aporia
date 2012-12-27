@@ -158,7 +158,6 @@ type
     saved*: bool
     filename*: string
     
-    
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*: string
     line*, col*: int32
