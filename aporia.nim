@@ -314,7 +314,7 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   # Change the tabs state to 'unsaved'
   # and add '*' to the Tab Name
   var current = win.SourceViewTabs.getCurrentPage()
-  if current < win.tabs.len-1:
+  if current < win.tabs.len:
     var name = ""
     if win.Tabs[current].filename == "":
       win.Tabs[current].saved = False
