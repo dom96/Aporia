@@ -135,7 +135,10 @@ proc filterSuggest*(win: var MainWin) =
   # Hide the tooltip
   win.suggest.tooltip.hide()
 
-  if win.suggest.items.len() == 0 and win.suggest.gotAll: win.suggest.hide()
+  if win.suggest.items.len() == 0 and win.suggest.gotAll:
+    if text.len > 0:
+      win.statusbar.setTemp("Filter gives no suggest items.", UrgNormal)
+    win.suggest.hide()
 
 proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
                      line, column: int) =
@@ -153,7 +156,9 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
       
   proc onSugExit(win: var MainWin, opts: PExecOptions, exit: int) {.closure.} =
     win.suggest.gotAll = true
-  
+    if win.suggest.allItems.len == 0:
+      win.statusbar.setTemp("No items found for suggest.", UrgError)
+    
   var execute = newExec(sugCmd, ExecRun, false, onSugLine, onSugExit)
   # Check if a suggest request is already running:
   if win.tempStuff.currentExec != nil and 

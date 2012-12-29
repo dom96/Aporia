@@ -10,12 +10,12 @@ type
   TStatus = object
     text: string
     urgency: TUrgency
+    startTime: float # Timestamp which specifies when this status was applied, also acts as ID.
     case kind: TStatusKind
     of StatusPerm:
       nil
     of StatusTemp:
       timeout: int # miliseconds to keep this status
-      startTime: float # Timestamp which specifies when this status was applied
     of StatusProgress:
       nil
 
@@ -26,10 +26,13 @@ type
     progressBar*: PProgressBar
     docInfoLabel: PLabel
 
+  TStatusID* = distinct float
+
 proc defaultStatus(): TStatus =
   result.kind = StatusPerm
   result.text = "Ready"
   result.urgency = UrgNormal
+  result.startTime = epochTime()
 
 proc initCustomStatusBar*(MainBox: PBox): PCustomStatusBar =
   ## Creates a new custom status bar.
@@ -87,19 +90,24 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
         else:
           return false
         result = true, addr(bar[]), nil)
-  
 
-proc setPerm*(bar: PCustomStatusBar, text: string, urgency: TUrgency) =
+proc setPerm*(bar: PCustomStatusBar, text: string, urgency: TUrgency): TStatusID {.discardable.} =
   ## Sets a permanent status which only gets overriden by another ``set*``.
+  ##
+  ## Returns the ID.
   var st: TStatus
   st.kind = StatusPerm
   st.text = text
   st.urgency = urgency
+  st.startTime = epochTime()
   setStatus(bar, st)
+  result = TStatusID(st.startTime)
 
-proc setTemp*(bar: PCustomStatusBar, text: string, urgency: TUrgency, timeout: int) =
+proc setTemp*(bar: PCustomStatusBar, text: string, urgency: TUrgency, timeout: int = 5000): TStatusID {.discardable.} =
   ## Sets a temporary status, after ``timeout`` the status will be disappear
   ## automatically and the previous one will be set.
+  ##
+  ## Returns the ID.
   var st: TStatus
   st.kind = StatusTemp
   st.text = text
@@ -107,18 +115,28 @@ proc setTemp*(bar: PCustomStatusBar, text: string, urgency: TUrgency, timeout: i
   st.timeout = timeout
   st.startTime = epochTime()
   setStatus(bar, st)
+  result = TStatusID(st.startTime)
   
-proc setProgress*(bar: PCustomStatusBar, text: string) =
+proc setProgress*(bar: PCustomStatusBar, text: string): TStatusID {.discardable.} =
   ## Shows the ``bar.progressbar``.
+  ##
+  ## Returns the ID.
   var st: TStatus
   st.kind = StatusProgress
   st.text = text
   st.urgency = UrgNormal
+  st.startTime = epochTime()
   setStatus(bar, st)
+  result = TStatusID(st.startTime)
 
-proc restorePrevious*(bar: PCustomStatusBar) =
-  ## Restores the previous status
-  bar.setStatus(defaultStatus())
+proc restorePrevious*(bar: PCustomStatusBar, onlyIfID: TStatusID = TStatusID(-1.0)) =
+  ## Resets the status to default. # TODO RENAME?
+  ##
+  ## If ``onlyIfID`` is set, the status will only be reset to default if the
+  ## current status' ID is the same as ``onlyIfID``, this is useful when
+  ## you don't want to reset to default if your status has been overriden. 
+  if onlyIfID.float == -1.0 or onlyIfID.float == bar.status.startTime:
+    bar.setStatus(defaultStatus())
 
 proc setDocInfo*(bar: PCustomStatusBar, line, col: int) =
   bar.docInfoLabel.setText("Ln: " & $line & " Col: " & $col)

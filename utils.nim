@@ -10,7 +10,7 @@
 import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
 import tables
 
-from CustomStatusBar import PCustomStatusBar
+from CustomStatusBar import PCustomStatusBar, TStatusID
 
 type
   TSettings* = object
@@ -136,6 +136,7 @@ type
     execThread*: TThread[void]
     execProcess*: PProcess
     idleFuncId*: int32
+    progressStatusID*: TStatusID
     lastProgressPulse*: float
     errorMsgStarted*: bool
     compilationErrorBuffer*: string # holds error msg if it spans multiple lines.

@@ -329,6 +329,7 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =
   result = false
+  let ctrlPressed = (event.state and ControlMask) != 0
   var key = $keyval_name(event.keyval)
   case key.toLower()
   of "up", "down", "page_up", "page_down":
@@ -403,6 +404,11 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         win.insertSuggestItem(index)
         
         return True
+
+    if win.settings.suggestFeature and not win.suggest.shown and
+        key.toLower() == "space" and ctrlPressed:
+      if win.suggest.items.len() != 0: win.suggest.clear()
+      doSuggest(win)
 
   of "backspace":
     if win.settings.suggestFeature and win.suggest.shown:

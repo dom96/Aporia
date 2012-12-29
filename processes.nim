@@ -239,7 +239,7 @@ proc peekProcOutput*(win: ptr MainWin): bool =
           let runAfter = win.tempStuff.currentExec.runAfter
           let runAfterSuccess = win.tempStuff.currentExec.runAfterSuccess
           win.tempStuff.currentExec = nil
-          win.statusbar.restorePrevious()
+          win.statusbar.restorePrevious(win.tempStuff.progressStatusID)
           # TODO: Remove idle proc here?
           
           # Execute another process in queue (if any)
@@ -275,7 +275,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, addr(win))
   echod("gTimeoutAdd id = ", $win.tempStuff.idleFuncId)
 
-  win.statusbar.setProgress("Executing")
+  win.tempStuff.progressStatusID = win.statusbar.setProgress("Executing")
   win.statusbar.progressbar.pulse()
   win.tempStuff.lastProgressPulse = epochTime()
   # Clear errors
