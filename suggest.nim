@@ -170,8 +170,6 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
 
 proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool = 
   ## Starts the request for suggest items asynchronously.
-  if tab.filename == "": return False
-  var currentTabSplit = splitFile(tab.filename)
   
   var aporiaTmpDir = getTempDir() / "aporia"
   var prefixDir = aporiaTmpDir / "suggest"
@@ -187,68 +185,97 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   # Recreate it.
   createDir(prefixDir)
   
-  # Find project file
-  var configFiles: seq[string] = @[]
-  for cfgFile in walkFiles(tab.filename.splitFile.dir / "*.nimrod.cfg"):
-    configFiles.add(cfgFile)
-  let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
-  var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
-  if not existsFile(projectFile):
-    # check for file.nimrod
-    if not existsFile(projectFile & "rod"):
-      projectFile = ""
-  let splitPrjF = splitFile(projectFile)
-  projectFile = prefixDir / splitPrjF.name & splitPrjF.ext
+  if tab.filename != "":
+    var currentTabSplit = splitFile(tab.filename)
   
-  echod("[Suggest] Project cfg file is: ", projectCfgFile)
-  echod("[Suggest] Project file is: ", projectFile)
-  
-  # Save tabs that are in the same directory as the file
-  # being suggested to /tmp/aporia/suggest
-  var alreadySaved: seq[string] = @[]
-  for t in items(win.Tabs):
-    if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
-      var f: TFile
-      var fileSplit = splitFile(t.filename)
-      echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
-      if f.open(prefixDir / fileSplit.name & fileSplit.ext, fmWrite):
-        # Save everything.
-        # - Get the text from the TextView.
-        var startIter: TTextIter
-        t.buffer.getStartIter(addr(startIter))
-        
-        var endIter: TTextIter
-        t.buffer.getEndIter(addr(endIter))
-        
-        var text = t.buffer.getText(addr(startIter), addr(endIter), False)
-        
-        # - Save it.
-        f.write(text)
-        
-        alreadySaved.add(t.filename)
-      else:
-        win.statusbar.setTemp("Unable to save one or more files for suggest. Suggest may not be activated.", UrgError, 5000)
-        echod("[Warning] Unable to save one or more files, suggest won't work.")
-        return false
-      f.close()
-  
-  # Copy other .nim files in the directory of the file in which suggest was
-  # activated to /tmp/aporia/suggest.
-  for nimfile in walkFiles(tab.filename.splitFile.dir / "*.nim"):
-    if nimfile notin alreadySaved:
-      var f: TFile
-      var fileSplit = splitFile(nimfile)
-      echod("Copying ", prefixDir / fileSplit.name & fileSplit.ext)
-      copyFile(nimfile, prefixDir / fileSplit.name & fileSplit.ext)
-  
-  # Copy over the config file, if it exists.
-  if projectCfgFile != "":
-    let fileSplit = splitFile(projectCfgFile)
-    copyFile(projectCfgFile, prefixDir / fileSplit.name & fileSplit.ext)
-  
-  var file = prefixDir / currentTabSplit.name & ".nim"
-  asyncGetSuggest(win, file, projectFile, prefixDir, start.getLine(),
-                  start.getLineOffset())
+    # Find project file
+    var configFiles: seq[string] = @[]
+    for cfgFile in walkFiles(tab.filename.splitFile.dir / "*.nimrod.cfg"):
+      configFiles.add(cfgFile)
+    let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
+    var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
+    if not existsFile(projectFile):
+      # check for file.nimrod
+      if not existsFile(projectFile & "rod"):
+        projectFile = ""
+    let splitPrjF = splitFile(projectFile)
+    projectFile = prefixDir / splitPrjF.name & splitPrjF.ext
+    
+    echod("[Suggest] Project cfg file is: ", projectCfgFile)
+    echod("[Suggest] Project file is: ", projectFile)
+    
+    # Save tabs that are in the same directory as the file
+    # being suggested to /tmp/aporia/suggest
+    var alreadySaved: seq[string] = @[]
+    for t in items(win.Tabs):
+      if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
+        var f: TFile
+        var fileSplit = splitFile(t.filename)
+        if fileSplit.ext notin [".nim", ".nimrod"]: continue
+        echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
+        if f.open(prefixDir / fileSplit.name & fileSplit.ext, fmWrite):
+          # Save everything.
+          # - Get the text from the TextView.
+          var startIter: TTextIter
+          t.buffer.getStartIter(addr(startIter))
+          
+          var endIter: TTextIter
+          t.buffer.getEndIter(addr(endIter))
+          
+          var text = t.buffer.getText(addr(startIter), addr(endIter), False)
+          
+          # - Save it.
+          f.write(text)
+          
+          alreadySaved.add(t.filename)
+        else:
+          win.statusbar.setTemp("Unable to save one or more files for suggest. Suggest may not be activated.", UrgError, 5000)
+          echod("[Warning] Unable to save one or more files, suggest won't work.")
+          return false
+        f.close()
+    
+    # Copy other .nim files in the directory of the file in which suggest was
+    # activated to /tmp/aporia/suggest.
+    for nimfile in walkFiles(tab.filename.splitFile.dir / "*.nim"):
+      if nimfile notin alreadySaved:
+        var f: TFile
+        var fileSplit = splitFile(nimfile)
+        echod("Copying ", prefixDir / fileSplit.name & fileSplit.ext)
+        copyFile(nimfile, prefixDir / fileSplit.name & fileSplit.ext)
+    
+    # Copy over the config file, if it exists.
+    if projectCfgFile != "":
+      let fileSplit = splitFile(projectCfgFile)
+      copyFile(projectCfgFile, prefixDir / fileSplit.name & fileSplit.ext)
+    
+    var file = prefixDir / currentTabSplit.name & ".nim"
+    asyncGetSuggest(win, file, projectFile, prefixDir, start.getLine(),
+                    start.getLineOffset())
+  else:
+    # Unsaved tab.
+    var f: TFile
+    var filename = prefixDir / "unknown.nim"
+    echod("Saving ", filename)
+    if f.open(filename, fmWrite):
+      # Save everything.
+      # - Get the text from the TextView.
+      var startIter: TTextIter
+      tab.buffer.getStartIter(addr(startIter))
+      
+      var endIter: TTextIter
+      tab.buffer.getEndIter(addr(endIter))
+      
+      var text = tab.buffer.getText(addr(startIter), addr(endIter), False)
+      
+      # - Save it.
+      f.write(text)
+    else:
+      win.statusbar.setTemp("Unable to save one or more files for suggest. Suggest may not be activated.", UrgError, 5000)
+      echod("[Warning] Unable to save one or more files, suggest won't work.")
+      return false
+    f.close()
+    asyncGetSuggest(win, filename, "", prefixDir, start.getLine(),
+                        start.getLineOffset())
   
   win.suggest.currentFilter = ""
   
