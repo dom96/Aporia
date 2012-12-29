@@ -179,7 +179,7 @@ type
 
   TEncodingsAvailable* = enum
     UTF8 = "UTF-8", ISO88591 = "ISO-8859-1", GB2312 = "GB2312",
-    Windows1251 = "Windows-1251"
+    Windows1251 = "Windows-1251", UTF16BE = "UTF-16BE", UTF16LE = "UTF-16LE"
 
 
 # -- Debug

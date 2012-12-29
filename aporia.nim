@@ -1084,7 +1084,7 @@ proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
   case respID
   of ResponseOK:
     let active = comboBox.getActive().int
-    assert active >= 0 and active <= Windows1251.int
+    assert active >= 0 and active <= UTF16LE.int
     comboBox.setActive(0) # Reset selection.
     infobar.hide()
     addTab("", win.tempStuff.pendingFilename, true,
@@ -1642,6 +1642,8 @@ proc initInfoBar(MainBox: PBox) =
   encodingsComboBox.appendText($ISO88591)
   encodingsComboBox.appendText($GB2312)
   encodingsComboBox.appendText($Windows1251)
+  encodingsComboBox.appendText($UTF16BE)
+  encodingsComboBox.appendText($UTF16LE)
   encodingsComboBox.setActive(UTF8.guint)
   encodingsComboBox.show()
   hbox.packStart(encodingsComboBox, false, false, 0)
