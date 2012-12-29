@@ -418,7 +418,7 @@ proc createSuggestDialog*(win: var MainWin) =
   # TreeView & TreeModel
   # -- ScrolledWindow
   var scrollWindow = scrolledWindowNew(nil, nil)
-  scrollWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
+  scrollWindow.setPolicy(POLICY_NEVER, POLICY_AUTOMATIC)
   vbox.packStart(scrollWindow, True, True, 0)
   scrollWindow.show()
   # -- TreeView
