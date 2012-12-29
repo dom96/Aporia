@@ -10,7 +10,7 @@
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,
-  utils, processes
+  utils, processes, CustomStatusBar
 
 proc addSuggestItem*(win: var MainWin, name: string, markup: String,
                      tooltipText: string, color: String = "#000000") =
@@ -137,11 +137,12 @@ proc filterSuggest*(win: var MainWin) =
 
   if win.suggest.items.len() == 0 and win.suggest.gotAll: win.suggest.hide()
 
-proc asyncGetSuggest(win: var MainWin, file, addToPath: string,
+proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
                      line, column: int) =
   let sugCmd = findExe("nimrod") & 
-        " idetools --path:$4 --path:$5 --track:$1,$2,$3 --suggest $1" % 
-        [file, $(line+1), $column, getTempDir(), addToPath]
+        " idetools --path:$4 --track:$1,$2,$3 --suggest $5" % 
+        [file, $(line+1), $column, addToPath,
+         if projectFile != "": projectFile else: file]
 
   proc onSugLine(win: var MainWin, opts: PExecOptions, line: string) {.closure.} =
     var item: TSuggestItem
@@ -186,8 +187,25 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   # Recreate it.
   createDir(prefixDir)
   
+  # Find project file
+  var configFiles: seq[string] = @[]
+  for cfgFile in walkFiles(tab.filename.splitFile.dir / "*.nimrod.cfg"):
+    configFiles.add(cfgFile)
+  let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
+  var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
+  if not existsFile(projectFile):
+    # check for file.nimrod
+    if not existsFile(projectFile & "rod"):
+      projectFile = ""
+  let splitPrjF = splitFile(projectFile)
+  projectFile = prefixDir / splitPrjF.name & splitPrjF.ext
+  
+  echod("[Suggest] Project cfg file is: ", projectCfgFile)
+  echod("[Suggest] Project file is: ", projectFile)
+  
   # Save tabs that are in the same directory as the file
   # being suggested to /tmp/aporia/suggest
+  var alreadySaved: seq[string] = @[]
   for t in items(win.Tabs):
     if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
       var f: TFile
@@ -206,18 +224,30 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         
         # - Save it.
         f.write(text)
+        
+        alreadySaved.add(t.filename)
       else:
+        win.statusbar.setTemp("Unable to save one or more files for suggest. Suggest may not be activated.", UrgError, 5000)
         echod("[Warning] Unable to save one or more files, suggest won't work.")
         return false
       f.close()
   
-  # Copy over nimrod.cfg if it exists to `prefixDir`.
-  if existsFile(currentTabSplit.dir / "nimrod".addFileExt("cfg")):
-    copyFile(currentTabSplit.dir / "nimrod".addFileExt("cfg"), 
-             prefixDir / "nimrod".addFileExt("cfg"))
+  # Copy other .nim files in the directory of the file in which suggest was
+  # activated to /tmp/aporia/suggest.
+  for nimfile in walkFiles(tab.filename.splitFile.dir / "*.nim"):
+    if nimfile notin alreadySaved:
+      var f: TFile
+      var fileSplit = splitFile(nimfile)
+      echod("Copying ", prefixDir / fileSplit.name & fileSplit.ext)
+      copyFile(nimfile, prefixDir / fileSplit.name & fileSplit.ext)
+  
+  # Copy over the config file, if it exists.
+  if projectCfgFile != "":
+    let fileSplit = splitFile(projectCfgFile)
+    copyFile(projectCfgFile, prefixDir / fileSplit.name & fileSplit.ext)
   
   var file = prefixDir / currentTabSplit.name & ".nim"
-  asyncGetSuggest(win, file, splitFile(tab.filename).dir, start.getLine(),
+  asyncGetSuggest(win, file, projectFile, prefixDir, start.getLine(),
                   start.getLineOffset())
   
   win.suggest.currentFilter = ""

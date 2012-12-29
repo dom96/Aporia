@@ -9,6 +9,7 @@
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * Update language definition files.
 * Go to definition does not scroll when it opens a new tab. Investigate.
+* "Project" feature, look at existance of file.nimrod.cfg in dir.
 
 ## Other language features
 * Ability to change to hard tabs.
