@@ -2078,7 +2078,8 @@ proc checkAlreadyRunning(): bool =
     client.send("\c\L")
 
 proc afterInit() =
-  win.Tabs[0].sourceView.grabFocus()
+  if win.Tabs.len > 0:
+    win.Tabs[0].sourceView.grabFocus()
 
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:
