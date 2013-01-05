@@ -79,7 +79,20 @@ proc updateMainTitle(pageNum: int) =
     if win.Tabs[pageNum].filename == "": name = "Untitled" 
     else: name = win.Tabs[pageNum].filename.extractFilename
     win.w.setTitle("Aporia - " & name)
-  
+
+proc plCheckUpdate(pageNum: int) =
+  ## Updates the 'check state' of the syntax highlighting CheckMenuItems,
+  ## depending on the syntax highlighting language that has been set.
+  let currentToggledLang = win.tempStuff.currentToggledLang
+  let newLang = win.getCurrentLanguage(pageNum)
+  assert win.tempStuff.plMenuItems.hasKey(currentToggledLang)
+  assert win.tempStuff.plMenuItems.hasKey(newLang)
+  win.tempStuff.stopPLToggle = true
+  win.tempStuff.plMenuItems[currentToggledLang].mi.itemSetActive(false)
+  win.tempStuff.plMenuItems[newLang].mi.itemSetActive(true)
+  win.tempStuff.currentToggledLang = newLang
+  win.tempStuff.stopPLToggle = false
+
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   if tabNr < 0: return
   if win.Tabs[tabNr].saved: return
@@ -95,6 +108,8 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         win.Tabs[tabNr].buffer.setHighlightSyntax(True)
       else:
         win.Tabs[tabNr].buffer.setHighlightSyntax(False)
+      if tabNr == win.getCurrentTab:
+        plCheckUpdate(tabNr)
   else: 
     path = win.Tabs[tabNr].filename
   
@@ -924,19 +939,14 @@ proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, 
       win.tempStuff.stopPLToggle = false
       return
   
-    let currentLang = win.getCurrentLanguage()
-    win.tempStuff.stopPLToggle = true
-    win.tempStuff.plMenuItems[currentLang].mi.itemSetActive(false)
-    win.tempStuff.stopPLToggle = false
     let currentTab = win.getCurrentTab()
     if plItem.lang.isNil:
       win.Tabs[currentTab].buffer.setHighlightSyntax(False)
-      win.tempStuff.currentToggledLang = ""
     else:
       win.Tabs[currentTab].buffer.setHighlightSyntax(True)
       win.Tabs[currentTab].buffer.setLanguage(plItem.lang)
-      win.tempStuff.currentToggledLang = $plItem.lang.getID()
-
+    plCheckUpdate(currentTab)
+    
 proc GetCmd(cmd, filename: string): string = 
   var f = quoteIfContainsWhite(filename)
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
@@ -1152,16 +1162,7 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   win.getCurrentLanguageComment(win.tempStuff.commentSyntax, pageNum)
   # Toggle the "Syntax Highlighting" check menu item based in the new tabs
   # syntax highlighting.
-  let currentToggledLang = win.tempStuff.currentToggledLang
-  let newLang = win.getCurrentLanguage(pageNum)
-  assert win.tempStuff.plMenuItems.hasKey(currentToggledLang)
-  assert win.tempStuff.plMenuItems.hasKey(newLang)
-  win.tempStuff.stopPLToggle = true
-  win.tempStuff.plMenuItems[currentToggledLang].mi.itemSetActive(false)
-  win.tempStuff.plMenuItems[newLang].mi.itemSetActive(true)
-  win.tempStuff.currentToggledLang = newLang
-  win.tempStuff.stopPLToggle = false
-
+  plCheckUpdate(pageNum)
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext, 
                         x: gint, y: gint, data: PSelectionData, info: guint,
