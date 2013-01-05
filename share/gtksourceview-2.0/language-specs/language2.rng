@@ -1,23 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Copyright (C) 2005-2007 Marco Barisione <barisione@gmail.com>
  Copyright (C) 2005-2007 Emanuele Aina
+ Copyright (C) 2011 Sapphire Becker <guess@logicplace.com>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ gtksourceview is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ gtksourceview is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <grammar xmlns="http://relaxng.org/ns/structure/1.0"
@@ -31,7 +33,7 @@
 
         <attribute name="id">
             <data type="string">
-                <param name="pattern">([a-zA-Z0-9_]|-)+</param>
+                <param name="pattern">[a-zA-Z0-9_\-]+</param>
             </data>
         </attribute>
 
@@ -90,23 +92,13 @@
 
 <define name="id-type">
     <data type="string">
-        <!-- FIXME: Why it doesn't work?
-             It seems that [a-z-] is unsupported -->
-        <!--
-        <param name="pattern">([a-zA-Z0-9_-]+:)?[a-zA-Z0-9_-]+</param>
-        -->
-        <param name="pattern">(([a-zA-Z0-9_]|-)+:)?([a-zA-Z0-9_]|-)+</param>
+        <param name="pattern">([a-zA-Z0-9_\-]+:)?[a-zA-Z0-9_\-]+</param>
     </data>
 </define>
 
 <define name="ref-type">
     <data type="string">
-        <!-- FIXME: Why it doesn't work?
-             It seems that [a-z-] is unsupported -->
-        <!--
-        <param name="pattern">([a-zA-Z0-9_-]+:)?[a-zA-Z0-9_-]+(:\*)?</param>
-        -->
-        <param name="pattern">(([a-zA-Z0-9_]|-)+:)?([a-zA-Z0-9_]|-)+(:\*)?</param>
+        <param name="pattern">([a-zA-Z0-9_\-]+:)?[a-zA-Z0-9_\-]+(:\*)?</param>
     </data>
 </define>
 
@@ -140,7 +132,7 @@
     <element name="property">
         <attribute name="name">
 <!--          <data type="string">-->
-<!--              <param name="pattern">([a-zA-Z0-9_]|-)+</param>-->
+<!--              <param name="pattern">[a-zA-Z0-9_\-]+</param>-->
 <!--          </data>-->
         </attribute>
         <text/>
@@ -164,7 +156,7 @@
             <element name="style">
                 <attribute name="id">
                     <data type="string">
-                        <param name="pattern">([a-zA-Z0-9_]|-)+</param>
+                        <param name="pattern">[a-zA-Z0-9_\-]+</param>
                     </data>
                 </attribute>
                 <choice>
@@ -236,7 +228,12 @@
                 <ref name="boolean-value"/>
             </attribute>
         </optional>
-
+        <optional>
+            <attribute name="class"/>
+        </optional>
+        <optional>
+            <attribute name="class-disabled"/>
+        </optional>
         <choice>
             <element name="match">
                 <ref name="regex-options"/>
@@ -308,6 +305,12 @@
                 <ref name="boolean-value"/>
             </attribute>
         </optional>
+        <optional>
+            <attribute name="class"/>
+        </optional>
+        <optional>
+            <attribute name="class-disabled"/>
+        </optional>
 
         <element name="start">
             <ref name="regex-options"/>
@@ -347,6 +350,12 @@
         <attribute name="id">
             <ref name="id-type"/>
         </attribute>
+        <optional>
+            <attribute name="class"/>
+        </optional>
+        <optional>
+            <attribute name="class-disabled"/>
+        </optional>
 
         <element name="include">
             <interleave>
@@ -379,6 +388,12 @@
                 <ref name="id-type"/>
             </attribute>
         </optional>
+        <optional>
+            <attribute name="class"/>
+        </optional>
+        <optional>
+            <attribute name="class-disabled"/>
+        </optional>
 
         <attribute name="sub-pattern"/>
     </element>
@@ -395,6 +410,12 @@
             <attribute name="style-ref">
                 <ref name="id-type"/>
             </attribute>
+        </optional>
+        <optional>
+            <attribute name="class"/>
+        </optional>
+        <optional>
+            <attribute name="class-disabled"/>
         </optional>
 
         <attribute name="sub-pattern"/>

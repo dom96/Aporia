@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Søren Hauberg
  Copyright (C) 2009 Søren Hauberg <soren@hauberg.org>
 
@@ -36,7 +38,7 @@
   </styles>
 
   <definitions>
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>//</start>
       <include>
         <context ref="def:in-comment"/>
@@ -98,7 +100,7 @@
       <match>\b([0-9]+[Ee][-]?[0-9]+|([0-9]*\.[0-9]+|[0-9]+\.)([Ee][-]?[0-9]+)?)[fFlL]?</match>
     </context>
 
-    <context id="fcl">
+    <context id="fcl" class="no-spell-check">
       <include>
         <context ref="line-comment"/>
         <context ref="keyword"/>

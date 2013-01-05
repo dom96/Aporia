@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Konstantin Ryabitsev <icon@fedoraproject.org>
  Copyright (C) 2007 Konstantin Ryabitsev <icon@fedoraproject.org>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <language id="rpmspec" _name="RPM spec" version="2.0" _section="Others">
@@ -63,31 +64,36 @@
     <context id="header" style-ref="header">
       <prefix>^</prefix>
       <suffix>:</suffix>
-      <keyword>Name</keyword>
-      <keyword>Version</keyword>
-      <keyword>Release</keyword>
-      <keyword>Epoch</keyword>
-      <keyword>Summary</keyword>
-      <keyword>Group</keyword>
-      <keyword>License</keyword>
-      <keyword>Packager</keyword>
-      <keyword>Vendor</keyword>
-      <keyword>Icon</keyword>
-      <keyword>URL</keyword>
-      <keyword>Patch[0-9]*</keyword>
-      <keyword>Source[0-9]*</keyword>
-      <keyword>Requires\(?[a-z]*\)?</keyword>
-      <keyword>[A-Za-z]+Req</keyword>
-      <keyword>Obsoletes</keyword>
-      <keyword>Provides</keyword>
-      <keyword>Conflicts</keyword>
-      <keyword>Build[A-Za-z]+</keyword>
-      <keyword>[A-Za-z]+Arch</keyword>
       <keyword>Auto[A-Za-z]+</keyword>
+      <keyword>[A-Za-z]+Arch</keyword>
+      <keyword>[A-Za-z]+Req</keyword>
+      <keyword>Build[A-Za-z]+</keyword>
+      <keyword>Conflicts</keyword>
+      <keyword>Epoch</keyword>
+      <keyword>Group</keyword>
+      <keyword>Icon</keyword>
+      <keyword>License</keyword>
+      <keyword>Name</keyword>
+      <keyword>Obsoletes</keyword>
+      <keyword>Packager</keyword>
+      <keyword>Patch[0-9]*</keyword>
+      <keyword>Provides</keyword>
+      <keyword>Recommends</keyword>
+      <keyword>Release</keyword>
+      <keyword>Requires\(?[a-z]*\)?</keyword>
+      <keyword>Source[0-9]*</keyword>
+      <keyword>Suggests</keyword>
+      <keyword>Summary</keyword>
+      <keyword>Supplements</keyword>
+      <keyword>Url</keyword>
+      <keyword>URL</keyword>
+      <keyword>Vendor</keyword>
+      <keyword>Version</keyword>
     </context>
 
     <context id="section" style-ref="section">
       <prefix>^%</prefix>
+      <keyword>global</keyword>
       <keyword>description</keyword>
       <keyword>package</keyword>
       <keyword>prep</keyword>
@@ -138,7 +144,7 @@
     </context>
 
     <context id="other-macro" style-ref="other-macro">
-        <match>%\{[a-zA-Z][a-zA-Z0-9_]+\}</match>
+        <match>%\{?[a-zA-Z][a-zA-Z0-9_]+\}?</match>
     </context>
 
     <context id="flow" style-ref="flow-conditional">
@@ -191,11 +197,11 @@
         <context ref="directory-macro"/>
         <context ref="command-macro"/>
         <context ref="conditional-macro"/>
-        <context ref="other-macro"/>
         <context ref="flow"/>
         <context ref="rpm-var"/>
         <context ref="command-switch"/>
         <context ref="changelog-section"/>
+        <context ref="other-macro"/>
       </include>
     </context>
 

@@ -1,137 +1,166 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
- Authors: Søren Hauberg, Muthiah Annamalai
+ This file is part of GtkSourceView
+
+ Authors: Søren Hauberg, Muthiah Annamalai, Carnë Draug
  Copyright (C) 2006 Søren Hauberg <soren@hauberg.org>
  Copyright (C) 2006 Muthiah Annamalai <gnumuthu@users.sf.net>
+ Copyright (C) 2010 Carnë Draug <carandraug+dev@gmail.com>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <language id="octave" _name="Octave" version="2.0" _section="Scientific">
   <metadata>
     <property name="mimetypes">text/x-octave;text/x-matlab</property>
     <property name="globs">*.m</property>
-    <property name="line-comment-start">%</property>
+    <property name="line-comment-start">#</property>
+    <property name="block-comment-start">#{</property>
+    <property name="block-comment-end">}#</property>
   </metadata>
 
+  <!--
+    Note: Matlab language is a subset of the Octave language. When making
+    modification to this file check first if they apply to both languages.
+  -->
+
   <styles>
-    <style id="comment" _name="Comment" map-to="def:comment"/>
-    <style id="floating-point" _name="Floating Point" map-to="def:floating-point"/>
-    <style id="string" _name="String" map-to="def:string"/>
-    <style id="keyword" _name="Keyword" map-to="def:keyword"/>
-    <style id="base-n-integer" _name="Base-N Integer" map-to="def:base-n-integer"/>
-    <style id="function" _name="Function" map-to="def:function"/>
-    <style id="decimal" _name="Decimal" map-to="def:decimal"/>
-    <style id="boolean" _name="Boolean" map-to="def:boolean"/>
+    <style id="comment"           _name="Comment"           map-to="def:comment"/>
+    <style id="string"            _name="String"            map-to="def:string"/>
+    <style id="operator"          _name="Operator"          map-to="def:operator"/>
+    <style id="data-type"         _name="Data type"         map-to="def:type"/>
+    <style id="storage-type"      _name="Storage Type"      map-to="def:type"/>
+    <style id="boolean"           _name="Boolean"           map-to="def:boolean"/>
+    <style id="decimal"           _name="Decimal"           map-to="def:decimal"/>
+    <style id="floating-point"    _name="Floating Point"    map-to="def:floating-point"/>
+    <style id="base-n-integer"    _name="Base-N Integer"    map-to="def:base-n-integer"/>
+    <style id="package-manager"   _name="Package Manager"   map-to="def:preprocessor"/>
+    <style id="keyword"          _name="Keyword"           map-to="def:keyword"/>
+    <style id="variable"          _name="Variable"          map-to="def:identifier"/>
     <style id="reserved-constant" _name="Reserved Constant" map-to="def:special-constant"/>
+    <style id="builtin"           _name="Builtin"           map-to="def:builtin"/>
   </styles>
 
   <definitions>
 
-    <!--
-      this is not yet supported by octave, but it's supported
-      by matlab - http://www.mathworks.com/access/helpdesk/help/techdoc/matlab_prog/f0-41244.html#f0-45380
-    -->
-    <context id="multiline-comment" style-ref="comment">
-      <start>^\s*%{\s*$</start>
-      <end>^\s*%}\s*$</end>
+    <context id="block-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
+      <start>^\s*[#%]{\s*$</start>
+      <end>^\s*[#%]}\s*$</end>
       <include>
+        <context ref="block-comment"/>
         <context ref="def:in-comment"/>
       </include>
     </context>
 
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>#|%</start>
       <include>
         <context ref="def:in-comment"/>
       </include>
     </context>
 
-    <context id="double-quoted-string" style-ref="string" end-at-line-end="true">
+    <!--
+      Line continue in Octave are different from the one in def.lang. They can
+      either be  ... or \ optionally followed by whitespace only.
+    -->
+    <context id="line-continue" style-ref="comment">
+      <start>(\.\.\.|\\)(\s)*?$</start>
+      <end>^</end>
+      <include>
+        <context ref="def:in-comment"/>
+      </include>
+    </context>
+
+    <context id="double-quoted-string" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
       <start>"</start>
       <end>"</end>
       <include>
-        <context ref="def:escape"/>
-        <context ref="def:line-continue"/>
+         <!-- octave uses the same printf format and escape chars as C -->
+        <context ref="c:printf"/>
+        <context ref="c:escaped-character"/>
+        <context ref="line-continue"/>
       </include>
     </context>
 
-    <context id="single-quoted-string" style-ref="string" end-at-line-end="true">
+    <context id="single-quoted-string" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
       <!--
-       To do not misdetect the transpose operator ' as the start of a string
-       we assert to not follow a variable name (letters, digits and underscores)
-       or a closing bracket (round, square or curly) or a dot (to form the
-       array transpose operator ".'" ). -->
-      <start>(?&lt;![0-9a-zA-Z_)\]}\.])'</start>
+         To do not misdetect the transpose operator ' as the start of a string
+         we assert to not follow a variable name (letters, digits and underscores)
+         or a closing bracket (round, square or curly) or a dot (to form the
+         array transpose operator ".'" ).
+      -->
+      <start>(?&lt;![0-9a-zA-Z_\)\]}\.])'</start>
       <end>'</end>
       <include>
         <context style-ref="def:special-char">
+          <!--
+            Unlike double quoted string, single quote strings in octave do not
+            allow continuation lines or escaped characters. The only escape
+            necessary is the single quote itself which is escaped with two
+            single quotes.
+          -->
           <match>''</match>
         </context>
-        <context ref="def:line-continue"/>
       </include>
     </context>
 
+    <!--To see the list of operators, use the function __operators__-->
+    <context id="operator" style-ref="operator">
+      <match extended="true">
+        (\.)?\+{1,2}?(?!\+) |   # arithmetic operators
+        (\.)?\-{1,2}?(?!\-) |   # already counting
+        (\.)?\*{1,2}?(?!\*) |   # with auto increment,
+        (\.)?\/(?!\^) |         # element by element,
+        (\.)?\\(?!\^) |         # left division
+        (\.)?\^(?!\^) |         # and both exp
+        (?&lt;=[0-9a-zA-Z_)\]}])(\.)?' |                  # transpose operator
+        &lt;=? | &gt;=? | != | ~= | == | &lt;&gt; |       # comparison operators
+        &amp;{1,2}?(?!&amp;) | \|{1,2}?(?!\|) | ! | ~ |   # boolean operators
+        = |                                               # assignment operator
+        : |                                               # range operator
+      </match>
+    </context>
+
+    <context id="data-type" style-ref="data-type">
+      <keyword>cell</keyword>
+      <keyword>char</keyword>
+      <keyword>double</keyword>
+      <keyword>(u)?int(8|16|32|64)</keyword>
+      <keyword>logical</keyword>
+      <keyword>single</keyword>
+      <keyword>struct</keyword>
+    </context>
+
+    <context id="function-handle" style-ref="data-type">
+      <match case-sensitive="false">@([a-z_][a-z1-9_]*)?</match>
+    </context>
+
+    <context id="storage-type" style-ref="storage-type">
+      <keyword>global</keyword>
+      <keyword>persistent</keyword>
+    </context>
+
     <context id="boolean" style-ref="boolean">
+      <!--
+        false and true can be used as functions too. Do not highlight as boolean
+        if followed by parentheses.
+      -->
+      <suffix>\b(?!(\s)*\()</suffix>
       <keyword>false</keyword>
       <keyword>true</keyword>
-    </context>
-
-    <context id="reserved-constant" style-ref="reserved-constant">
-      <keyword>pi</keyword>
-      <keyword>eps</keyword>
-      <keyword>Inf</keyword>
-      <keyword>inf</keyword>
-      <keyword>NaN</keyword>
-      <keyword>nan</keyword>
-      <keyword>NA</keyword>
-    </context>
-
-    <context id="keyword" style-ref="keyword">
-      <keyword>assert</keyword>
-      <keyword>break</keyword>
-      <keyword>case</keyword>
-      <keyword>catch</keyword>
-      <keyword>continue</keyword>
-      <keyword>do</keyword>
-      <keyword>elseif</keyword>
-      <keyword>else</keyword>
-      <keyword>endfor</keyword>
-      <keyword>endfunction</keyword>
-      <keyword>endif</keyword>
-      <keyword>end</keyword>
-      <keyword>endswitch</keyword>
-      <keyword>end_try_catch</keyword>
-      <keyword>end_unwind_protect</keyword>
-      <keyword>endwhile</keyword>
-      <keyword>for</keyword>
-      <keyword>function</keyword>
-      <keyword>global</keyword>
-      <keyword>if</keyword>
-      <keyword>nargin</keyword>
-      <keyword>nargout</keyword>
-      <keyword>otherwise</keyword>
-      <keyword>return</keyword>
-      <keyword>switch</keyword>
-      <keyword>try</keyword>
-      <keyword>until</keyword>
-      <keyword>unwind_protect_cleanup</keyword>
-      <keyword>unwind_protect</keyword>
-      <keyword>while</keyword>
     </context>
 
     <context id="decimal" style-ref="decimal">
@@ -150,88 +179,680 @@
       <match>\b0[xX][0-9a-fA-F]+([Uu]([Ll]|LL|ll)?|([Ll]|LL|ll)[Uu]?)?\b</match>
     </context>
 
-    <context id="function" style-ref="function">
-      <keyword>abs</keyword>
-      <keyword>acos</keyword>
-      <keyword>asin</keyword>
-      <keyword>atan2</keyword>
-      <keyword>atan</keyword>
-      <keyword>ceil</keyword>
-      <keyword>columns</keyword>
-      <keyword>conv</keyword>
-      <keyword>cosh</keyword>
-      <keyword>cos</keyword>
-      <keyword>cumprod</keyword>
-      <keyword>dims</keyword>
-      <keyword>error</keyword>
-      <keyword>fclose</keyword>
-      <keyword>floor</keyword>
-      <keyword>fopen</keyword>
-      <keyword>fprintf</keyword>
-      <keyword>fread</keyword>
-      <keyword>fsolve</keyword>
-      <keyword>imag</keyword>
-      <keyword>isempty</keyword>
-      <keyword>isinf</keyword>
-      <keyword>islogical</keyword>
-      <keyword>ismatrix</keyword>
-      <keyword>isnan</keyword>
-      <keyword>isna</keyword>
-      <keyword>isnumeric</keyword>
-      <keyword>isscalar</keyword>
-      <keyword>isstr</keyword>
-      <keyword>isvector</keyword>
-      <keyword>length</keyword>
-      <keyword>linspace</keyword>
-      <keyword>log10</keyword>
-      <keyword>log2</keyword>
-      <keyword>log</keyword>
-      <keyword>max</keyword>
-      <keyword>min</keyword>
+    <context id="variables" style-ref="variable">
+      <keyword>ans</keyword>
+    </context>
+
+    <context id="reserved-constant" style-ref="reserved-constant">
+      <!--
+        Most of the constants can be used as functions too. Do not highlight as
+        constants if followed by parentheses.
+      -->
+      <suffix>\b(?!(\s)*\()</suffix>
+      <keyword>e</keyword>
+      <keyword>eps</keyword>
+      <keyword>(J|j|I|i)</keyword>
+      <keyword>(Inf|inf)</keyword>
+      <keyword>(NaN|nan)</keyword>
+      <keyword>NA</keyword>
       <keyword>ones</keyword>
-      <keyword>printf</keyword>
-      <keyword>prod</keyword>
-      <keyword>real</keyword>
-      <keyword>rem</keyword>
-      <keyword>repmat</keyword>
-      <keyword>reshape</keyword>
-      <keyword>round</keyword>
-      <keyword>rows</keyword>
-      <keyword>setstr</keyword>
-      <keyword>sinh</keyword>
-      <keyword>sin</keyword>
-      <keyword>size</keyword>
-      <keyword>sort</keyword>
-      <keyword>sprintf</keyword>
-      <keyword>sqrt</keyword>
-      <keyword>strcat</keyword>
-      <keyword>strcmp</keyword>
-      <keyword>sum</keyword>
-      <keyword>system</keyword>
-      <keyword>tanh</keyword>
-      <keyword>tan</keyword>
-      <keyword>unlink</keyword>
-      <keyword>usage</keyword>
-      <keyword>varargin</keyword>
-      <keyword>varargout</keyword>
-      <keyword>warning</keyword>
+      <keyword>pi</keyword>
+      <keyword>rand</keyword>
       <keyword>zeros</keyword>
     </context>
 
-    <context id="octave">
+    <context id="package-manager" style-ref="package-manager">
+      <!--
+        The list of pkg commands is optional to the match so that at least pkg
+        is highlighted when new commands get implemented.
+      -->
+      <match extended="true">
+        \bpkg(?!(\s)*\()(\s)+
+        ((un)?install|update|(un)?load|list|(global|local)_list|describe|prefix|(re)?build)?\b
+      </match>
+    </context>
+
+    <context id="keyword">
       <include>
-        <context ref="multiline-comment"/>
+        <context style-ref="keyword">
+          <!--
+            Only Octave specific keywords. To see a complete list of keywords in
+            Octave, use __keywords__ at the Octave prompt.
+          -->
+          <keyword>end(_try_catch|_unwind_protect|for|function|if|parfor|switch|while)</keyword>
+          <keyword>unwind_protect(_cleanup)?</keyword>
+        </context>
+        <context id="octave-matlab-keyword" style-ref="keyword">
+          <!--
+            Octave and Matlab have already implemented most of each others keywords
+            but not all. Both Octave and Matlab are still missing keywords from the
+            other. As such, this block only has the keywords already implemented in
+            both. When adding a new keyword, make sure you place it on the right
+            place.
+          -->
+          <keyword>case</keyword>
+          <keyword>catch</keyword>
+          <keyword>continue</keyword>
+          <keyword>do</keyword>
+          <keyword>else(if)?</keyword>
+          <keyword>end</keyword>
+          <keyword>for</keyword>
+          <keyword>function</keyword>
+          <keyword>if</keyword>
+          <keyword>otherwise</keyword>
+          <keyword>parfor</keyword>
+          <keyword>return</keyword>
+          <keyword>switch</keyword>
+          <keyword>try</keyword>
+          <keyword>until</keyword>
+          <keyword>vararg(in|out)</keyword>
+          <keyword>while</keyword>
+        </context>
+      </include>
+    </context>
+
+    <define-regex id="is-type-functions" extended="true">
+      _absolute_filename         | dir                        |numeric        |
+      _dq_string                 | empty                      | object        |
+      _function_handle           | equal                      | obsv          |
+      _leap_year                 | equalwithequalnans         |
+      _real_matrix               | field                      |
+      _real_scalar               | figure                     |
+      _real_square_matrix        | finite                     | pc            |
+      _real_vector               | float                      | pref          |
+      _rooted_relative_filename  | global                     | prime         |
+      _sq_string                 | graph                      | print         |
+      _valid_file_id             | gray                       | prop          |
+      a                          | handle                     | punct         |
+      alnum                      | hermitian                  | real          |
+      alpha                      | hghandle                   | rgb           |
+      appdata                    | hold                       | row           |
+      argout                     | ieee                       | sample        |
+      ascii                      | ind                        | scalar        |
+      bool                       | index                      | sorted        |
+      bw                         | inf                        | space         |
+      cell                       | integer                    | sparse        |
+      cellstr                    | keyword                    | square        |
+      char                       | letter                     | stabilizable  |
+      cntrl                      | logical                    | strprop       |
+      column                     | lower                      | struct        |
+      complex                    | mac                        | symmetric     |
+      ctrb                       | matrix                     | unix          |
+      debugmode                  | member                     | upper         |
+      definite                   | method                     | varname       |
+      deployed                   | na                         | vector        |
+      detectable                 | nan                        | xdigit        |
+      digit                      | null
+    </define-regex>
+
+    <!--
+      While there are many more builtin functions in octave, only some are listed
+      here. This is to avoid maintenance problems specially in the case of
+      functions that may later be removed. Extra functions can easily be added
+      manually. Function __list_functions__ lists them all.
+    -->
+    <context id="builtin" style-ref="builtin">
+      <prefix>(?&lt;!\.)\%[</prefix>
+      <suffix>\%](?!\.)</suffix>
+
+      <keyword>(Inf|inf)</keyword>
+      <keyword>(NaN|nan)</keyword>
+      <keyword>abs</keyword>
+      <keyword>accumarray</keyword>
+      <keyword>acos(d|h)?</keyword>
+      <keyword>acot(d|h)?</keyword>
+      <keyword>acsc(d|h)?</keyword>
+      <keyword>addlistener</keyword>
+      <keyword>addpath</keyword>
+      <keyword>addproperty</keyword>
+      <keyword>addtodate</keyword>
+      <keyword>airy</keyword>
+      <keyword>all</keyword>
+      <keyword>allchild</keyword>
+      <keyword>amd</keyword>
+      <keyword>ancestor</keyword>
+      <keyword>and</keyword>
+      <keyword>angle</keyword>
+      <keyword>any</keyword>
+      <keyword>area</keyword>
+      <keyword>arrayfun</keyword>
+      <keyword>asec(d|h)?</keyword>
+      <keyword>asin(d|h)?</keyword>
+      <keyword>assert</keyword>
+      <keyword>assignin</keyword>
+      <keyword>atan(d|h)?</keyword>
+      <keyword>atan2</keyword>
+      <keyword>axes</keyword>
+      <keyword>axis</keyword>
+      <keyword>balance</keyword>
+      <keyword>bar(h)?</keyword>
+      <keyword>base2dec</keyword>
+      <keyword>beep</keyword>
+      <keyword>bessel(h|i|j|k|y)</keyword>
+      <keyword>beta(inc|ln)?</keyword>
+      <keyword>bicgstab</keyword>
+      <keyword>bin2dec</keyword>
+      <keyword>bit(and|cmp|or|xor)</keyword>
+      <keyword>bit(get|max|set|shift)</keyword>
+      <keyword>blanks</keyword>
+      <keyword>blkdiag</keyword>
+      <keyword>box</keyword>
+      <keyword>brighten</keyword>
+      <keyword>bsxfun</keyword>
+      <keyword>builtin</keyword>
+      <keyword>bunzip2</keyword>
+      <keyword>bzip2</keyword>
+      <keyword>calendar</keyword>
+      <keyword>cart2(pol|sph)</keyword>
+      <keyword>cast</keyword>
+      <keyword>cat</keyword>
+      <keyword>caxis</keyword>
+      <keyword>cd</keyword>
+      <keyword>ceil</keyword>
+      <keyword>cell2(mat|struct)</keyword>
+      <keyword>celldisp</keyword>
+      <keyword>cellfun</keyword>
+      <keyword>cellstr</keyword>
+      <keyword>cgs</keyword>
+      <keyword>char</keyword>
+      <keyword>chol</keyword>
+      <keyword>cholupdate</keyword>
+      <keyword>circshift</keyword>
+      <keyword>cla</keyword>
+      <keyword>clabel</keyword>
+      <keyword>class</keyword>
+      <keyword>clc</keyword>
+      <keyword>clear</keyword>
+      <keyword>clf</keyword>
+      <keyword>clock</keyword>
+      <keyword>close(req)?</keyword>
+      <keyword>col(amd|perm)</keyword>
+      <keyword>colorbar</keyword>
+      <keyword>colormap</keyword>
+      <keyword>columns</keyword>
+      <keyword>comet</keyword>
+      <keyword>compan</keyword>
+      <keyword>compass</keyword>
+      <keyword>complex</keyword>
+      <keyword>computer</keyword>
+      <keyword>cond(est)?</keyword>
+      <keyword>conj</keyword>
+      <keyword>contour(3|c|f)?</keyword>
+      <keyword>contrast</keyword>
+      <keyword>conv(2|hull(n)?|n)?</keyword>
+      <keyword>copyfile</keyword>
+      <keyword>corrcoef</keyword>
+      <keyword>cos(d|h)?</keyword>
+      <keyword>cot(d|h)?</keyword>
+      <keyword>cov</keyword>
+      <keyword>cplxpair</keyword>
+      <keyword>cputime</keyword>
+      <keyword>cross</keyword>
+      <keyword>csc(d|h)?</keyword>
+      <keyword>csv(read|write)</keyword>
+      <keyword>ctranspose</keyword>
+      <keyword>cum(max|min|prod|sum|trapz)</keyword>
+      <keyword>curl</keyword>
+      <keyword>cylinder</keyword>
+      <keyword>daspect</keyword>
+      <keyword>date(num|str|tick|vec)?</keyword>
+      <keyword>db(clear|stack|status|stop|type|where)</keyword>
+      <keyword>db(cont|down|next|quit|step|up)</keyword>
+      <keyword>dbquad</keyword>
+      <keyword>deal</keyword>
+      <keyword>deblank</keyword>
+      <keyword>dec2(base|bin|hex)</keyword>
+      <keyword>deconv</keyword>
+      <keyword>del2</keyword>
+      <keyword>delaunay(3|n)?</keyword>
+      <keyword>demo</keyword>
+      <keyword>det</keyword>
+      <keyword>detrend</keyword>
+      <keyword>diag</keyword>
+      <keyword>diary</keyword>
+      <keyword>diff</keyword>
+      <keyword>diffuse</keyword>
+      <keyword>dir</keyword>
+      <keyword>disp</keyword>
+      <keyword>display</keyword>
+      <keyword>divergence</keyword>
+      <keyword>dlm(read|write)</keyword>
+      <keyword>dmperm</keyword>
+      <keyword>doc</keyword>
+      <keyword>dos</keyword>
+      <keyword>dot</keyword>
+      <keyword>double</keyword>
+      <keyword>drawnow</keyword>
+      <keyword>dsearch(n)?</keyword>
+      <keyword>echo</keyword>
+      <keyword>edit</keyword>
+      <keyword>eig(s)?</keyword>
+      <keyword>ellipsoid</keyword>
+      <keyword>eomday</keyword>
+      <keyword>eps</keyword>
+      <keyword>eq</keyword>
+      <keyword>erf(c|cx|cinv|inv)?</keyword>
+      <keyword>erfcx</keyword>
+      <keyword>error</keyword>
+      <keyword>errorbar</keyword>
+      <keyword>etime</keyword>
+      <keyword>etree(plot)?</keyword>
+      <keyword>eval(in)?</keyword>
+      <keyword>exist</keyword>
+      <keyword>exit</keyword>
+      <keyword>exp(int|m|m1)?</keyword>
+      <keyword>eye</keyword>
+      <keyword>ez(contour(f)?|mesh(c)?|plot(3)?|polar|surf(c)?)</keyword>
+      <keyword>f(close|open|read|seek|tell|write)</keyword>
+      <keyword>factor</keyword>
+      <keyword>factorial</keyword>
+      <keyword>false</keyword>
+      <keyword>feather</keyword>
+      <keyword>feof</keyword>
+      <keyword>ferror</keyword>
+      <keyword>feval</keyword>
+      <keyword>fft(2|n|shift)?</keyword>
+      <keyword>fftw</keyword>
+      <keyword>fget(l|s)</keyword>
+      <keyword>fieldnames</keyword>
+      <keyword>figure</keyword>
+      <keyword>file(attrib|marker|parts|sep)</keyword>
+      <keyword>fileread</keyword>
+      <keyword>fill</keyword>
+      <keyword>filter(2)?</keyword>
+      <keyword>find</keyword>
+      <keyword>findall</keyword>
+      <keyword>findobj</keyword>
+      <keyword>findstr</keyword>
+      <keyword>fix</keyword>
+      <keyword>flip(dim|lr|ud)</keyword>
+      <keyword>floor</keyword>
+      <keyword>fminbnd</keyword>
+      <keyword>format</keyword>
+      <keyword>fplot</keyword>
+      <keyword>fprint(f)?</keyword>
+      <keyword>frewind</keyword>
+      <keyword>fscanf</keyword>
+      <keyword>fsolve</keyword>
+      <keyword>full</keyword>
+      <keyword>fullfile</keyword>
+      <keyword>func2str</keyword>
+      <keyword>functions</keyword>
+      <keyword>fzero</keyword>
+      <keyword>gamma(inc|ln)?</keyword>
+      <keyword>gca</keyword>
+      <keyword>gcb(f|o)</keyword>
+      <keyword>gcd</keyword>
+      <keyword>gcf</keyword>
+      <keyword>ge</keyword>
+      <keyword>genpath</keyword>
+      <keyword>genvarname</keyword>
+      <keyword>get</keyword>
+      <keyword>getenv</keyword>
+      <keyword>getfield</keyword>
+      <keyword>ginput</keyword>
+      <keyword>gplot</keyword>
+      <keyword>gradient</keyword>
+      <keyword>grid(data|data3|datan)?</keyword>
+      <keyword>gt</keyword>
+      <keyword>gtext</keyword>
+      <keyword>gunzip</keyword>
+      <keyword>gzip</keyword>
+      <keyword>hadamard</keyword>
+      <keyword>hankel</keyword>
+      <keyword>help</keyword>
+      <keyword>hess</keyword>
+      <keyword>hex2(dec|num)</keyword>
+      <keyword>hggroup</keyword>
+      <keyword>hidden</keyword>
+      <keyword>hilb</keyword>
+      <keyword>hist(c)?</keyword>
+      <keyword>hold</keyword>
+      <keyword>home</keyword>
+      <keyword>horzcat</keyword>
+      <keyword>hsv2rgb</keyword>
+      <keyword>hypot</keyword>
+      <keyword>I</keyword>
+      <keyword>i</keyword>
+      <keyword>idivide</keyword>
+      <keyword>ifft(2|n|shift)?</keyword>
+      <keyword>im(finfo|read|show|write)</keyword>
+      <keyword>image(sc)?</keyword>
+      <keyword>ind2(rgb|sub)</keyword>
+      <keyword>inferiorto</keyword>
+      <keyword>info</keyword>
+      <keyword>inline</keyword>
+      <keyword>inpolygon</keyword>
+      <keyword>input</keyword>
+      <keyword>inputname</keyword>
+      <keyword>int(min|max)</keyword>
+      <keyword>int2str</keyword>
+      <keyword>interp(1|1q|2|3|ft|n)</keyword>
+      <keyword>intersect</keyword>
+      <keyword>intwarning</keyword>
+      <keyword>inv(erse)?</keyword>
+      <keyword>invhilb</keyword>
+      <keyword>ipermute</keyword>
+      <keyword>iqr</keyword>
+      <!--
+        rather than write here all the is(type) functions, a regex was created
+        named 'is-type-functions'. Add the type to that regex rather than adding
+        a new keyword here.
+      -->
+      <keyword>is\%{is-type-functions}</keyword>
+      <keyword>iso(colors|normals|surface)</keyword>
+      <keyword>J</keyword>
+      <keyword>j</keyword>
+      <keyword>jet</keyword>
+      <keyword>keyboard</keyword>
+      <keyword>kron</keyword>
+      <keyword>last(err|error|warn)</keyword>
+      <keyword>lcm</keyword>
+      <keyword>ldivide</keyword>
+      <keyword>le</keyword>
+      <keyword>legend</keyword>
+      <keyword>legendre</keyword>
+      <keyword>length</keyword>
+      <keyword>license</keyword>
+      <keyword>lin2mu</keyword>
+      <keyword>line</keyword>
+      <keyword>linkprop</keyword>
+      <keyword>linspace</keyword>
+      <keyword>list</keyword>
+      <keyword>load(obj)?</keyword>
+      <keyword>log(10|1p|2|space|m)?</keyword>
+      <keyword>loglog</keyword>
+      <keyword>lookfor</keyword>
+      <keyword>lower</keyword>
+      <keyword>ls</keyword>
+      <keyword>lsqnonneg</keyword>
+      <keyword>lt</keyword>
+      <keyword>lu(inc)?</keyword>
+      <keyword>magic</keyword>
+      <keyword>mat2(cell|str)</keyword>
+      <keyword>matlabroot</keyword>
+      <keyword>max</keyword>
+      <keyword>mean</keyword>
+      <keyword>median</keyword>
+      <keyword>menu</keyword>
+      <keyword>merge</keyword>
+      <keyword>mesh(grid|c|z)?</keyword>
+      <keyword>methods</keyword>
+      <keyword>mex</keyword>
+      <keyword>mexext</keyword>
+      <keyword>mfilename</keyword>
+      <keyword>min</keyword>
+      <keyword>minus</keyword>
+      <keyword>mislocked</keyword>
+      <keyword>mkdir</keyword>
+      <keyword>mkoctfile</keyword>
+      <keyword>mkpp</keyword>
+      <keyword>mldivide</keyword>
+      <keyword>mlock</keyword>
+      <keyword>mod</keyword>
+      <keyword>mode</keyword>
+      <keyword>more</keyword>
+      <keyword>movefile</keyword>
+      <keyword>mrdivide</keyword>
+      <keyword>mtimes</keyword>
+      <keyword>mu2lin</keyword>
+      <keyword>munlock</keyword>
+      <keyword>NA</keyword>
+      <keyword>namelengthmax</keyword>
+      <keyword>narg(in|out)</keyword>
+      <keyword>narg(out)?chk</keyword>
+      <keyword>nchoosek</keyword>
+      <keyword>ndgrid</keyword>
+      <keyword>ndims</keyword>
+      <keyword>ne</keyword>
+      <keyword>newplot</keyword>
+      <keyword>nextpow2</keyword>
+      <keyword>nnz</keyword>
+      <keyword>nonzeros</keyword>
+      <keyword>norm</keyword>
+      <keyword>normest</keyword>
+      <keyword>not</keyword>
+      <keyword>now</keyword>
+      <keyword>nthroot</keyword>
+      <keyword>null</keyword>
+      <keyword>num2(cell|hex|str)</keyword>
+      <keyword>numel</keyword>
+      <keyword>nzmax</keyword>
+      <keyword>onCleanup</keyword>
+      <keyword>ones</keyword>
+      <keyword>optim(get|set)</keyword>
+      <keyword>or</keyword>
+      <keyword>orderfields</keyword>
+      <keyword>orient</keyword>
+      <keyword>orth</keyword>
+      <keyword>pack</keyword>
+      <keyword>pareto</keyword>
+      <keyword>pascal</keyword>
+      <keyword>patch</keyword>
+      <keyword>path</keyword>
+      <keyword>pathsep</keyword>
+      <keyword>pause</keyword>
+      <keyword>pbaspect</keyword>
+      <keyword>pcg</keyword>
+      <keyword>pchip</keyword>
+      <keyword>pcolor</keyword>
+      <keyword>peaks</keyword>
+      <keyword>perl</keyword>
+      <keyword>perms</keyword>
+      <keyword>permute</keyword>
+      <keyword>pi</keyword>
+      <keyword>pie</keyword>
+      <keyword>pie3</keyword>
+      <keyword>pinv</keyword>
+      <keyword>pkg</keyword>
+      <keyword>planerot</keyword>
+      <keyword>plot(3|matrix|yy)?</keyword>
+      <keyword>pol2cart</keyword>
+      <keyword>polar</keyword>
+      <keyword>poly(der(inv)?|fit|int|val|valm)?</keyword>
+      <keyword>polyarea</keyword>
+      <keyword>pow2</keyword>
+      <keyword>power</keyword>
+      <keyword>ppval</keyword>
+      <keyword>primes</keyword>
+      <keyword>print(f)?</keyword>
+      <keyword>print_usage</keyword>
+      <keyword>prod</keyword>
+      <keyword>psi</keyword>
+      <keyword>pwd</keyword>
+      <keyword>qr(delete|insert|update)?</keyword>
+      <keyword>quad(gk|l|v)?</keyword>
+      <keyword>quit</keyword>
+      <keyword>quiver(3)?</keyword>
+      <keyword>qz</keyword>
+      <keyword>rand(i|n|perm)?</keyword>
+      <keyword>rank</keyword>
+      <keyword>rat(s)?</keyword>
+      <keyword>rcond</keyword>
+      <keyword>rdivide</keyword>
+      <keyword>real(log|max|min|pow|sqrt)?</keyword>
+      <keyword>record</keyword>
+      <keyword>rectint</keyword>
+      <keyword>refresh</keyword>
+      <keyword>refreshdata</keyword>
+      <keyword>regexp(i|rep|translate)?</keyword>
+      <keyword>rehash</keyword>
+      <keyword>rem</keyword>
+      <keyword>rename</keyword>
+      <keyword>repmat</keyword>
+      <keyword>reset</keyword>
+      <keyword>reshape</keyword>
+      <keyword>residue</keyword>
+      <keyword>restoredefaultpath</keyword>
+      <keyword>rgb2(hsv|ind)</keyword>
+      <keyword>ribbon</keyword>
+      <keyword>rmdir</keyword>
+      <keyword>rmfield</keyword>
+      <keyword>rmpath</keyword>
+      <keyword>roots</keyword>
+      <keyword>rose</keyword>
+      <keyword>rosser</keyword>
+      <keyword>rot90</keyword>
+      <keyword>round</keyword>
+      <keyword>rows</keyword>
+      <keyword>rref</keyword>
+      <keyword>rsf2csf</keyword>
+      <keyword>run</keyword>
+      <keyword>save(as|obj|path)?</keyword>
+      <keyword>scatter(3)?</keyword>
+      <keyword>schur</keyword>
+      <keyword>sec(d|h)?</keyword>
+      <keyword>semilog(x|y)</keyword>
+      <keyword>set</keyword>
+      <keyword>setdiff</keyword>
+      <keyword>setenv</keyword>
+      <keyword>setfield</keyword>
+      <keyword>setxor</keyword>
+      <keyword>shading</keyword>
+      <keyword>shg</keyword>
+      <keyword>shiftdim</keyword>
+      <keyword>sign</keyword>
+      <keyword>sin(d|h)?</keyword>
+      <keyword>size</keyword>
+      <keyword>slice</keyword>
+      <keyword>sort</keyword>
+      <keyword>sortrows</keyword>
+      <keyword>spalloc</keyword>
+      <keyword>sparse</keyword>
+      <keyword>spaugment</keyword>
+      <keyword>spconvert</keyword>
+      <keyword>spdiags</keyword>
+      <keyword>specular</keyword>
+      <keyword>speye</keyword>
+      <keyword>spfun</keyword>
+      <keyword>sph2cart</keyword>
+      <keyword>sphere</keyword>
+      <keyword>spinmap</keyword>
+      <keyword>spline</keyword>
+      <keyword>spones</keyword>
+      <keyword>spparms</keyword>
+      <keyword>sprand(n|sym)?</keyword>
+      <keyword>sprank</keyword>
+      <keyword>sprintf</keyword>
+      <keyword>spy</keyword>
+      <keyword>sqrt(m)?</keyword>
+      <keyword>squeeze</keyword>
+      <keyword>sscanf</keyword>
+      <keyword>stairs</keyword>
+      <keyword>std</keyword>
+      <keyword>stem(3)?</keyword>
+      <keyword>str(cat|(n)?cmp(i)?|find|just|match|rep|tok|trim)</keyword>
+      <keyword>str2(double|func|mat|num)</keyword>
+      <keyword>strread</keyword>
+      <keyword>struct</keyword>
+      <keyword>struct2cell</keyword>
+      <keyword>structfun</keyword>
+      <keyword>strvcat</keyword>
+      <keyword>sub2ind</keyword>
+      <keyword>subplot</keyword>
+      <keyword>subsasgn</keyword>
+      <keyword>subsindex</keyword>
+      <keyword>subspace</keyword>
+      <keyword>subsref</keyword>
+      <keyword>substruct</keyword>
+      <keyword>sum</keyword>
+      <keyword>superiorto</keyword>
+      <keyword>surf(ace|c|l|norm)?</keyword>
+      <keyword>svd</keyword>
+      <keyword>svds</keyword>
+      <keyword>swapbytes</keyword>
+      <keyword>symamd</keyword>
+      <keyword>symbfact</keyword>
+      <keyword>symrcm</keyword>
+      <keyword>symvar</keyword>
+      <keyword>system</keyword>
+      <keyword>tan(d|h)?</keyword>
+      <keyword>tar</keyword>
+      <keyword>temp(dir|name)</keyword>
+      <keyword>text</keyword>
+      <keyword>textread</keyword>
+      <keyword>tic</keyword>
+      <keyword>time</keyword>
+      <keyword>times</keyword>
+      <keyword>title</keyword>
+      <keyword>toc</keyword>
+      <keyword>toeplitz</keyword>
+      <keyword>trace</keyword>
+      <keyword>transpose</keyword>
+      <keyword>trapz</keyword>
+      <keyword>treelayout</keyword>
+      <keyword>treeplot</keyword>
+      <keyword>tri(mesh|plot|surf)</keyword>
+      <keyword>tril</keyword>
+      <keyword>triplequad</keyword>
+      <keyword>triu</keyword>
+      <keyword>true</keyword>
+      <keyword>tsearch(n)?</keyword>
+      <keyword>type</keyword>
+      <keyword>typecast</keyword>
+      <keyword>uigetdir</keyword>
+      <keyword>uigetfile</keyword>
+      <keyword>uimenu</keyword>
+      <keyword>uiputfile</keyword>
+      <keyword>union</keyword>
+      <keyword>unique</keyword>
+      <keyword>unix</keyword>
+      <keyword>unmkpp</keyword>
+      <keyword>untar</keyword>
+      <keyword>unwrap</keyword>
+      <keyword>unzip</keyword>
+      <keyword>upper</keyword>
+      <keyword>url(read|write)</keyword>
+      <keyword>validatestring</keyword>
+      <keyword>values</keyword>
+      <keyword>vander</keyword>
+      <keyword>var</keyword>
+      <keyword>vectorize</keyword>
+      <keyword>ver</keyword>
+      <keyword>version</keyword>
+      <keyword>vertcat</keyword>
+      <keyword>view</keyword>
+      <keyword>voronoi(n)?</keyword>
+      <keyword>waitforbuttonpress</keyword>
+      <keyword>warning</keyword>
+      <keyword>wav(read|write)</keyword>
+      <keyword>weekday</keyword>
+      <keyword>what</keyword>
+      <keyword>whitebg</keyword>
+      <keyword>who(s)?</keyword>
+      <keyword>wilkinson</keyword>
+      <keyword>xlabel</keyword>
+      <keyword>xlim</keyword>
+      <keyword>xor</keyword>
+      <keyword>ylabel</keyword>
+      <keyword>ylim</keyword>
+      <keyword>zeros</keyword>
+      <keyword>zlabel</keyword>
+      <keyword>zlim</keyword>
+    </context>
+
+    <context id="octave" class="no-spell-check">
+      <include>
+        <context ref="def:shebang"/>
+        <context ref="block-comment"/>
         <context ref="line-comment"/>
+        <context ref="line-continue"/>
         <context ref="double-quoted-string"/>
         <context ref="single-quoted-string"/>
+        <context ref="operator"/>
+        <context ref="data-type"/>
+        <context ref="function-handle"/>
+        <context ref="storage-type"/>
         <context ref="boolean"/>
-        <context ref="reserved-constant"/>
-        <context ref="keyword"/>
         <context ref="decimal"/>
         <context ref="floating-point-number"/>
         <context ref="octal-number"/>
         <context ref="hex-number"/>
-        <context ref="function"/>
+        <context ref="variables"/>
+        <context ref="reserved-constant"/>
+        <context ref="package-manager"/>
+        <context ref="keyword"/>
+        <context ref="builtin"/>
       </include>
     </context>
   </definitions>

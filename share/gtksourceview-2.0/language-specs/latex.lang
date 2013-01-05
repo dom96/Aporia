@@ -1,23 +1,24 @@
 <?xml version="1.0"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Marco Barisione <barisione@gmail.com>
  Copyright (C) 2005-2007 Marco Barisione <barisione@gmail.com>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <language id="latex" _name="LaTeX" version="2.0" _section="Markup">
@@ -36,7 +37,7 @@
     <style id="inline-math"        _name="Inline Math Mode" map-to="latex:display-math"/>
     <style id="structure"          _name="Inline Math Mode"/>
     <style id="section"            _name="Inline Math Mode"/>
-    <style id="math"               _name="Math Mode" map-to="latex:display-math"/>
+    <style id="math"               _name="Math Mode"  map-to="latex:display-math"/>
     <style id="math-bound"         _name="math-bound" map-to="latex:display-math"/>
     <style id="include"            _name="Include"    map-to="def:keyword"/>
     <style id="common-commands"    _name="Command"    map-to="def:keyword"/>
@@ -45,9 +46,11 @@
   </styles>
 
   <definitions>
-        <context id="common-commands" style-ref="common-commands">
+        <context id="common-commands" style-ref="common-commands" class="no-spell-check">
             <prefix>\\</prefix>
-
+            <!-- We need to special case "_" since it is not considered a
+              boundary but it is allowed in latex -->
+            <suffix>(\b|(?=_))</suffix>
             <keyword>Alpha</keyword>
             <keyword>Beta</keyword>
             <keyword>Chi</keyword>
@@ -81,6 +84,7 @@
             <keyword>cdot</keyword>
             <keyword>chapter</keyword>
             <keyword>chi</keyword>
+            <keyword>cite</keyword>
             <keyword>cup</keyword>
             <keyword>delta</keyword>
             <keyword>documentclass</keyword>
@@ -157,7 +161,7 @@
             <keyword>zeta</keyword>
         </context>
 
-        <context id="specials-symbol" style-ref="command">
+        <context id="specials-symbol" style-ref="command" class="no-spell-check">
             <prefix>\\</prefix>
             <suffix></suffix>
 
@@ -173,11 +177,11 @@
             <keyword>\\</keyword>
         </context>
 
-        <context id="command" style-ref="command">
+        <context id="command" style-ref="command" class="no-spell-check">
             <match>\\[a-zA-Z]+</match>
         </context>
 
-        <context id="in-math">
+        <context id="in-math" class="no-spell-check">
             <include>
                 <context ref="common-commands"/>
                 <context ref="specials-symbol"/>
@@ -185,7 +189,7 @@
             </include>
         </context>
 
-        <context id="in-inline-math">
+        <context id="in-inline-math" class="no-spell-check">
             <include>
                 <context ref="common-commands"/>
                 <context ref="specials-symbol"/>
@@ -204,7 +208,7 @@
                     </include>
                 </context>
 
-                <context id="verbatim-comment" style-ref="comment">
+                <context id="verbatim-comment" style-ref="comment" class="no-spell-check">
                     <start>\\begin\{comment\}</start>
                     <end>\\end\{comment\}</end>
                     <include>
@@ -212,7 +216,7 @@
                     </include>
                 </context>
 
-                <context id="math-1" style-ref="math">
+                <context id="math-1" style-ref="math" class="no-spell-check">
                     <start>\$\$</start>
                     <end>\$\$</end>
                     <include>
@@ -222,7 +226,7 @@
                     </include>
                 </context>
 
-                <context id="math-2" style-ref="math">
+                <context id="math-2" style-ref="math" class="no-spell-check">
                     <start>\\\[</start>
                     <end>\\\]</end>
                     <include>
@@ -232,7 +236,7 @@
                     </include>
                 </context>
 
-                <context id="inline-math-1" style-ref="inline-math">
+                <context id="inline-math-1" style-ref="inline-math" class="no-spell-check">
                     <start>\$</start>
                     <end>\$</end>
                     <include>
@@ -242,7 +246,7 @@
                     </include>
                 </context>
 
-                <context id="inline-math-2" style-ref="inline-math">
+                <context id="inline-math-2" style-ref="inline-math" class="no-spell-check">
                     <start>\\\(</start>
                     <end>\\\)</end>
                     <include>
@@ -252,7 +256,7 @@
                     </include>
                 </context>
 
-                <context id="verbatim-env" style-ref="verbatim">
+                <context id="verbatim-env" style-ref="verbatim" class-disabled="no-spell-check">
                     <start extended="true">
                         \\begin\{
                             (
@@ -263,14 +267,22 @@
                         \}
                     </start>
                     <end>\\end\{\%{1@start}\}</end>
+                    <include>
+                      <context sub-pattern="0" where="start" class="no-spell-check"/>
+                      <context sub-pattern="0" where="end" class="no-spell-check"/>
+                    </include>
                 </context>
 
-                <context id="verbatim-inline" style-ref="verbatim">
+                <context id="verbatim-inline" style-ref="verbatim" class-disabled="no-spell-check">
                     <start>\\(verb\*?|lstinline)(\S)</start>
                     <end>\%{2@start}</end>
+                    <include>
+                      <context sub-pattern="0" where="start" class="no-spell-check"/>
+                      <context sub-pattern="0" where="end" class="no-spell-check"/>
+                    </include>
                 </context>
 
-                <context id="include" style-ref="include">
+                <context id="include" style-ref="include" class="no-spell-check">
                     <prefix>\\</prefix>
 
                     <keyword>input</keyword>

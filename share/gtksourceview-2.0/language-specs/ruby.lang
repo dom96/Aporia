@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Archit Baweja <bighead@users.sourceforge.net>
  Copyright (C) 2004 Archit Baweja <bighead@users.sourceforge.net>
  Copyright (C) 2005 Michael Witrant <mike@lepton.fr>
@@ -24,12 +26,12 @@
 <language id="ruby" _name="Ruby" version="2.0" _section="Scripts">
   <metadata>
     <property name="mimetypes">application/x-ruby;text/x-ruby</property>
-    <property name="globs">*.rb</property>
+    <property name="globs">*.rb;*.rake;Rakefile;Capfile;Gemfile</property>
     <property name="line-comment-start">#</property>
   </metadata>
 
   <styles>
-    <style id="escape"               _name="Escaped Character"      map-to="def:special-char"/>
+    <style id="escape"               _name="Escaped Character"     map-to="def:special-char"/>
     <style id="comment"              _name="Comment"               map-to="def:comment"/>
     <style id="attribute-definition" _name="Attribute Definition"  map-to="def:statement"/>
     <style id="module-handler"       _name="Module handler"        map-to="def:preprocessor"/>
@@ -41,6 +43,7 @@
     <style id="base-n-integer"       _name="Base-N number"         map-to="def:base-n-integer"/>
     <style id="numeric-literal"      _name="Numeric literal"       map-to="def:base-n-integer"/>
     <style id="string"               _name="String"                map-to="def:string"/>
+    <!-- Translators: functions that are provided in the language -->
     <style id="builtin"              _name="Builtin"               map-to="def:type"/>
     <style id="constant"             _name="Constant"              map-to="def:type"/>
     <style id="symbol"               _name="Symbol"                map-to="def:string"/>
@@ -58,7 +61,7 @@
       <match>\\((0-7){3}|(x[a-fA-F0-9]{2})|(c\S)|([CM]-\S)|(M-C-\S)|.)</match>
     </context>
 
-    <context id="multiline-comment" style-ref="comment">
+    <context id="multiline-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
       <start>^=begin</start>
       <end>^=end</end>
       <include>
@@ -430,7 +433,7 @@
     <!-- ruby strings do not end at line end,
          so we cannot use def:string
          (parts lifted from perl.lang) -->
-    <context id="double-quoted-string" style-ref="string">
+    <context id="double-quoted-string" style-ref="string" class="string" class-disabled="no-spell-check">
       <start>"</start>
       <end>"</end>
       <include>
@@ -441,7 +444,7 @@
       </include>
     </context>
 
-    <context id="single-quoted-string" style-ref="string">
+    <context id="single-quoted-string" style-ref="string" class="string" class-disabled="no-spell-check">
       <start>'</start>
       <end>'</end>
       <include>
@@ -463,7 +466,7 @@
     </context>
 
     <context id="here-doc-string" style-ref="here-doc" style-inside="true">
-      <start>&lt;&lt;(\w+)</start>
+      <start>&lt;&lt;([a-zA-Z_]\w*)</start>
       <end>^\%{1@start}</end>
       <include>
         <context ref="escape"/>
@@ -474,7 +477,7 @@
     </context>
 
     <context id="here-doc-indented-string" style-ref="here-doc" style-inside="true">
-      <start>&lt;&lt;-(\w+)</start>
+      <start>&lt;&lt;-([a-zA-Z_]\w*)</start>
       <end>^\s*\%{1@start}</end>
       <include>
         <context ref="escape"/>
@@ -546,7 +549,7 @@
       </include>
     </context>
 
-    <context id="ruby">
+    <context id="ruby" class="no-spell-check">
       <include>
         <context ref="def:shebang"/>
         <context ref="def:shell-like-comment"/>

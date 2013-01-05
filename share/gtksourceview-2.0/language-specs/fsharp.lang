@@ -1,22 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
- Author: Alexandr Kuleshov <sterh@live.ru>
- Copyright (C) 2009 Alexandr Kuleshov <sterh@live.ru>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ This file is part of GtkSourceView
+
+ Author: Alexander Kuleshov <kuleshovmail@gmail.com>
+ Copyright (C) 2009-2010 Alexander Kuleshov <kuleshovmail@gmail.com>
+
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 
@@ -41,6 +43,7 @@
     <style id="label" _name="Labeled argument" map-to="def:type"/>
     <style id="poly-variant" _name="Polymorphic Variant" map-to="def:type"/>
     <style id="variant" _name="Variant Constructor" map-to="def:type"/>
+    <!-- Translators: this is a specific variable called Type -->
     <style id="type-var" _name="Type Variable" map-to="def:type"/>
     <style id="module" _name="Module Path" map-to="def:type"/>
     <style id="escape" _name="Escaped Character" map-to="def:special-char"/>
@@ -60,14 +63,14 @@
       <match>\%{char-esc}</match>
     </context>
        
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>//</start>
         <include>
           <context ref="def:in-line-comment"/>
         </include>
     </context>
     
-    <context id="multiline-comment" style-ref="comment">
+    <context id="multiline-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
       <start>\(\*</start>
       <end>\*\)</end>
         <include>
@@ -76,7 +79,7 @@
         </include>
     </context>
     
-    <context id="if0-comment" style-ref="comment">
+    <context id="if0-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
       <start>\%{preproc-start}if\b\s*0\b</start>
       <end>\%{preproc-start}(endif|else|elif)\b</end>
       <include>
@@ -113,7 +116,7 @@
       <match>[-]?0[oO][0-7][0-7_]*[lL]?</match>
     </context>
     
-    <context id="binary-number" style-ref="base-n-integer"> 
+    <context id="binary-number" style-ref="base-n-integer">
       <match>[-]?0[bB][01][01_]*[lL]?</match>
     </context>
     
@@ -261,10 +264,39 @@
       <keyword>upcast</keyword>
       <keyword>while</keyword>
       <keyword>with</keyword>
+      <keyword>async</keyword>
+      <keyword>atomic</keyword>
+      <keyword>break</keyword>
+      <keyword>checked</keyword>
+      <keyword>component</keyword>
+      <keyword>const</keyword>
+      <keyword>constructor</keyword>
+      <keyword>continue</keyword>
+      <keyword>eager</keyword>
+      <keyword>event</keyword>
+      <keyword>external</keyword>
+      <keyword>fixed</keyword>
+      <keyword>functor</keyword>
+      <keyword>include</keyword>
+      <keyword>method</keyword>
+      <keyword>mixin</keyword>
+      <keyword>process</keyword>
+      <keyword>property</keyword>
+      <keyword>protected</keyword>
+      <keyword>public</keyword>
+      <keyword>pure</keyword>
+      <keyword>readonly</keyword>
+      <keyword>return</keyword>
+      <keyword>sealed</keyword>
+      <keyword>switch</keyword>
+      <keyword>virtual</keyword>
+      <keyword>void</keyword>
+      <keyword>volatile</keyword>
+      <keyword>where</keyword>
     </context>
 
     <!-- main context -->
-    <context id="fsharp">
+    <context id="fsharp" class="no-spell-check">
       <include>
         <context ref="keywords"/>
         <context ref="keysymbol"/>

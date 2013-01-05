@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Silian Della Ragione <silian87@gechi.it>
  Copyright (C) 2005 Silian Della Ragione <silian87@gechi.it>
  Copyright (C) 2008 Steve Frécinaux <code@istique.net>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <language id="sh" _name="sh" version="2.0" _section="Scripts">
@@ -30,7 +31,6 @@
 
   <styles>
     <style id="comment"             _name="Comment"             map-to="def:comment"/>
-    <style id="shebang"             _name="Shebang"             map-to="def:shebang"/>
     <style id="function"            _name="Function"            map-to="def:function"/>
     <style id="string"              _name="String"              map-to="def:string"/>
     <style id="keyword"             _name="Keyword"             map-to="def:keyword"/>
@@ -46,14 +46,14 @@
 
     <!-- we cannot use def:shell-like-comment, because
          m4.lang needs to replace this context -->
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>(?&lt;!\S)#</start>
       <include>
         <context ref="def:in-comment"/>
       </include>
     </context>
 
-    <context id="double-quoted-string" style-ref="string">
+    <context id="double-quoted-string" style-ref="string" class="string" class-disabled="no-spell-check">
       <start>"</start>
       <end>"</end>
       <include>
@@ -66,12 +66,12 @@
             <match>\\</match>
         </context>
         <context ref="def:line-continue"/>
-	<context ref="variable"/>
-	<context ref="backtick-subshell"/>
+        <context ref="variable"/>
+        <context ref="backtick-subshell"/>
       </include>
     </context>
 
-    <context id="single-quoted-string" style-ref="string">
+    <context id="single-quoted-string" style-ref="string" class="string" class-disabled="no-spell-check">
       <start>'</start>
       <end>'</end>
     </context>
@@ -185,7 +185,7 @@
     </context>
 
     <context id="variable-definition">
-      <match>(^|(?&lt;=then|else|do|export))\s*([a-zA-Z_][a-zA-Z0-9_]*)\=</match>
+      <match>(^\s*|(?&lt;=then|else|do|export)\s+)([a-zA-Z_][a-zA-Z0-9_]*)\=</match>
       <include>
         <context sub-pattern="2" style-ref="variable-definition"/>
       </include>
@@ -473,9 +473,9 @@
       </include>
     </context>
 
-    <context id="sh">
+    <context id="sh" class="no-spell-check">
       <include>
-        <context ref="def:shebang" style-ref="shebang"/>
+        <context ref="def:shebang"/>
         <context ref="line-comment"/>
         <context ref="def:escape"/>
         <context ref="single-quoted-string"/>

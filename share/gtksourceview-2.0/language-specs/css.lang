@@ -1,23 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Scott Martin <scott@coffeeblack.org>
  Copyright (C) 2004 Scott Martin <scott@coffeeblack.org>
+ Copyright (C) 2010 Patryk Zawadzki <patrys@pld-linux.org>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <!--
@@ -42,42 +44,31 @@
   </metadata>
 
   <styles>
-    <style id="comment" _name="Comment" map-to="def:comment"/>
-    <style id="error" _name="Error" map-to="def:error"/>
-    <style id="others-2" _name="Others 2"/>
-    <style id="string" _name="String" map-to="def:string"/>
-    <style id="color" _name="Color" map-to="def:base-n-integer"/>
-    <style id="others-3" _name="Others 3"/>
-    <style id="function" _name="Function" map-to="def:function"/>
-    <style id="decimal" _name="Decimal" map-to="def:decimal"/>
-    <style id="dimension" _name="Dimension" map-to="def:floating-point"/>
-    <style id="known-property-values" _name="Known Property Value" map-to="def:type"/>
-    <style id="at-rules" _name="at-rules" map-to="def:keyword"/>
-    <style id="keyword" _name="Keyword" map-to="def:keyword"/>
+    <style id="error"                 _name="Error"                 map-to="def:error"/>
+    <style id="others-2"              _name="Others 2"/>
+    <style id="string"                _name="String"                map-to="def:string"/>
+    <style id="color"                 _name="Color"                 map-to="def:base-n-integer"/>
+    <style id="others-3"              _name="Others 3"/>
+    <style id="function"              _name="Function"              map-to="def:function"/>
+    <!-- Translator: it is a type of number -->
+    <style id="decimal"               _name="Decimal"               map-to="def:decimal"/>
+    <style id="dimension"             _name="Dimension"             map-to="def:floating-point"/>
+    <style id="known-property-values" _name="Known Property Value"  map-to="def:constant"/>
+    <style id="at-rules"              _name="at-rules"              map-to="def:preprocessor"/>
+    <style id="keyword"               _name="Keyword"               map-to="def:keyword"/>
+    <style id="selector-id"           _name="ID Selector"           map-to="def:statement"/>
+    <style id="selector-class"        _name="Class Selector"        map-to="def:identifier"/>
+    <style id="selector-tagname"      _name="Tag Name Selector"     map-to="def:type"/>
   </styles>
 
   <definitions>
-
-    <context id="comment" style-ref="comment">
-      <start>/\*</start>
-      <end>\*/</end>
-      <include>
-        <context style-ref="error" extend-parent="false">
-          <match>/\*</match>
-        </context>
-        <context ref="def:in-comment"/>
-      </include>
-    </context>
-
-    <context id="close-comment-outside-comment" style-ref="error">
-      <match>\*/(?!\*)</match>
-    </context>
 
     <context id="unicode-character-reference" style-ref="others-2">
       <match>\\([a-fA-F0-9]{1,5}[ \t]|[a-fA-F0-9]{6})</match>
     </context>
 
     <context id="selector-pseudo-elements" style-ref="function">
+      <prefix>:</prefix>
       <keyword>first-line</keyword>
       <keyword>first-letter</keyword>
       <keyword>before</keyword>
@@ -85,6 +76,7 @@
     </context>
 
     <context id="selector-pseudo-classes" style-ref="function">
+      <prefix>:</prefix>
       <keyword>first-child</keyword>
       <keyword>link</keyword>
       <keyword>visited</keyword>
@@ -103,14 +95,48 @@
       <keyword>import</keyword>
     </context>
 
-    <context id="hexadecimal-color" style-ref="color">
-      <match>#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})</match>
+    <context id="selector-id" style-ref="selector-id">
+      <match>#[a-zA-Z][a-zA-Z0-9_-]*\b</match>
     </context>
 
-    <context id="function" style-ref="function">
+    <context id="selector-class" style-ref="selector-class">
+      <match>\.[a-zA-Z][a-zA-Z0-9_-]*\b</match>
+    </context>
+
+    <context id="selector-tagname" style-ref="selector-tagname">
+      <match>\b[a-zA-Z][a-zA-Z0-9_-]*\b</match>
+    </context>
+
+    <context id="hexadecimal-color" style-ref="color">
+      <match>#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})\b</match>
+    </context>
+
+    <context id="named-color" style-ref="color">
+      <keyword>aqua</keyword>
+      <keyword>black</keyword>
+      <keyword>blue</keyword>
+      <keyword>fuchsia</keyword>
+      <keyword>gray</keyword>
+      <keyword>green</keyword>
+      <keyword>lime</keyword>
+      <keyword>maroon</keyword>
+      <keyword>navy</keyword>
+      <keyword>olive</keyword>
+      <keyword>orange</keyword>
+      <keyword>purple</keyword>
+      <keyword>red</keyword>
+      <keyword>silver</keyword>
+      <keyword>teal</keyword>
+      <keyword>white</keyword>
+      <keyword>yellow</keyword>
+    </context>
+
+    <context id="function">
       <start>[a-zA-Z][a-z0-9-]+\(</start>
       <end>\)</end>
       <include>
+        <context sub-pattern="0" where="start" style-ref="function"/>
+        <context sub-pattern="0" where="end" style-ref="function"/>
         <context ref="def:escape"/>
         <context ref="def:line-continue"/>
       </include>
@@ -133,6 +159,7 @@
     </context>
 
     <context id="property-names" style-ref="keyword">
+      <suffix>(?=\s*:)</suffix>
       <keyword>azimuth</keyword>
       <keyword>background-attachment</keyword>
       <keyword>background-color</keyword>
@@ -260,7 +287,6 @@
       <keyword>above</keyword>
       <keyword>absolute</keyword>
       <keyword>always</keyword>
-      <keyword>aqua</keyword>
       <keyword>armenian</keyword>
       <keyword>auto</keyword>
       <keyword>avoid</keyword>
@@ -268,10 +294,8 @@
       <keyword>behind</keyword>
       <keyword>below</keyword>
       <keyword>bidi-override</keyword>
-      <keyword>black</keyword>
       <keyword>blink</keyword>
       <keyword>block</keyword>
-      <keyword>blue</keyword>
       <keyword>bolder</keyword>
       <keyword>bold</keyword>
       <keyword>bottom</keyword>
@@ -313,10 +337,7 @@
       <keyword>fast</keyword>
       <keyword>fixed</keyword>
       <keyword>fixed</keyword>
-      <keyword>fuchsia</keyword>
       <keyword>georgian</keyword>
-      <keyword>gray</keyword>
-      <keyword>green</keyword>
       <keyword>groove</keyword>
       <keyword>hebrew</keyword>
       <keyword>help</keyword>
@@ -344,7 +365,6 @@
       <keyword>leftwards</keyword>
       <keyword>level</keyword>
       <keyword>lighter</keyword>
-      <keyword>lime</keyword>
       <keyword>line-through</keyword>
       <keyword>list-item</keyword>
       <keyword>loud</keyword>
@@ -357,7 +377,6 @@
       <keyword>low</keyword>
       <keyword>ltr</keyword>
       <keyword>marker</keyword>
-      <keyword>maroon</keyword>
       <keyword>medium</keyword>
       <keyword>medium</keyword>
       <keyword>middle</keyword>
@@ -365,7 +384,6 @@
       <keyword>monospace</keyword>
       <keyword>move</keyword>
       <keyword>narrower</keyword>
-      <keyword>navy</keyword>
       <keyword>ne-resize</keyword>
       <keyword>no-close-quote</keyword>
       <keyword>none</keyword>
@@ -376,7 +394,6 @@
       <keyword>n-resize</keyword>
       <keyword>nw-resize</keyword>
       <keyword>oblique</keyword>
-      <keyword>olive</keyword>
       <keyword>once</keyword>
       <keyword>open-quote</keyword>
       <keyword>outset</keyword>
@@ -385,8 +402,6 @@
       <keyword>pointer</keyword>
       <keyword>portait</keyword>
       <keyword>pre</keyword>
-      <keyword>purple</keyword>
-      <keyword>red</keyword>
       <keyword>relative</keyword>
       <keyword>repeat-x</keyword>
       <keyword>repeat-y</keyword>
@@ -395,7 +410,7 @@
       <keyword>right-side</keyword>
       <keyword>right</keyword>
       <keyword>rightwards</keyword>
-      <keyword>rlt</keyword>
+      <keyword>rtl</keyword>
       <keyword>run-in</keyword>
       <keyword>sans-serif</keyword>
       <keyword>scroll</keyword>
@@ -407,7 +422,6 @@
       <keyword>serif</keyword>
       <keyword>show</keyword>
       <keyword>silent</keyword>
-      <keyword>silver</keyword>
       <keyword>slower</keyword>
       <keyword>slow</keyword>
       <keyword>small-caps</keyword>
@@ -431,7 +445,6 @@
       <keyword>table-row-group</keyword>
       <keyword>table-row</keyword>
       <keyword>table</keyword>
-      <keyword>teal</keyword>
       <keyword>text-bottom</keyword>
       <keyword>text</keyword>
       <keyword>text-top</keyword>
@@ -449,7 +462,6 @@
       <keyword>upper-roman</keyword>
       <keyword>visible</keyword>
       <keyword>wait</keyword>
-      <keyword>white</keyword>
       <keyword>wider</keyword>
       <keyword>w-resize</keyword>
       <keyword>x-fast</keyword>
@@ -462,7 +474,26 @@
       <keyword>x-soft</keyword>
       <keyword>xx-large</keyword>
       <keyword>xx-small</keyword>
-      <keyword>yellow</keyword>
+    </context>
+
+    <context id="style-block">
+      <start>\{</start>
+      <end>\}</end>
+      <include>
+        <context ref="def:c-like-comment-multiline"/>
+        <context ref="def:c-like-close-comment-outside-comment"/>
+        <context ref="at-rules"/>
+        <context ref="style-block"/>
+        <context ref="hexadecimal-color"/>
+        <context ref="named-color"/>
+        <context ref="function"/>
+        <context ref="dimension"/>
+        <context ref="number"/>
+        <context ref="unicode-range"/>
+        <context ref="importance-modifier"/>
+        <context ref="property-names"/>
+        <context ref="known-property-values"/>
+      </include>
     </context>
 
     <context id="punctuators" style-ref="others-3">
@@ -478,31 +509,27 @@
     </context>
 
     <context id="selector-grammar" style-ref="others-3">
-      <match>[*#.&gt;+]</match>
+      <match>[*&gt;+]</match>
     </context>
 
-    <context id="css">
+    <context id="css" class="no-spell-check">
       <include>
         <context ref="def:string"/>
         <context ref="def:single-quoted-string"/>
-        <context ref="comment"/>
-        <context ref="close-comment-outside-comment"/>
+        <context ref="def:c-like-comment-multiline"/>
+        <context ref="def:c-like-close-comment-outside-comment"/>
         <context ref="unicode-character-reference"/>
         <context ref="selector-pseudo-elements"/>
         <context ref="selector-pseudo-classes"/>
         <context ref="at-rules"/>
-        <context ref="hexadecimal-color"/>
-        <context ref="function"/>
-        <context ref="dimension"/>
-        <context ref="number"/>
-        <context ref="unicode-range"/>
-        <context ref="importance-modifier"/>
-        <context ref="property-names"/>
-        <context ref="known-property-values"/>
+        <context ref="style-block"/>
         <context ref="punctuators"/>
         <context ref="attribute-value-delimiters"/>
         <context ref="operators"/>
         <context ref="selector-grammar"/>
+        <context ref="selector-id"/>
+        <context ref="selector-class"/>
+        <context ref="selector-tagname"/>
       </include>
     </context>
 

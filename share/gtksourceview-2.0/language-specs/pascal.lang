@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Andrew Johnson <acjgenius@earthlink.net>
  Copyright (C) 2004 Andrew Johnson <acjgenius@earthlink.net>
  Copyright (C) 2005 Thierry Moisan <thierryn@videotron.ca>
@@ -40,19 +42,19 @@
 
   <definitions>
 
-    <context id="string" style-ref="string">
+    <context id="string" style-ref="string" class="string" class-disabled="no-spell-check">
       <start>[uUrR]?'</start>
       <end>'</end>
     </context>
 
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>//</start>
       <include>
         <context ref="def:in-comment"/>
       </include>
     </context>
 
-    <context id="block-comment-1" style-ref="comment">
+    <context id="block-comment-1" style-ref="comment" class="comment" class-disabled="no-spell-check">
       <start>\(\*</start>
       <end>\*\)</end>
       <include>
@@ -60,7 +62,7 @@
       </include>
     </context>
 
-    <context id="block-comment-2" style-ref="comment">
+    <context id="block-comment-2" style-ref="comment" class="comment" class-disabled="no-spell-check">
       <start>\{</start>
       <end>\}</end>
       <include>
@@ -194,6 +196,8 @@
       <keyword>Real</keyword>
       <keyword>Boolean</keyword>
       <keyword>Pointer</keyword>
+      <keyword>Byte</keyword>
+      <keyword>LongInt</keyword>
     </context>
 
     <context id="builtin-functions" style-ref="keyword">
@@ -239,7 +243,7 @@
       </match>
     </context>
 
-    <context id="pascal">
+    <context id="pascal" class="no-spell-check">
       <include>
         <context ref="string"/>
         <context ref="line-comment"/>

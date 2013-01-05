@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- ex:set ts=2 et:
 
+ This file is part of GtkSourceView
+
  Copyright (C) 2006, 2007 Steve Frécinaux <code@istique.net>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 TODO: extended regex support
 FIXME: =pod should require an empty line before/after, as written in perlpod
@@ -52,7 +53,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
   </styles>
 
   <definitions>
-    <context id="perl">
+    <context id="perl" class="no-spell-check">
       <include>
         <context ref="def:shebang"/>
         <context ref="line-directive"/>
@@ -102,7 +103,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
       &lt; | &gt; | [&lt;&gt;=!]= | &lt;=&gt; |
       &amp; | \| | \^ |
       &amp;&amp; |
-      \.\. | \.\.\. |
+      \.\.\.? |
       \? | : |
       = | \*\*= | \+= | \*= | &amp;= | &lt;&lt;= | &amp;&amp;= | \-= | /= |
       \|= | &gt;&gt;= | \|\|= | \.= | %= | \^= | \bx= |
@@ -411,7 +412,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
       </include>
     </context>
 
-    <context id="single-quoted-string">
+    <context id="single-quoted-string" class="string" class-disabled="no-spell-check">
       <include>
         <context style-ref="string">
           <start>'</start><end>'</end>
@@ -429,7 +430,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
       </include>
     </context>
 
-    <context id="double-quoted-string">
+    <context id="double-quoted-string" class="string" class-disabled="no-spell-check">
       <include>
         <context style-ref="string">
           <start>"</start><end>"</end>
@@ -630,6 +631,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
             <context sub-pattern="0" where="start" style-ref="include-statement"/>
             <context once-only="true" style-ref="include-statement">
               <keyword>attributes</keyword>
+              <keyword>autodie</keyword>
               <keyword>autouse</keyword>
               <keyword>base</keyword>
               <keyword>bigint</keyword>
@@ -641,6 +643,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
               <keyword>constant</keyword>
               <keyword>diagnostics</keyword>
               <keyword>encoding</keyword>
+              <keyword>feature</keyword>
               <keyword>fields</keyword>
               <keyword>fileset</keyword>
               <keyword>if</keyword>
@@ -648,9 +651,12 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
               <keyword>less</keyword>
               <keyword>lib</keyword>
               <keyword>locale</keyword>
+              <keyword>mro</keyword>
               <keyword>open</keyword>
               <keyword>ops</keyword>
               <keyword>overload</keyword>
+              <keyword>overloading</keyword>
+              <keyword>parent</keyword>
               <keyword>re</keyword>
               <keyword>sigtrap</keyword>
               <keyword>sort</keyword>
@@ -674,11 +680,13 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
       <keyword>break</keyword>
       <keyword>continue</keyword>
       <keyword>do</keyword>
+      <keyword>default</keyword>
       <keyword>each</keyword>
       <keyword>else</keyword>
       <keyword>elsif</keyword>
       <keyword>foreach</keyword>
       <keyword>for</keyword>
+      <keyword>given</keyword>
       <keyword>if</keyword>
       <keyword>last</keyword>
       <keyword>local</keyword>
@@ -688,8 +696,10 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
       <keyword>package</keyword>
       <keyword>return</keyword>
       <keyword>sub</keyword>
+      <keyword>state</keyword>
       <keyword>unless</keyword>
       <keyword>until</keyword>
+      <keyword>when</keyword>
       <keyword>while</keyword>
       <keyword>__FILE__</keyword>
       <keyword>__LINE__</keyword>
@@ -822,6 +832,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
       <keyword>rewinddir</keyword>
       <keyword>rindex</keyword>
       <keyword>rmdir</keyword>
+      <keyword>say</keyword>
       <keyword>scalar</keyword>
       <keyword>seekdir</keyword>
       <keyword>seek</keyword>
@@ -894,7 +905,7 @@ FIXME: =pod should require an empty line before/after, as written in perlpod
     <!-- usual comments for perl are def:shell-style-comment -->
     <!-- comment that must have a whitespace before (used in s{}{}, because
          perl bugs if there is no space between '}' and '#') -->
-    <context id="asserted-comment" style-ref="comment" end-at-line-end="true">
+    <context id="asserted-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>(?&lt;![^\s])#</start>
       <include><context ref="def:in-comment"/></include>
     </context>

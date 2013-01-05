@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Antonio Ognio <gnrfan@gnrfan.org>
  Copyright (C) 2005 Antonio Ognio <gnrfan@gnrfan.org>
 
- This library is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 -->
 <language id="ini" _name=".ini" version="2.0" _section="Others">
   <metadata>
@@ -38,7 +39,7 @@
   </styles>
 
   <definitions>
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>;</start>
     </context>
     <context id="group" style-ref="keyword">
@@ -66,7 +67,7 @@
       <start>'</start>
       <end>'</end>
     </context>
-    <context id="double-quoted-string" style-ref="string">
+    <context id="double-quoted-string" style-ref="string" class="string" class-disabled="no-spell-check">
       <start>"</start>
       <end>"</end>
     </context>
@@ -76,7 +77,7 @@
     <context id="decimal-number" style-ref="floating-point">
       <match>(\b[0-9]+(\.[0-9]+)?|\.[0-9]+)([Ee][\+-]?[0-9]+)?\b</match>
     </context>
-    <context id="ini">
+    <context id="ini" class="no-spell-check">
       <include>
         <context ref="line-comment"/>
         <context ref="group"/>

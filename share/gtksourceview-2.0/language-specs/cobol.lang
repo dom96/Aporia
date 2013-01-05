@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Authors: Fernando Brito
+ Copyright (C) 2010 Fernando Brito <email@fernandobrito.com>
+
+ Credits:
+  Based on prolog.lang by Ignacio Casal Quinteiro <icq@gnome.org>
+  Cobol keywords taken from cobol.vim by Tim Pope <vimNOSPAM@tpope.info>
+
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+
+ GtkSourceView is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+-->
+<language id="cobol" _name="Cobol" version="2.0" _section="Sources">
+  <metadata>
+    <property name="mimetype">text/x-cobol</property>
+    <property name="globs">*.cbl;*.cob</property>
+    <property name="line-comment-start">*</property>
+  </metadata>
+
+  <styles>
+    <style id="comment"           _name="Comment"           map-to="def:comment"/>
+    <style id="statement"         _name="Statement"         map-to="def:statement"/>
+    <style id="variable"          _name="Variable"          map-to="def:type"/>
+    <style id="keyword"           _name="Keyword"           map-to="def:keyword"/>
+    <style id="constant"          _name="Constant"          map-to="def:constant"/>
+    <style id="string"            _name="String"            map-to="def:string"/>
+    <style id="number"            _name="Number"            map-to="def:decimal"/>
+    <style id="operator"          _name="Operator"          map-to="def:operator"/>
+    <style id="error"             _name="Error"             map-to="def:error"/>
+  </styles>
+
+  <definitions>
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
+      <start>^\s{0,6}\*</start>
+      <include>
+        <context ref="def:in-comment"/>
+      </include>
+    </context>
+
+    <context id="bad-ident" style-ref="error" end-at-line-end="true" class="error" class-disabled="no-spell-check">
+      <start>^\s{0,6}\w</start>      <!-- everything must start at the 8th column, except the line comment, that is indicated ONLY by a * in the 7th -->
+    </context>
+
+    <context id="bad-long-line" style-ref="error">
+      <match>.{74,}</match>  <!-- http://docs.hp.com/en/65/books/lrintr.htm -->
+    </context>
+
+    <context id="bad-comment-line" style-ref="error" end-at-line-end="true" class="error" class-disabled="no-spell-check">
+      <start>(\*)(?=(?:[^"']|["|'][^"']*")*$)</start> <!-- Credits: http://stackoverflow.com/questions/632475/regex-to-pick-commas-outside-of-quotes -->
+    </context>
+
+    <context id="variable" style-ref="variable">
+      <match>\b([A-Za-z0-9_]*)\b</match>
+    </context>
+
+    <context id="string-double-quote" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
+      <start>"</start>
+      <end>"</end>
+    </context>
+
+    <context id="string-single-quote" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
+      <start>'</start>
+      <end>'</end>
+    </context>
+
+    <context id="number" style-ref="number">
+      <match extended="true">
+        \b[0-9]+(\.[0-9]+)?\b
+      </match>
+    </context>
+
+    <context id="constant" style-ref="constant">
+      <keyword>SPACE</keyword>
+      <keyword>SPACES</keyword>
+      <keyword>NULL</keyword>
+      <keyword>ZERO</keyword>
+      <keyword>ZEROES</keyword>
+      <keyword>ZEROS</keyword>
+      <keyword>LOW-VALUES</keyword>
+      <keyword>LOW-VALUE</keyword>
+      <keyword>HIGH-VALUES</keyword>
+      <keyword>HIGH-VALUE</keyword>
+      <keyword>QUOTE</keyword>
+      <keyword>QUOTES</keyword>
+    </context>
+
+    <context id="keyword" style-ref="keyword">
+      <keyword>ACCEPT</keyword>
+      <keyword>ACCESS</keyword>
+      <keyword>ADD</keyword>
+      <keyword>ADDRESS</keyword>
+      <keyword>ADVANCING</keyword>
+      <keyword>AFTER</keyword>
+      <keyword>ALPHABET</keyword>
+      <keyword>ALPHABETIC</keyword>
+      <keyword>ALPHABETIC-LOWER</keyword>
+      <keyword>ALPHABETIC-UPPER</keyword>
+      <keyword>ALPHANUMERIC</keyword>
+      <keyword>ALPHANUMERIC-EDITED</keyword>
+      <keyword>ALS</keyword>
+      <keyword>ALTERNATE</keyword>
+      <keyword>AND</keyword>
+      <keyword>ANY</keyword>
+      <keyword>ARE</keyword>
+      <keyword>AREA</keyword>
+      <keyword>AREAS</keyword>
+      <keyword>ASCENDING</keyword>
+      <keyword>ASSIGN</keyword>
+      <keyword>AT</keyword>
+      <keyword>AUTHOR</keyword>
+      <keyword>BEFORE</keyword>
+      <keyword>BINARY</keyword>
+      <keyword>BLANK</keyword>
+      <keyword>BLOCK</keyword>
+      <keyword>BOTTOM</keyword>
+      <keyword>BY</keyword>
+      <keyword>CANCEL</keyword>
+      <keyword>CBLL</keyword>
+      <keyword>CD</keyword>
+      <keyword>CF</keyword>
+      <keyword>CH</keyword>
+      <keyword>CHARACTER</keyword>
+      <keyword>CHARACTERS</keyword>
+      <keyword>CLASS</keyword>
+      <keyword>CLOCK-UNITS</keyword>
+      <keyword>CLOSE</keyword>
+      <keyword>COBOL</keyword>
+      <keyword>CODE</keyword>
+      <keyword>CODE-SET</keyword>
+      <keyword>COLLATING</keyword>
+      <keyword>COLUMN</keyword>
+      <keyword>COMMA</keyword>
+      <keyword>COMMON</keyword>
+      <keyword>COMMUNICATIONS</keyword>
+      <keyword>COMPUTATIONAL</keyword>
+      <keyword>COMPUTE</keyword>
+      <keyword>CONTENT</keyword>
+      <keyword>CONTINUE</keyword>
+      <keyword>CONTROL</keyword>
+      <keyword>CONVERTING</keyword>
+      <keyword>CORR</keyword>
+      <keyword>CORRESPONDING</keyword>
+      <keyword>COUNT</keyword>
+      <keyword>CURRENCY</keyword>
+      <keyword>DATE</keyword>
+      <keyword>DATE-COMPILED</keyword>
+      <keyword>DATE-WRITTEN</keyword>
+      <keyword>DAY</keyword>
+      <keyword>DAY-OF-WEEK</keyword>
+      <keyword>DE</keyword>
+      <keyword>DEBUG-CONTENTS</keyword>
+      <keyword>DEBUG-ITEM</keyword>
+      <keyword>DEBUG-LINE</keyword>
+      <keyword>DEBUG-NAME</keyword>
+      <keyword>DEBUG-SUB-1</keyword>
+      <keyword>DEBUG-SUB-2</keyword>
+      <keyword>DEBUG-SUB-3</keyword>
+      <keyword>DEBUGGING</keyword>
+      <keyword>DECIMAL-POINT</keyword>
+      <keyword>DELARATIVES</keyword>
+      <keyword>DELETE</keyword>
+      <keyword>DELIMITED</keyword>
+      <keyword>DELIMITER</keyword>
+      <keyword>DEPENDING</keyword>
+      <keyword>DESCENDING</keyword>
+      <keyword>DESTINATION</keyword>
+      <keyword>DETAIL</keyword>
+      <keyword>DISABLE</keyword>
+      <keyword>DISPLAY</keyword>
+      <keyword>DIVIDE</keyword>
+      <keyword>DIVISION</keyword>
+      <keyword>DOWN</keyword>
+      <keyword>DUPLICATES</keyword>
+      <keyword>DYNAMIC</keyword>
+      <keyword>EGI</keyword>
+      <keyword>ELSE</keyword>
+      <keyword>EMI</keyword>
+      <keyword>ENABLE</keyword>
+      <keyword>END-ADD</keyword>
+      <keyword>END-COMPUTE</keyword>
+      <keyword>END-DELETE</keyword>
+      <keyword>END-DIVIDE</keyword>
+      <keyword>END-EVALUATE</keyword>
+      <keyword>END-MULTIPLY</keyword>
+      <keyword>END-OF-PAGE</keyword>
+      <keyword>END-READ</keyword>
+      <keyword>END-RECEIVE</keyword>
+      <keyword>END-RETURN</keyword>
+      <keyword>END-REWRITE</keyword>
+      <keyword>END-SEARCH</keyword>
+      <keyword>END-START</keyword>
+      <keyword>END-STRING</keyword>
+      <keyword>END-SUBTRACT</keyword>
+      <keyword>END-UNSTRING</keyword>
+      <keyword>END-WRITE</keyword>
+      <keyword>EQUAL</keyword>
+      <keyword>ERROR</keyword>
+      <keyword>ESI</keyword>
+      <keyword>EVALUATE</keyword>
+      <keyword>EVERY</keyword>
+      <keyword>EXCEPTION</keyword>
+      <keyword>EXIT</keyword>
+      <keyword>EXTEND</keyword>
+      <keyword>EXTERNAL</keyword>
+      <keyword>FALSE</keyword>
+      <keyword>FD</keyword>
+      <keyword>FILLER</keyword>
+      <keyword>FINAL</keyword>
+      <keyword>FIRST</keyword>
+      <keyword>FOOTING</keyword>
+      <keyword>FOR</keyword>
+      <keyword>FROM</keyword>
+      <keyword>GENERATE</keyword>
+      <keyword>GIVING</keyword>
+      <keyword>GLOBAL</keyword>
+      <keyword>GREATER</keyword>
+      <keyword>GROUP</keyword>
+      <keyword>HEADING</keyword>
+      <keyword>I-O</keyword>
+      <keyword>IN</keyword>
+      <keyword>INDEX</keyword>
+      <keyword>INDEXED</keyword>
+      <keyword>INDICATE</keyword>
+      <keyword>INITIAL</keyword>
+      <keyword>INITIALIZE</keyword>
+      <keyword>INITIATE</keyword>
+      <keyword>INPUT</keyword>
+      <keyword>INSPECT</keyword>
+      <keyword>INSTALLATION</keyword>
+      <keyword>INTO</keyword>
+      <keyword>IS</keyword>
+      <keyword>JUST</keyword>
+      <keyword>JUSTIFIED</keyword>
+      <keyword>KEY</keyword>
+      <keyword>LABEL</keyword>
+      <keyword>LAST</keyword>
+      <keyword>LEADING</keyword>
+      <keyword>LEFT</keyword>
+      <keyword>LENGTH</keyword>
+      <keyword>LOCK</keyword>
+      <keyword>MEMORY</keyword>
+      <keyword>MERGE</keyword>
+      <keyword>MESSAGE</keyword>
+      <keyword>MODE</keyword>
+      <keyword>MODULES</keyword>
+      <keyword>MOVE</keyword>
+      <keyword>MULTIPLE</keyword>
+      <keyword>MULTIPLY</keyword>
+      <keyword>NATIVE</keyword>
+      <keyword>NEGATIVE</keyword>
+      <keyword>NEXT</keyword>
+      <keyword>NO</keyword>
+      <keyword>NOT</keyword>
+      <keyword>NUMBER</keyword>
+      <keyword>NUMERIC</keyword>
+      <keyword>NUMERIC-EDITED</keyword>
+      <keyword>OCCURS</keyword>
+      <keyword>OF</keyword>
+      <keyword>OFF</keyword>
+      <keyword>OMITTED</keyword>
+      <keyword>ON</keyword>
+      <keyword>OPEN</keyword>
+      <keyword>OPTIONAL</keyword>
+      <keyword>OR</keyword>
+      <keyword>ORDER</keyword>
+      <keyword>ORGANIZATION</keyword>
+      <keyword>OTHER</keyword>
+      <keyword>OUTPUT</keyword>
+      <keyword>OVERFLOW</keyword>
+      <keyword>PACKED-DECIMAL</keyword>
+      <keyword>PADDING</keyword>
+      <keyword>PAGE</keyword>
+      <keyword>PAGE-COUNTER</keyword>
+      <keyword>PF</keyword>
+      <keyword>PH</keyword>
+      <keyword>PIC</keyword>
+      <keyword>PICTURE</keyword>
+      <keyword>PLUS</keyword>
+      <keyword>POINTER</keyword>
+      <keyword>POSITION</keyword>
+      <keyword>POSITIVE</keyword>
+      <keyword>PRINTING</keyword>
+      <keyword>PROCEDURES</keyword>
+      <keyword>PROCEDD</keyword>
+      <keyword>PROGRAM-ID</keyword>
+      <keyword>PROGRAM</keyword>
+      <keyword>PURGE</keyword>
+      <keyword>QUEUE</keyword>
+      <keyword>RANDOM</keyword>
+      <keyword>RD</keyword>
+      <keyword>READ</keyword>
+      <keyword>RECEIVE</keyword>
+      <keyword>RECORD</keyword>
+      <keyword>RECORDS</keyword>
+      <keyword>REDEFINES</keyword>
+      <keyword>REEL</keyword>
+      <keyword>REFERENCE</keyword>
+      <keyword>REFERENCES</keyword>
+      <keyword>RELATIVE</keyword>
+      <keyword>RELEASE</keyword>
+      <keyword>REMAINDER</keyword>
+      <keyword>REMOVAL</keyword>
+      <keyword>REPLACE</keyword>
+      <keyword>REPLACING</keyword>
+      <keyword>REPORT</keyword>
+      <keyword>REPORTING</keyword>
+      <keyword>REPORTS</keyword>
+      <keyword>RERUN</keyword>
+      <keyword>RESERVE</keyword>
+      <keyword>RESET</keyword>
+      <keyword>RETURN</keyword>
+      <keyword>RETURNING</keyword>
+      <keyword>REVERSED</keyword>
+      <keyword>REWIND</keyword>
+      <keyword>REWRITE</keyword>
+      <keyword>RF</keyword>
+      <keyword>RH</keyword>
+      <keyword>RIGHT</keyword>
+      <keyword>ROUNDED</keyword>
+      <keyword>RUN</keyword>
+      <keyword>SAME</keyword>
+      <keyword>SD</keyword>
+      <keyword>SEARCH</keyword>
+      <keyword>SECTION</keyword>
+      <keyword>SECURITY</keyword>
+      <keyword>SEGMENT-LIMITED</keyword>
+      <keyword>SEGMENT</keyword>
+      <keyword>SELECT</keyword>
+      <keyword>SEND</keyword>
+      <keyword>SENTENCE</keyword>
+      <keyword>SEPARATE</keyword>
+      <keyword>SEQUENCE</keyword>
+      <keyword>SEQUENTIAL</keyword>
+      <keyword>SET</keyword>
+      <keyword>SIGN</keyword>
+      <keyword>SIZE</keyword>
+      <keyword>SORT-MERGE</keyword>
+      <keyword>SORT</keyword>
+      <keyword>SOURCE-COMPUTER</keyword>
+      <keyword>SOURCE</keyword>
+      <keyword>STANDARD</keyword>
+      <keyword>STANDARD-1</keyword>
+      <keyword>STANDARD-2</keyword>
+      <keyword>START</keyword>
+      <keyword>STATUS</keyword>
+      <keyword>STOP</keyword>
+      <keyword>STRING</keyword>
+      <keyword>SUB-QUEUE-1</keyword>
+      <keyword>SUB-QUEUE-2</keyword>
+      <keyword>SUB-QUEUE-3</keyword>
+      <keyword>SUBTRACT</keyword>
+      <keyword>SUM</keyword>
+      <keyword>SUPPRESS</keyword>
+      <keyword>SYMBOLIC</keyword>
+      <keyword>SYNC</keyword>
+      <keyword>SYNCHRONIZED</keyword>
+      <keyword>TABLE</keyword>
+      <keyword>TALLYING</keyword>
+      <keyword>TAPE</keyword>
+      <keyword>TERMINAL</keyword>
+      <keyword>TERMINATE</keyword>
+      <keyword>TEST</keyword>
+      <keyword>TEXT</keyword>
+      <keyword>THAN</keyword>
+      <keyword>THEN</keyword>
+      <keyword>THROUGH</keyword>
+      <keyword>THRU</keyword>
+      <keyword>TIME</keyword>
+      <keyword>TIMES</keyword>
+      <keyword>TO</keyword>
+      <keyword>TOP</keyword>
+      <keyword>TRAILING</keyword>
+      <keyword>TRUE</keyword>
+      <keyword>TYPE</keyword>
+      <keyword>UNIT</keyword>
+      <keyword>UNSTRING</keyword>
+      <keyword>UNTIL</keyword>
+      <keyword>UP</keyword>
+      <keyword>UPON</keyword>
+      <keyword>USAGE</keyword>
+      <keyword>USE</keyword>
+      <keyword>USING</keyword>
+      <keyword>VALUE</keyword>
+      <keyword>VALUES</keyword>
+      <keyword>VARYING</keyword>
+      <keyword>WHEN</keyword>
+      <keyword>WITH</keyword>
+      <keyword>WORDS</keyword>
+      <keyword>WRITE</keyword>
+      <keyword>OBJECT-COMPUTER</keyword>
+      <keyword>SPECIAL-NAMES</keyword>
+      <keyword>FILE-CONTROL</keyword>
+      <keyword>I-O-CONTROL</keyword>
+    </context>
+
+    <context id="section-name" style-ref="keyword">
+      <keyword>CONFIGURATION</keyword>
+      <keyword>INPUT-OUTPUT</keyword>
+      <keyword>FILE</keyword>
+      <keyword>WORKING-STORAGE</keyword>
+      <keyword>LOCAL-STORAGE</keyword>
+      <keyword>LINKAGE</keyword>
+    </context>
+
+    <context id="division-name" style-ref="keyword">
+      <keyword>IDENTIFICATION</keyword>
+      <keyword>ENVIRONMENT</keyword>
+      <keyword>DATA</keyword>
+      <keyword>PROCEDURE</keyword>
+    </context>
+
+    <context id="call" style-ref="statement">
+      <keyword>END-CALL</keyword>
+      <keyword>CALL</keyword>
+      <keyword>CANCEL</keyword>
+      <keyword>GOBACK</keyword>
+      <keyword>END-PERFORM</keyword>
+      <keyword>PERFORM</keyword>
+      <keyword>INVOKE</keyword>
+      <keyword>END-IF</keyword>
+      <keyword>IF</keyword>
+    </context>
+
+    <context id="cobol" class="no-spell-check">
+      <include>
+        <context ref="constant"/>
+        <context ref="keyword"/>
+        <context ref="call"/>
+        <context ref="division-name"/>
+        <context ref="section-name"/>
+        <context ref="line-comment"/>
+        <context ref="bad-ident"/>
+        <context ref="bad-comment-line"/>
+        <context ref="bad-long-line"/>
+        <context ref="string-double-quote"/>
+        <context ref="string-single-quote"/>
+        <context ref="number"/>
+        <context ref="variable"/>
+      </include>
+    </context>
+
+  </definitions>
+</language>

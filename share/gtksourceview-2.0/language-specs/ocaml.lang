@@ -1,25 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- vim: set sts=2 sw=2: -->
 <!--
+
+ This file is part of GtkSourceView
+
  Author: Eric Cooper <ecc@cmu.edu>
  Copyright (C) 2007 Eric Cooper <ecc@cmu.edu>
  Copyright (C) 2007 Eric Norige <thelema314@gmail.com>
  Copyright (C) 2009 Alexandr Kuleshov <sterh@live.ru>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
 -->
 <language id="objective-caml" _name="Objective Caml" version="2.0" _section="Sources">
   <metadata>
@@ -48,7 +51,7 @@
     <style id="escape" _name="Escaped Character" map-to="def:special-char"/>
     <style id="boolean" _name="Boolean value" map-to="def:boolean"/>
     <style id="error" _name="Error" map-to="def:error"/>
-    <style id="std-modules" _name="Standart Modules" map-to="def:type"/>
+    <style id="std-modules" _name="Standard Modules" map-to="def:type"/>
   </styles>
 
   <definitions>
@@ -61,13 +64,13 @@
     </context>
 
     <!-- here's the main context -->
-    <context id="objective-caml">
+    <context id="objective-caml" class="no-spell-check">
       <include>
 	<context id="ocamldoc" style-ref="ocamldoc">
 	  <start>\(\*\*</start>
 	  <end>\*\)</end>
 	  <include>
-	    <context id="comment-in-comment" style-ref="comment">
+	    <context id="comment-in-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
 	      <start>\(\*</start>
 	      <end>\*\)</end>
 	      <include>
@@ -80,7 +83,7 @@
 	    <context ref="def:in-comment:*"/>
 	  </include>
 	</context>
-	<context id="comment" style-ref="comment">
+	<context id="comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
 	  <start>\(\*</start>
 	  <end>\*\)</end>
 	  <include>
@@ -88,9 +91,6 @@
 	    <context ref="comment-in-comment"/>
 	    <context ref="def:in-comment:*"/>
 	  </include>
-	</context>
-	<context id="decimal" style-ref="decimal">
-	  <match>[-]?[0-9][0-9_]*[lLn]?</match>
 	</context>
 	<context id="hex-number" style-ref="base-n-integer">
 	  <match>[-]?0[xX][0-9A-Fa-f][0-9A-Fa-f_]*[lL]?</match>
@@ -100,6 +100,9 @@
 	</context>
 	<context id="binary-number" style-ref="base-n-integer">
 	  <match>[-]?0[bB][01][01_]*[lL]?</match>
+	</context>
+	<context id="decimal" style-ref="decimal">
+	  <match>[-]?[0-9][0-9_]*[lLn]?</match>
 	</context>
 	<context id="floating-point-number" style-ref="floating-point">
 	  <match>[-]?[0-9][0-9_]*(\.[0-9_]*)?([Ee][+-]?[0-9][0-9_]*)?</match>
@@ -234,63 +237,63 @@
 	</context>
 	<context id="standart-modules" style-ref="std-modules">
 	  <!--Standart modules -->
-	  <keyword>arg</keyword>
-	  <keyword>arith_status</keyword>
-	  <keyword>array</keyword>
-	  <keyword>arrayLabels</keyword>
-	  <keyword>big_int</keyword>
-	  <keyword>bigarray</keyword>
-	  <keyword>buffer</keyword>
-	  <keyword>callback</keyword>
-	  <keyword>camlinternalMod</keyword>
-	  <keyword>camlinternalOO</keyword>
-	  <keyword>char</keyword>
-	  <keyword>complex</keyword>
-	  <keyword>condition</keyword>
-	  <keyword>dbm</keyword>
-	  <keyword>digest</keyword>
-	  <keyword>dynLink</keyword>
-	  <keyword>event</keyword>
-	  <keyword>filename</keyword>
-	  <keyword>format</keyword>
-	  <keyword>gc</keyword>
-	  <keyword>genlex</keyword>
-	  <keyword>graphics</keyword>
-	  <keyword>graphicsX11</keyword>
-	  <keyword>hashtbl</keyword>
-	  <keyword>int32</keyword>
-	  <keyword>int64</keyword>
-	  <keyword>largeFile</keyword>
-	  <keyword>lazy</keyword>
-	  <keyword>lexing</keyword>
-	  <keyword>list</keyword>
-	  <keyword>listLabels</keyword>
-	  <keyword>map</keyword>
-	  <keyword>marshal</keyword>
-	  <keyword>moreLabels</keyword>
-	  <keyword>mutex</keyword>
-	  <keyword>mativeint</keyword>
-	  <keyword>num</keyword>
-	  <keyword>oo</keyword>
-	  <keyword>parsing</keyword>
-	  <keyword>printexc</keyword>
-	  <keyword>printf</keyword>
-	  <keyword>queue</keyword>
-	  <keyword>random</keyword>
-	  <keyword>scanf</keyword>
-	  <keyword>set</keyword>
-	  <keyword>sort</keyword>
-	  <keyword>stack</keyword>
-	  <keyword>stdLabels</keyword>
-	  <keyword>str</keyword>
-	  <keyword>stream</keyword>
-	  <keyword>stringLabels</keyword>
-	  <keyword>sys</keyword>
-	  <keyword>thread</keyword>
-	  <keyword>threadUnix</keyword>
-	  <keyword>unix</keyword>
-	  <keyword>unixLabels</keyword>
-	  <keyword>weak</keyword>
+	  <keyword>Arg</keyword>
+	  <keyword>Arith_status</keyword>
+	  <keyword>Array</keyword>
+	  <keyword>ArrayLabels</keyword>
+	  <keyword>Big_int</keyword>
+	  <keyword>Bigarray</keyword>
+	  <keyword>Buffer</keyword>
+	  <keyword>Callback</keyword>
+	  <keyword>CamlinternalMod</keyword>
+	  <keyword>CamlinternalOO</keyword>
+	  <keyword>Char</keyword>
+	  <keyword>Complex</keyword>
+	  <keyword>Condition</keyword>
+	  <keyword>Dbm</keyword>
+	  <keyword>Digest</keyword>
+	  <keyword>DynLink</keyword>
+	  <keyword>Event</keyword>
+	  <keyword>Filename</keyword>
+	  <keyword>Format</keyword>
+	  <keyword>Gc</keyword>
+	  <keyword>Genlex</keyword>
+	  <keyword>Graphics</keyword>
+	  <keyword>GraphicsX11</keyword>
+	  <keyword>Hashtbl</keyword>
+	  <keyword>Int32</keyword>
+	  <keyword>Int64</keyword>
+	  <keyword>LargeFile</keyword>
+	  <keyword>Lazy</keyword>
+	  <keyword>Lexing</keyword>
+	  <keyword>List</keyword>
+	  <keyword>ListLabels</keyword>
+	  <keyword>Map</keyword>
+	  <keyword>Marshal</keyword>
+	  <keyword>MoreLabels</keyword>
+	  <keyword>Mutex</keyword>
+	  <keyword>Mativeint</keyword>
+	  <keyword>Num</keyword>
+	  <keyword>Oo</keyword>
+	  <keyword>Parsing</keyword>
+	  <keyword>Printexc</keyword>
+	  <keyword>Printf</keyword>
+	  <keyword>Queue</keyword>
+	  <keyword>Random</keyword>
+	  <keyword>Scanf</keyword>
+	  <keyword>Set</keyword>
+	  <keyword>Sort</keyword>
+	  <keyword>Stack</keyword>
+	  <keyword>StdLabels</keyword>
+	  <keyword>Str</keyword>
+	  <keyword>Stream</keyword>
+	  <keyword>StringLabels</keyword>
+	  <keyword>Sys</keyword>
+	  <keyword>Thread</keyword>
+	  <keyword>ThreadUnix</keyword>
+	  <keyword>Unix</keyword>
+	  <keyword>UnixLabels</keyword>
+	  <keyword>Weak</keyword>
 	  <!-- Standart modules -->
 	</context>
       </include>

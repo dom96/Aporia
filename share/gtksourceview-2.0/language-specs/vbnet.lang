@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: John Luke <jluke@cfl.rr.com>
  Copyright (C) 2004 John Luke <jluke@cfl.rr.com>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <language id="vbnet" _name="VB.NET" version="2.0" _section="Sources">
@@ -41,21 +42,21 @@
 
   <definitions>
 
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>'</start>
       <include>
         <context ref="def:in-line-comment"/>
       </include>
     </context>
 
-    <context id="old-style-comment" style-ref="comment" end-at-line-end="true">
+    <context id="old-style-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>^rem</start>
       <include>
         <context ref="def:in-line-comment"/>
       </include>
     </context>
 
-    <context id="string" style-ref="string" end-at-line-end="true">
+    <context id="string" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
       <start>"</start>
       <end>"</end>
     </context>
@@ -226,7 +227,7 @@
       <keyword>true</keyword>
     </context>
 
-    <context id="vbnet">
+    <context id="vbnet" class="no-spell-check">
       <include>
         <context ref="line-comment"/>
         <context ref="old-style-comment"/>

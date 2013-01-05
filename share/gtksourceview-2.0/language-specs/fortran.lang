@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: John Spray <jcspray@icculus.org>
  Copyright (C) 2004, 2005, 2006 John Spray <jcs116@york.ac.uk>
  Copyright (C) 2005 Jerry DeLisle <jvdelisle@verizon.net>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <language id="fortran" _name="Fortran 95" version="2.0" _section="Sources">
   <metadata>
     <property name="mimetypes">text/x-fortran</property>
-    <property name="globs">*.f;*.f9[05];*.for</property>
+    <property name="globs">*.f;*.f90;*.f95;*.for</property>
     <property name="line-comment-start">!</property>
   </metadata>
 
@@ -43,8 +44,8 @@
   <definitions>
 
     <!-- Note: contains an hack to avoid considering ^COMMON a comment -->
-    <context id="line-comment" style-ref="comment" end-at-line-end="true">
-      <start>!|(^[Cc](\b|[^Oo]))</start>
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
+      <start>!|(^[Cc](\b|[^OoAaYy]))</start>
       <include>
         <context ref="def:escape"/>
         <context ref="def:in-line-comment"/>
@@ -489,7 +490,7 @@
       </match>
     </context>
 
-    <context id="fortran">
+    <context id="fortran" class="no-spell-check">
       <include>
         <context ref="floating-point-number"/>
         <context ref="decimal"/>

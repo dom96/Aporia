@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Paolo Maggi
  Copyright (C) 2003 Paolo Maggi
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
 <language id="gettext-translation" _name="gettext translation" version="2.0" _section="Others">
@@ -28,17 +29,16 @@
   </metadata>
 
   <styles>
-    <style id="comment" _name="Comment" map-to="def:comment"/>
-    <style id="location" _name="Location" map-to="def:comment"/>
-    <style id="string" _name="String" map-to="def:string"/>
-    <style id="fuzzy" _name="Fuzzy" map-to="def:note"/>
-    <style id="keyword" _name="Keyword" map-to="def:keyword"/>
-    <!-- FIXME make it some nice name and mark it translatable -->
-    <style id="special" _name="Special" map-to="def:special-char"/>
+    <style id="comment"   _name="Comment"       map-to="def:comment"/>
+    <style id="location"  _name="Location"      map-to="def:comment"/>
+    <style id="string"    _name="String"        map-to="def:string"/>
+    <style id="fuzzy"     _name="Fuzzy"         map-to="def:note"/>
+    <style id="keyword"   _name="Keyword"       map-to="def:keyword"/>
+    <style id="format"    _name="String Format" map-to="def:special-char"/>
   </styles>
 
   <definitions>
-    <context id="string" style-ref="string">
+    <context id="string" style-ref="string" class="string" class-disabled="no-spell-check">
       <start>"</start>
       <end>"</end>
       <include>
@@ -46,14 +46,14 @@
         <context ref="def:line-continue"/>
         <context ref="def:email-address"/>
         <context ref="def:net-address"/>
-        <context id="mnemonic" style-ref="special">
-          <match>[&amp;_][a-zA-Z]</match>
+        <context id="mnemonic" style-ref="format">
+          <match>[&amp;_][\p{L}\p{Nd}]</match>
         </context>
-        <context id="tag" style-ref="special">
-	  <match>&lt;[a-zA-Z\=\"\/ ]+&gt;</match>
-	</context>
-        <context ref="python:format" style-ref="special"/>
-        <context ref="c:printf" style-ref="special"/>
+        <context id="tag" style-ref="format">
+          <match>&lt;[a-zA-Z\=\"\/ ]+&gt;</match>
+        </context>
+        <context ref="python:format" style-ref="format"/>
+        <context ref="c:printf" style-ref="format"/>
       </include>
     </context>
     <context id="format" style-ref="comment" end-at-line-end="true">
@@ -81,12 +81,12 @@
       <keyword>msgstr</keyword>
       <keyword>msgctxt</keyword>
     </context>
-    <context id="gettext-translation">
+    <context id="gettext-translation" class="no-spell-check">
       <include>
         <context ref="string"/>
         <context ref="format"/>
         <context ref="location"/>
-        <context ref="def:shell-like-comment" style-ref="comment"/>
+        <context ref="def:shell-like-comment"/>
         <context ref="keyword"/>
       </include>
     </context>

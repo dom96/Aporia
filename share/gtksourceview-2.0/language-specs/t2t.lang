@@ -1,26 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
+ This file is part of GtkSourceView
+
  Author: Yevgen Muntyan <muntyan@tamu.edu>
  Copyright (C) 2008 Yevgen Muntyan <muntyan@tamu.edu>
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Library General Public
+ GtkSourceView is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
- version 2 of the License, or (at your option) any later version.
+ version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
+ GtkSourceView is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Library General Public License for more details.
+ Lesser General Public License for more details.
 
- You should have received a copy of the GNU Library General Public
- License along with this library; if not, write to the
- Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- Boston, MA 02111-1307, USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 -->
-<language id="t2t" _name="Text2Tags" version="2.0" _section="Markup">
+<language id="t2t" _name="txt2tags" version="2.0" _section="Markup">
   <metadata>
     <property name="globs">*.t2t</property>
     <property name="line-comment-start">%</property>
@@ -63,7 +64,7 @@
       </include>
     </context>
 
-    <context id="comment" style-ref="comment" end-at-line-end="true">
+    <context id="comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
       <start>^%</start>
     </context>
 
@@ -133,7 +134,7 @@
       <end>^```$</end>
     </context>
 
-    <context id="t2t">
+    <context id="t2t" class="no-spell-check">
       <include>
         <context ref="header"/>
         <context ref="sections"/>
