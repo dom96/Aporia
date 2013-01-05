@@ -101,6 +101,7 @@ type
   PExecOptions* = ref TExecOptions
   TExecOptions* = object
     command*: string
+    workDir*: string
     mode*: TExecMode
     output*: bool
     onLine*: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.}
@@ -114,6 +115,7 @@ type
     case typ*: TExecThrTaskType
     of ThrRun:
       command*: string
+      workDir*: string
     of ThrStop: nil
   
   TExecThrEventType* = enum

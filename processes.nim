@@ -265,6 +265,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   var task: TExecThrTask
   task.typ = ThrRun
   task.command = exec.command
+  task.workDir = exec.workDir
   execThrTaskChan.send(task)
   # Output
   if exec.output:
@@ -281,12 +282,13 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   # Clear errors
   win.clearErrors()
 
-proc newExec*(command: string, mode: TExecMode, output = true, 
+proc newExec*(command: string, workDir: string, mode: TExecMode, output = true, 
               onLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.} = nil,
               onExit: proc (win: var MainWin, opts: PExecOptions, exitcode: int) {.closure.} = nil,
               runAfter: PExecOptions = nil, runAfterSuccess = true): PExecOptions =
   new(result)
   result.command = command
+  result.workDir = workDir
   result.mode = mode
   result.output = output
   result.onLine = onLine
@@ -301,6 +303,14 @@ template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt =
   todo
   execThrEventChan.send(event)
 
+proc cmdToArgs(cmd: string): tuple[bin: string, args: seq[string]] =
+  var spl = cmd.split(' ')
+  assert spl.len > 0
+  result.bin = spl[0]
+  result.args = @[]
+  for i in 1 .. <spl.len:
+    result.args.add(spl[i])
+
 proc execThreadProc(){.thread.} =
   var p: PProcess
   var o: PStream
@@ -314,7 +324,9 @@ proc execThreadProc(){.thread.} =
         case task.typ
         of ThrRun:
           if not started:
-            p = startCmd(task.command)
+            let (bin, args) = cmdToArgs(task.command)
+            p = startProcess(bin, task.workDir, args,
+                             options = {poStdErrToStdOut, poUseShell})
             createExecThrEvent(EvStarted):
               event.p = p
             o = p.outputStream

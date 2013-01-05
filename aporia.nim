@@ -996,10 +996,11 @@ proc compileRun(filename: string, shouldRun: bool) =
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
   var runAfter: PExecOptions = nil
+  let workDir = filename.splitFile.dir
   if shouldRun:
     let ifSuccess = changeFileExt(filename, os.ExeExt)
-    runAfter = newExec(ifSuccess, ExecRun)
-  win.execProcAsync newExec(cmd, ExecNimrod, runAfter = runAfter)
+    runAfter = newExec(ifSuccess, workDir, ExecRun)
+  win.execProcAsync newExec(cmd, workDir, ExecNimrod, runAfter = runAfter)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
@@ -1047,7 +1048,9 @@ proc RunCustomCommand(cmd: string) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
   
-  win.execProcAsync newExec(GetCmd(cmd, win.Tabs[currentTab].filename), ExecCustom)
+  let workDir = win.Tabs[currentTab].filename.splitFile.dir
+  
+  win.execProcAsync newExec(GetCmd(cmd, win.Tabs[currentTab].filename), workDir, ExecCustom)
 
 proc RunCustomCommand1(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.settings.customCmd1)
@@ -1070,7 +1073,7 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   showBottomPanel()
 
   var cmd = GetCmd("$findExe(nimrod) check --listFullPaths $#", filename)
-  win.execProcAsync newExec(cmd, ExecNimrod)
+  win.execProcAsync newExec(cmd, "", ExecNimrod)
 
 proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
   echod("Memory usage: ")

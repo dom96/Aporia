@@ -13,7 +13,6 @@
 * Fix language definition to color numbers with underscores as numbers.
   also, gnustepex.nim
 * Comment feature should add a space after '#' and between /* */ (For CSS)
-* Issue #20
 
 ## Other language features
 * Ability to change to hard tabs.

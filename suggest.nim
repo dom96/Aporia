@@ -159,7 +159,7 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
     if win.suggest.allItems.len == 0:
       win.statusbar.setTemp("No items found for suggest.", UrgError)
     
-  var execute = newExec(sugCmd, ExecRun, false, onSugLine, onSugExit)
+  var execute = newExec(sugCmd, "", ExecRun, false, onSugLine, onSugExit)
   # Check if a suggest request is already running:
   if win.tempStuff.currentExec != nil and 
      win.tempStuff.execProcess != nil:
@@ -294,7 +294,7 @@ proc asyncGetDef*(win: var MainWin, file: string,
         " idetools --path:$4 --track:$1,$2,$3 --def $1" % 
         [file, $(line+1), $column, getTempDir()]
   
-  var execute = newExec(sugCmd, ExecRun, false, onSugLine, onSugExit)
+  var execute = newExec(sugCmd, "", ExecRun, false, onSugLine, onSugExit)
   # Check if something is currently running.
   if win.tempStuff.currentExec != nil and 
      win.tempStuff.execProcess != nil:
