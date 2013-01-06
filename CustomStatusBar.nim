@@ -22,6 +22,7 @@ type
   PCustomStatusBar* = ref object
     hbox: PHbox
     statusLabel: PLabel
+    statuses: seq[TStatus] # previous statuses
     status: TStatus
     progressBar*: PProgressBar
     docInfoLabel: PLabel
@@ -54,8 +55,12 @@ proc initCustomStatusBar*(MainBox: PBox): PCustomStatusBar =
   result.hbox.show()
 
   result.status = defaultStatus()
+  result.statuses = @[]
 
+proc restorePrevious*(bar: PCustomStatusBar)
 proc setStatus(bar: PCustomStatusBar, st: TStatus) =
+  bar.statuses.add(bar.status)
+
   bar.status = st
   case st.kind
   of StatusPerm, StatusTemp:
@@ -78,14 +83,16 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
     bar.progressbar.show()
     bar.statusLabel.setUseMarkup(false)
     bar.progressbar.setText(st.text)
-  
+  echo("added ", st.kind)
   if st.kind == StatusTemp:
-    discard gTimeoutAddFull(GPriorityLow, 500, 
+    # Priority has to be high, otherwise the proc fails to be executed in some
+    # cases.
+    let tid = gTimeoutAddFull(GPriorityHigh, 500, 
       proc (barP: pointer): bool {.cdecl.} =
         let b = cast[PCustomStatusBar](barP)
         if b.status.kind == StatusTemp:
           if epochTime() - b.status.startTime > (b.status.timeout/1000):
-            b.setStatus(defaultStatus())
+            b.restorePrevious()
             return false
         else:
           return false
@@ -129,15 +136,23 @@ proc setProgress*(bar: PCustomStatusBar, text: string): TStatusID {.discardable.
   setStatus(bar, st)
   result = TStatusID(st.startTime)
 
-proc restorePrevious*(bar: PCustomStatusBar, onlyIfID: TStatusID = TStatusID(-1.0)) =
-  ## Resets the status to default. # TODO RENAME?
-  ##
-  ## If ``onlyIfID`` is set, the status will only be reset to default if the
-  ## current status' ID is the same as ``onlyIfID``, this is useful when
-  ## you don't want to reset to default if your status has been overriden. 
-  if onlyIfID.float == -1.0 or onlyIfID.float == bar.status.startTime:
-    bar.setStatus(defaultStatus())
+proc delPrevious*(bar: PCustomStatusBar, id: TStatusID) =
+  ## If ``id`` is present in the list of previous statuses. It will be deleted.
+  var ix = -1
+  for i in 0 .. <bar.statuses.len:
+    if bar.statuses[i].startTime == float(id):
+      ix = i
+      break
+  bar.statuses.delete(ix)
 
+proc restorePrevious*(bar: PCustomStatusBar) =
+  ## Restore the previous status. 
+  let prevStatus = bar.statuses.pop()
+  bar.setStatus(prevStatus)
+  # We don't want the current status added to bar.statuses, setStatus adds it
+  # so pop it here.
+  discard bar.statuses.pop()
+    
 proc setDocInfo*(bar: PCustomStatusBar, line, col: int) =
   bar.docInfoLabel.setText("Ln: " & $line & " Col: " & $col)
 

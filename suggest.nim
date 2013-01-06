@@ -298,7 +298,7 @@ proc asyncGetDef*(win: var MainWin, file: string,
   # Check if something is currently running.
   if win.tempStuff.currentExec != nil and 
      win.tempStuff.execProcess != nil:
-    return "Process already running. Use Ctrl + F7 to terminate and try again."
+    return "Process already running. Use F7 to terminate and try again."
   else:
     win.tempStuff.gotDefinition = false
     win.execProcAsync execute 

@@ -239,7 +239,9 @@ proc peekProcOutput*(win: ptr MainWin): bool =
           let runAfter = win.tempStuff.currentExec.runAfter
           let runAfterSuccess = win.tempStuff.currentExec.runAfterSuccess
           win.tempStuff.currentExec = nil
-          win.statusbar.restorePrevious(win.tempStuff.progressStatusID)
+          # remove our progress status if it's in the 'previous status list'
+          win.statusbar.delPrevious(win.tempStuff.progressStatusID)
+          win.statusbar.restorePrevious()
           # TODO: Remove idle proc here?
           
           # Execute another process in queue (if any)
