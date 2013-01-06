@@ -7,8 +7,6 @@
 * Test on Windows.
 * When you select a word, the same words in the doc should be highlighted.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
-* Go to definition does not scroll when it opens a new tab. Investigate.
-  * Possible solution: idle proc, get_visible_rect and get_iter_location
 * "Project" feature, look at existance of file.nimrod.cfg in dir.
 * Fix language definition to color numbers with underscores as numbers.
   also, gnustepex.nim
@@ -55,7 +53,12 @@
   the textbox orange but do go to it.
 * Ctrl+Shift up/down should move the current line up or down.
 * Commands?
-* Make the find bar text boxes span the whole find bar.
+  * Command bar:
+    * Ctrl + Shift + P (or w/e).
+    * Type in ``open`` + enter: gives you a list of files in current work dir (as calculated currently)
+    * Type in ``open dir`` + enter: gives you a list of files in that dir
+    * Type in ``open file`` + enter: opens file obviously.
+    * Tab complete should be well thought out.
 * c2nim integration. Select text, right click, "convert to Nimrod code using c2nim" option.
 * Text macros. I want to be able to with a press of a button start some kind of
   pre-written macro which can do cool things like inspect my clipboard. In the case

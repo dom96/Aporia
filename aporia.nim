@@ -503,7 +503,7 @@ proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
             
             win.tabs[currentPage].buffer.placeCursor(addr(iter))
             
-            win.scrollToInsert()
+            win.forceScrollToInsert()
             
             echod(def.repr())
         
@@ -1252,12 +1252,11 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
   win.Tabs[existingTab].buffer.selectRange(addr(iter), addr(iterPlus1))
   
   # TODO: This should be getting focus, but as usual it's not... FIXME
+  # TODO: This can perhaps be done by providing a 'initialised' signal, once
+  # the scrolling occurs ... look down.
   win.Tabs[existingTab].sourceView.grabFocus()
 
-  # TODO: Use an idle proc, get_visible_rect and get_iter_location to determine
-  # whether the scrolling was successful, the idle proc should scroll constantly
-  # until the scrolling occurs.
-  win.scrollToInsert(int32(existingTab))
+  win.forceScrollToInsert(int32(existingTab))
 
 # -- FindBar
 
@@ -1703,11 +1702,7 @@ proc initSourceViewTabs() =
         win.Tabs[count].buffer.getIterAtOffset(addr(iter), int32(offset.parseInt()))
         win.Tabs[count].buffer.placeCursor(addr(iter))
         
-        var mark = win.Tabs[count].buffer.getInsert()
-        
-        # The reason why this didn't work was because the GtkWindow was being
-        # shown too quickly.
-        win.Tabs[count].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
+        win.forceScrollToInsert(int32(win.Tabs.len-1))
         inc(count)
       else: dialogs.error(win.w, "Could not restore file from session, file not found: " & filename)
     

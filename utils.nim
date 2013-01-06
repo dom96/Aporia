@@ -11,6 +11,7 @@ import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, struti
 import tables
 
 from CustomStatusBar import PCustomStatusBar, TStatusID
+from gdk2 import TRectangle, intersect
 
 type
   TSettings* = object
@@ -215,6 +216,43 @@ proc addText*(textView: PTextView, text: string,
       var endMark = textView.getBuffer().getMark("endMark")
       # Yay! With the use of marks; scrolling always occurs!
       textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
+
+proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
+  ## Uses an idle proc to make sure that the SourceView scrolls. This is quite
+  ## effective when the sourceview has just been initialised.
+  var current = -1
+  if tabIndex != -1: current = tabIndex
+  else: current = win.SourceViewTabs.getCurrentPage()
+
+  var mark = win.Tabs[current].buffer.getInsert()
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
+  
+  # TODO: What if I remove the tab, while this is happening, segfault because
+  # sourceview is gone? The likelihood of this happening is probably very unlikely
+  # though.
+  
+  proc idleConfirmScroll(sv: PSourceView): bool =
+    result = false
+    
+    var buff = sv.getBuffer()
+    var insertMark = buff.getInsert()
+    var insertIter: TTextIter
+    buff.getIterAtMark(addr(insertIter), insertMark)
+    var insertLoc: TRectangle
+    sv.getIterLocation(addr(insertIter), addr(insertLoc))
+    
+    var rect: TRectangle
+    sv.getVisibleRect(addr(rect))
+    
+    # Now check whether insert iter is inside the visible rect.
+    # Width has to be higher than 0
+    if insertLoc.width <= 0: insertLoc.width = 1
+    let inside = intersect(addr(rect), addr(insertLoc), nil)
+    if not inside:
+      sv.scrollToMark(insertMark, 0.25, False, 0.0, 0.0)
+      return true
+  
+  discard gIdleAdd(idleConfirmScroll, win.Tabs[current].sourceview)
 
 proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   var current = -1
