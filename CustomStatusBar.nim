@@ -146,7 +146,8 @@ proc delPrevious*(bar: PCustomStatusBar, id: TStatusID) =
     if bar.statuses[i].startTime == float(id):
       ix = i
       break
-  bar.statuses.delete(ix)
+  if ix != -1:
+    bar.statuses.delete(ix)
 
 proc statusID*(bar: PCustomStatusBar): TStatusID =
   ## Returns current status ID.

@@ -11,10 +11,6 @@
 * Fix language definition to color numbers with underscores as numbers.
   also, gnustepex.nim
 * Comment feature should add a space after '#' and between /* */ (For CSS)
-* Make aporia confirm that it received a file to open, there was a case where
-  I terminated aporia and I think the socket was still active, aporia would not
-  run because it thought another aporia was still running because the socket was
-  open.
 
 ## Other language features
 * Ability to change to hard tabs.

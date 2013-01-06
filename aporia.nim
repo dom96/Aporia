@@ -1971,6 +1971,8 @@ proc initSocket() =
               else:
                 win.w.error("File not found: " & filepath)
                 win.w.present()
+          else:
+            win.w.error("One instance socket error on recvLine operation: " & OSErrorMsg())
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)
@@ -2053,7 +2055,7 @@ proc initControls() =
       dialogs.warning(win.w, 
         "Unable to bind socket. Aporia will not " &
         "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
-    discard gTimeoutAddFull(GPriorityLow, 500, 
+    discard gTimeoutAddFull(glib2.GPriorityDefault, 500, 
       proc (dummy: pointer): bool =
         result = win.IODispatcher.poll(5), nil, nil)
 
@@ -2064,6 +2066,7 @@ proc checkAlreadyRunning(): bool =
     client.connect("localhost", TPort(win.settings.singleInstancePort.toU16))
   except EOS:
     return false
+  echo("An instance of aporia is already running.")
   if loadFiles.len() > 0:
     for file in loadFiles:
       var filepath = file
