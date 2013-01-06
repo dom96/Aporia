@@ -8,8 +8,6 @@
 * When you select a word, the same words in the doc should be highlighted.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * "Project" feature, look at existance of file.nimrod.cfg in dir.
-* Fix language definition to color numbers with underscores as numbers.
-  also, gnustepex.nim
 * Comment feature should add a space after '#' and between /* */ (For CSS)
 
 ## Other language features

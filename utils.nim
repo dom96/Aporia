@@ -8,7 +8,7 @@
 #
 
 import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
-import tables
+import tables, os
 
 from CustomStatusBar import PCustomStatusBar, TStatusID
 from gdk2 import TRectangle, intersect
@@ -268,7 +268,7 @@ proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
       if win.Tabs[i].filename == filename: 
         return i
     else:
-      if filename in win.Tabs[i].filename:
+      if win.Tabs[i].filename.extractFilename == filename:
         return i 
       elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
         return i

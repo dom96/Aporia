@@ -151,6 +151,11 @@
           <keyword>(t|T)_*(r|R)_*(u|U)_*(e|E)_*</keyword>
         </context>
 
+        <context id="ml-pragma" style-ref="pragma">
+          <start>{\.\w+:\s?"""</start>
+          <end>"""\.?}</end>
+        </context>
+
         <context id="pragma" style-ref="pragma">
           <start>\{\.</start>
           <end>(\.|)\}</end>
