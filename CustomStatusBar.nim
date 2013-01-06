@@ -136,6 +136,9 @@ proc setProgress*(bar: PCustomStatusBar, text: string): TStatusID {.discardable.
   setStatus(bar, st)
   result = TStatusID(st.startTime)
 
+
+proc `==`*(s, s2: TStatusID): bool {.borrow.}
+
 proc delPrevious*(bar: PCustomStatusBar, id: TStatusID) =
   ## If ``id`` is present in the list of previous statuses. It will be deleted.
   var ix = -1
@@ -145,13 +148,18 @@ proc delPrevious*(bar: PCustomStatusBar, id: TStatusID) =
       break
   bar.statuses.delete(ix)
 
+proc statusID*(bar: PCustomStatusBar): TStatusID =
+  ## Returns current status ID.
+  return bar.status.startTime.TStatusID
+
 proc restorePrevious*(bar: PCustomStatusBar) =
-  ## Restore the previous status. 
-  let prevStatus = bar.statuses.pop()
-  bar.setStatus(prevStatus)
-  # We don't want the current status added to bar.statuses, setStatus adds it
-  # so pop it here.
-  discard bar.statuses.pop()
+  ## Restore the previous status.
+  if bar.statuses.len > 0:
+    let prevStatus = bar.statuses.pop()
+    bar.setStatus(prevStatus)
+    # We don't want the current status added to bar.statuses, setStatus adds it
+    # so pop it here.
+    discard bar.statuses.pop()
     
 proc setDocInfo*(bar: PCustomStatusBar, line, col: int) =
   bar.docInfoLabel.setText("Ln: " & $line & " Col: " & $col)

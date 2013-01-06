@@ -241,7 +241,8 @@ proc peekProcOutput*(win: ptr MainWin): bool =
           win.tempStuff.currentExec = nil
           # remove our progress status if it's in the 'previous status list'
           win.statusbar.delPrevious(win.tempStuff.progressStatusID)
-          win.statusbar.restorePrevious()
+          if win.statusbar.statusID == win.tempStuff.progressStatusID:
+            win.statusbar.restorePrevious()
           # TODO: Remove idle proc here?
           
           # Execute another process in queue (if any)
