@@ -9,6 +9,9 @@
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * "Project" feature, look at existance of file.nimrod.cfg in dir.
 * Comment feature should add a space after '#' and between /* */ (For CSS)
+* Sort View -> Syntax Highlighting
+* When opening a file from Recently opened file. They should be added to the top
+  of Recently opened files.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -67,3 +70,4 @@
   Like in vim.
   * Evaluate how to handle projects.
 * Feature: Select a block of code, split it up into 80 char lines.
+* Popular languages listed in View -> Syntax Highlighting?

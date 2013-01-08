@@ -62,13 +62,14 @@ proc doMoveSuggest*(win: var MainWin) =
 proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
   if line.startsWith(cmd):
     var s = line.split('\t')
-    assert s.len == 7
+    assert s.len == 8
     item.nodeType = s[1]
     item.name = s[2]
     item.nimType = s[3]
     item.file = s[4]
     item.line = int32(s[5].parseInt())
     item.col = int32(s[6].parseInt())
+    item.docs = s[7]
 
     # Get the name without the module name in front of it.
     var dots = item.name.split('.')
@@ -77,6 +78,10 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
     else:
       echod("[Suggest] Unknown module name for ", item.name)
       item.nmName = item.name
+
+    if item.docs[0] == '\"': item.docs = item.docs[1 .. -1]
+    if item.docs[item.docs.len-1] == '\"': item.docs = item.docs[0 .. -2]
+
     result = true
 
 proc clear*(suggest: var TSuggestDialog) =
@@ -336,7 +341,8 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
 
 proc showTooltip*(win: var MainWin, tab: Tab, markup: string,
                   selectedPath: PTreePath) =
-  win.suggest.tooltipLabel.setMarkup(markup)
+  # TODO: Play around with markup
+  win.suggest.tooltipLabel.setText(markup)
   var cursor: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
@@ -379,7 +385,8 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
     var index = selectedPath.getIndices()[]
     if win.suggest.items.len() > index:
       if win.suggest.shown:
-        win[].showTooltip(tab, win.suggest.items[index].nimType, selectedPath)
+        win[].showTooltip(tab, win.suggest.items[index].nimType & "\n" &
+                               win.suggest.items[index].docs, selectedPath)
 
 proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
   win.w.present()

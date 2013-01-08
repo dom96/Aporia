@@ -163,7 +163,7 @@ type
     filename*: string
     
   TSuggestItem* = object
-    nodeType*, name*, nimType*, file*, nmName*: string
+    nodeType*, name*, nimType*, file*, nmName*, docs*: string
     line*, col*: int32
   
   TSearchEnum* = enum
