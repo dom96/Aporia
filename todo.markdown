@@ -12,6 +12,10 @@
 * Sort View -> Syntax Highlighting
 * When opening a file from Recently opened file. They should be added to the top
   of Recently opened files.
+* Fix docs in suggest.
+* Temporary file saves.
+* keywords.txt -> nimrod.lang
+* Output text view limit. OOMed my system because of a lot of output already.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -71,3 +75,4 @@
   * Evaluate how to handle projects.
 * Feature: Select a block of code, split it up into 80 char lines.
 * Popular languages listed in View -> Syntax Highlighting?
+* When aporia's config file is saved, validate before saving. If incorrect, list errors in Error List?

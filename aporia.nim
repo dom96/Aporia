@@ -928,7 +928,7 @@ proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
   else:
     win.bottomPanelTabs.hide()
 
-proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, lang: PSourceLanguage]) =
+proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, id: string]) =
   if not win.tempStuff.stopPLToggle:
     # TODO: Consider using onclick event instead of variables...
     
@@ -940,11 +940,12 @@ proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, 
       return
   
     let currentTab = win.getCurrentTab()
-    if plItem.lang.isNil:
+    if plItem.id == "":
       win.Tabs[currentTab].buffer.setHighlightSyntax(False)
     else:
+      var langMan = languageManagerGetDefault()
       win.Tabs[currentTab].buffer.setHighlightSyntax(True)
-      win.Tabs[currentTab].buffer.setLanguage(plItem.lang)
+      win.Tabs[currentTab].buffer.setLanguage(langMan.getLanguage(plItem.id))
     plCheckUpdate(currentTab)
     
 proc GetCmd(cmd, filename: string): string = 
@@ -1512,7 +1513,7 @@ proc initTopMenu(MainBox: PBox) =
   # -- Syntax Highlighting sections
   
   let langSections = loadLanguageSections()
-  win.tempStuff.plMenuItems = initTable[string, tuple[mi: PCheckMenuItem, lang: PSourceLanguage]]()
+  win.tempStuff.plMenuItems = initTable[string, tuple[mi: PCheckMenuItem, id: string]]()
   var SyntaxHighlightingMenuItem = menuItemNew("Syntax Highlighting")
   SyntaxHighlightingMenuItem.show()
   var SyntaxHighlightingMenu = menuNew(); SyntaxHighlightingMenu.show()
@@ -1521,7 +1522,7 @@ proc initTopMenu(MainBox: PBox) =
   # Add plain text.
   var plainTextItem = checkMenuItemNew("Plain text"); plainTextItem.show()
   SyntaxHighlightingMenu.append(plainTextItem)
-  win.tempStuff.plMenuItems[""] = (plainTextItem, nil)
+  win.tempStuff.plMenuItems[""] = (plainTextItem, "")
   discard signalConnect(plainTextItem, "toggled",
                         SignalFunc(pl_Toggled),
           addr(win.tempStuff.plMenuItems.mget("")))
@@ -1533,7 +1534,7 @@ proc initTopMenu(MainBox: PBox) =
     for lang in langs:
       var langMenuItem = checkMenuItemNew(lang.getName()); langMenuItem.show()
       sectionMenu.append(langMenuItem)
-      win.tempStuff.plMenuItems[$lang.getID()] = (langMenuItem, lang)
+      win.tempStuff.plMenuItems[$lang.getID()] = (langMenuItem, $lang.getID())
       discard signalConnect(langMenuItem, "toggled",
                             SignalFunc(pl_Toggled),
               addr(win.tempStuff.plMenuItems.mget($lang.getID())))

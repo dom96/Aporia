@@ -150,7 +150,7 @@ type
     lastTab*: int # For reordering tabs, the last tab that was selected.
     commentSyntax*: tuple[line: string, blockStart: string, blockEnd: string]
     pendingFilename*: string # Filename which could not be opened due to encoding.
-    plMenuItems*: tables.TTable[string, tuple[mi: PCheckMenuItem, lang: PSourceLanguage]]
+    plMenuItems*: tables.TTable[string, tuple[mi: PCheckMenuItem, id: string]]
     stopPLToggle*: bool
     currentToggledLang*: string # ID of the currently active pl
 
