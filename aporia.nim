@@ -928,7 +928,7 @@ proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
   else:
     win.bottomPanelTabs.hide()
 
-proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, id: string]) =
+proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
   if not win.tempStuff.stopPLToggle:
     # TODO: Consider using onclick event instead of variables...
     
@@ -940,12 +940,12 @@ proc pl_Toggled(menuitem: PCheckMenuItem, plItem: ptr tuple[mi: PCheckMenuItem, 
       return
   
     let currentTab = win.getCurrentTab()
-    if plItem.id == "":
+    if id == "":
       win.Tabs[currentTab].buffer.setHighlightSyntax(False)
     else:
       var langMan = languageManagerGetDefault()
       win.Tabs[currentTab].buffer.setHighlightSyntax(True)
-      win.Tabs[currentTab].buffer.setLanguage(langMan.getLanguage(plItem.id))
+      win.Tabs[currentTab].buffer.setLanguage(langMan.getLanguage(id))
     plCheckUpdate(currentTab)
     
 proc GetCmd(cmd, filename: string): string = 
@@ -1523,9 +1523,11 @@ proc initTopMenu(MainBox: PBox) =
   var plainTextItem = checkMenuItemNew("Plain text"); plainTextItem.show()
   SyntaxHighlightingMenu.append(plainTextItem)
   win.tempStuff.plMenuItems[""] = (plainTextItem, "")
+  var plainText = ""
+  GCRef(plainText) # We need this for the whole lifetime of this app
   discard signalConnect(plainTextItem, "toggled",
                         SignalFunc(pl_Toggled),
-          addr(win.tempStuff.plMenuItems.mget("")))
+          addr(plainText[0]))
   
   for section, langs in langSections:
     var sectionMenuItem = menuItemNew(section); sectionMenuItem.show()
@@ -1535,9 +1537,11 @@ proc initTopMenu(MainBox: PBox) =
       var langMenuItem = checkMenuItemNew(lang.getName()); langMenuItem.show()
       sectionMenu.append(langMenuItem)
       win.tempStuff.plMenuItems[$lang.getID()] = (langMenuItem, $lang.getID())
+      var langID = $lang.getID()
+      GCRef(langID)
       discard signalConnect(langMenuItem, "toggled",
                             SignalFunc(pl_Toggled),
-              addr(win.tempStuff.plMenuItems.mget($lang.getID())))
+              addr(langID[0]))
     SyntaxHighlightingMenu.append(sectionMenuItem)
   
   var ViewMenuItem = menuItemNewWithMnemonic("_View")
