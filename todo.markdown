@@ -17,6 +17,7 @@
 * keywords.txt -> nimrod.lang
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
+* Check current tabs language when F5 (etc.) is pressed.
 
 ## Other language features
 * Ability to change to hard tabs.

@@ -52,7 +52,6 @@ proc findBoundsGen(text, pattern: string,
                    rePattern: bool, reOptions: system.set[TRegExFlag],
                    start: int = 0): 
     tuple[first: int, last: int] =
-  
   if rePattern:
     try:
       result = re.findBounds(text, re(pattern, reOptions), start)
@@ -99,7 +98,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
     # Yeah. I know inefficient, but that's the only way I know how to do this.
     var newMatch = (-1, 0)
     while True:
-      newMatch = findBoundsGen($text, newPattern, isRegex, reOptions, match[1]+1)
+      newMatch = findBoundsGen($text, newPattern, isRegex, reOptions, match[1])
       if newMatch != (-1, 0): match = newMatch
       else: break
 
@@ -206,6 +205,14 @@ proc findText*(forward: bool) =
     
     # Reset statusbar
     win.statusbar.restorePrevious()
+    
+    let compared = compare(addr(startSel), addr(endMatch))
+    if forward:
+      if compared > 0:
+        win.statusbar.setTemp("Wrapped around end of file", UrgNormal, 5000)
+    else:
+      if compared < 0:
+        win.statusbar.setTemp("Wrapped around end of file", UrgNormal, 5000)
   else:
     # Change the findEntry color to red
     var red: Gdk2.TColor
@@ -268,5 +275,18 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.setHighlightMatchingBrackets(win.settings.highlightMatchingBrackets)
 
   return count
+  
+proc highlightAll*(term: string, mode = SearchCaseInsens) =
+  ## Asynchronously finds all occurrences of ``term`` in the current tab, and
+  ## highlights them.
+  
+  
+proc stopHighlightAll*() =
+  ## Resets the terms that are highlighted in the current tab, or if all terms
+  ## haven't yet been found cancels the idle proc job (resets the already
+  ## highlighted terms)
+  
+  
+  
   
   

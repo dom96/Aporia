@@ -83,7 +83,6 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
     bar.progressbar.show()
     bar.statusLabel.setUseMarkup(false)
     bar.progressbar.setText(st.text)
-  echo("added ", st.kind)
   if st.kind == StatusTemp:
     # Priority has to be high, otherwise the proc fails to be executed in some
     # cases.
