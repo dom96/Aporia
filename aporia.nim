@@ -10,7 +10,7 @@
 # Stdlib imports:
 import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
-import tables
+import tables, algorithm
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes,
        CustomStatusBar
@@ -1398,8 +1398,8 @@ proc goLineClose_clicked(button: PButton, user_data: pgpointer) =
 # GUI Initialization
 
 proc loadLanguageSections(): 
-      tables.TTable[string, seq[PSourceLanguage]] =
-  result = initTable[string, seq[PSourceLanguage]]()
+      tables.TOrderedTable[string, seq[PSourceLanguage]] =
+  result = initOrderedTable[string, seq[PSourceLanguage]]()
   var langMan = languageManagerGetDefault()
   var languages = langMan.getLanguageIDs()
   for i in 0..len(languages.cstringArrayToSeq)-1:
@@ -1409,6 +1409,15 @@ proc loadLanguageSections():
     if not result.hasKey(section):
       result[section] = @[]
     result.mget(section).add(lang)
+
+  for k, v in mpairs(result):
+    v.sort do (x, y: PSourceLanguage) -> int {.closure.}:
+      return cmp(toLower($x.getName()), toLower($y.getName()))
+  
+  let cmpB = proc (x, y: tuple[key: string, val: seq[PSourceLanguage]]): int {.closure.} =
+    return cmp(x.key, y.key)
+  
+  #result.sort cmpB
 
 proc initTopMenu(MainBox: PBox) =
   # Create a accelerator group, used for shortcuts

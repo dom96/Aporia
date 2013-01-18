@@ -16,6 +16,7 @@
 * Temporary file saves.
 * keywords.txt -> nimrod.lang
 * Output text view limit. OOMed my system because of a lot of output already.
+* Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -76,3 +77,4 @@
 * Feature: Select a block of code, split it up into 80 char lines.
 * Popular languages listed in View -> Syntax Highlighting?
 * When aporia's config file is saved, validate before saving. If incorrect, list errors in Error List?
+* List of debug's or echod functions, can be used to easily toggle them when debugging. This will decrease crap in your stdout when you're trying to debug something. And you don't have to hunt down each of your debug functions.
