@@ -6,7 +6,6 @@
 * Test on Windows.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * "Project" feature, look at existance of file.nimrod.cfg in dir.
-* Comment feature should add a space after '#' and between /* */ (For CSS)
 * Sort View -> Syntax Highlighting
 * When opening a file from Recently opened file. They should be added to the top
   of Recently opened files.
@@ -19,7 +18,7 @@
 * Change GUI layout of find bar, add wrap around toggle button etc.
 * Gdk-CRITICAL **: gdk_window_invalidate_rect_full: assertion `GDK_IS_WINDOW (window)' failed
   * Caused by a GtkSourceView from a tab other than the current one being focused.
-
+  * Use the same strategy as scrolling for making sure that the selected tab gets focused.
 
 ## Other language features
 * Ability to change to hard tabs.

@@ -852,7 +852,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     # Find first non-whitespace
     var locNonWS = ($line).skipWhitespace()
     # Check if the line is commented.
-    let lineComment = win.tempStuff.commentSyntax.line
+    let lineComment = win.tempStuff.commentSyntax.line & ' '
     if ($line)[locNonWS .. locNonWS+lineComment.len-1] == lineComment:
       # Line is commented
       var startCmntIter, endCmntIter: TTextIter
@@ -873,11 +873,12 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     (addr theEnd).moveToEndLine() # Move to end of line.
     var selectedTxt = cb.getText(addr(start), addr(theEnd), false)
     # Check if this language supports block comments.
-    let blockStart = win.tempStuff.commentSyntax.blockStart
-    let blockEnd   = win.tempStuff.commentSyntax.blockEnd
+    let blockStart = win.tempStuff.commentSyntax.blockStart & ' '
+    let blockEnd   = ' ' & win.tempStuff.commentSyntax.blockEnd
     if blockStart != "":
       var firstNonWS = ($selectedTxt).skipWhitespace()
       if ($selectedTxt)[firstNonWS .. firstNonWS+blockStart.len-1] == blockStart:
+        # Uncommenting here.
         # Find blockEnd:
         var blockEndIndex = ($selectedTxt).rfind(blockEnd)
         if blockEndIndex == -1:
@@ -900,6 +901,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
                            gint(blockEnd.len))
         gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
       else:
+        # Commenting selection
         var locNonWSIter: TTextIter
         cb.getIterAtOffset(addr(locNonWSIter), (addr start).getOffset() +
                                firstNonWS.gint)
