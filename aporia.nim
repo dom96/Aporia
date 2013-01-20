@@ -356,6 +356,8 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
     
     var cTab = win.Tabs[current]
     cTab.label.setText(name)
+    
+    updateStatusBar(buffer, "")
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): bool =

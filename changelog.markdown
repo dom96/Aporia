@@ -33,3 +33,5 @@ the Nimrod syntax highlighter.
 * When searching, all occurrences in the document of your search will now be
   highlighted.
 * When you select text all occurrences of the selected text will now be highlighted.
+* You are now notified when search wraps around the end of the file through the 
+  status bar.

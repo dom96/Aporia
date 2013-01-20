@@ -15,6 +15,12 @@ import utils, CustomStatusBar
 var
   win*: ptr utils.MainWin
 
+const
+  NonHighlightChars = {'=', '+', '-', '*', '/', '<', '>', '@', '$', '~', '&',
+                       '%', '|', '!', '?', '^', '.', ':', '\\', '(', ')',
+                       '{', '}', '`', '[', ']', ',', ';'} +
+                      strutils.Whitespace + {'\t'}
+
 proc newHighlightAll*(text: string, forSearch: bool, idleID: int32): THighlightAll =
   result.isHighlighted = true
   result.text = text
@@ -25,6 +31,15 @@ proc newNoHighlightAll*(): THighlightAll =
   result.isHighlighted = false
   result.text = ""
 
+proc canBeHighlighted(term: string): bool =
+  ## Determines whether ``term`` should be highlighted.
+  result = false
+  if term.len == 0: return false
+  let c = term[0]
+  if c notin NonHighlightChars: return true
+  for i in 1..term.len-1:
+    if term[i] notin NonHighlightChars: return true
+  
 proc getSearchOptions(mode: TSearchEnum): TTextSearchFlags =
   case mode
   of SearchCaseInsens:
@@ -217,6 +232,10 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
   if w.tabs[current].highlighted.text == term:
     ## This is already highlighted.
     return
+  
+  if not forSearch:
+    if not canBeHighlighted(term):
+      return
   
   echod("Highlighting in ", mode)
   stopHighlightAll(w, forSearch)
