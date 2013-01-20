@@ -17,6 +17,8 @@ type
   TSettings* = object
     search*: TSearchEnum # Search mode.
     wrapAround*: bool # Whether to wrap the search around.
+    selectHighlightAll*: bool # Whether to highlight all occurrences upon selection
+    searchHighlightAll*: bool # Whether to highlight all occurrences of the currently searched text
     
     font*: string # font used by the sourceview
     outputFont*: string # font used by the output textview
@@ -161,6 +163,7 @@ type
     closeBtn*: PButton # This is so that the close btn is only shown on selected tabs.
     saved*: bool
     filename*: string
+    highlighted*: THighlightAll
     
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string
@@ -184,6 +187,11 @@ type
     UTF8 = "UTF-8", ISO88591 = "ISO-8859-1", GB2312 = "GB2312",
     Windows1251 = "Windows-1251", UTF16BE = "UTF-16BE", UTF16LE = "UTF-16LE"
 
+  THighlightAll* = object
+    isHighlighted*: bool
+    text*: string # What is currently being highlighted in this tab
+    forSearch*: bool # Whether highlightedText is done as a result of a search.
+    idleID*: int32
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
@@ -200,6 +208,19 @@ proc createColor*(textView: PTextView, name, color: string): PTextTag =
   result = tagTable.tableLookup(name)
   if result == nil:
     result = textView.getBuffer().createTag(name, "foreground", color, nil)
+
+proc removeTag*(buffer: PTextBuffer, name: string): bool =
+  ## Removes a TextTag from ``buffer`` with the name of ``name``.
+  ## Returns whether tag was removed.
+  var tagTable = buffer.getTagTable()
+  var tag = tagTable.tableLookup(name)
+  if tag == nil: return false
+  tagTable.tableRemove(tag)
+  return true
+
+proc getTag*(buffer: PTextBuffer, name: string): PTextTag =
+  ## Gets tag with ``name``. Return nil if it does not exist.
+  return buffer.getTagTable().tableLookup(name)
 
 proc addText*(textView: PTextView, text: string,
              colorTag: PTextTag = nil, scroll: bool = true) =

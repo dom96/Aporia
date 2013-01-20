@@ -15,8 +15,18 @@ import utils, CustomStatusBar
 var
   win*: ptr utils.MainWin
 
-proc getSearchOptions(): TTextSearchFlags =
-  case win.settings.search
+proc newHighlightAll*(text: string, forSearch: bool, idleID: int32): THighlightAll =
+  result.isHighlighted = true
+  result.text = text
+  result.forSearch = forSearch
+  result.idleID = idleID
+
+proc newNoHighlightAll*(): THighlightAll =
+  result.isHighlighted = false
+  result.text = ""
+
+proc getSearchOptions(mode: TSearchEnum): TTextSearchFlags =
+  case mode
   of SearchCaseInsens:
     result = TEXT_SEARCH_TEXT_ONLY or 
         TEXT_SEARCH_VISIBLE_ONLY or TEXT_SEARCH_CASE_INSENSITIVE
@@ -46,6 +56,9 @@ proc styleInsensitive(s: string): string =
     of ' ':
       result.add("\\s")
       inc(i)
+    of '\t':
+      result.add("\\t")
+      inc(i)
     else: addx()
 
 proc findBoundsGen(text, pattern: string,
@@ -67,7 +80,8 @@ proc findBoundsGen(text, pattern: string,
   if result[0] == -1 or result[1] == -1: return (-1, 0)
 
 proc findRePeg(forward: bool, startIter: PTextIter,
-               buffer: PTextBuffer, pattern: string, wrappedAround = false): 
+               buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
+               wrappedAround = false): 
     tuple[startMatch, endMatch: TTextIter, found: bool] =
   var text: cstring
   var iter: TTextIter # If forward then this points to the end
@@ -83,10 +97,9 @@ proc findRePeg(forward: bool, startIter: PTextIter,
   var isRegex = win.settings.search == SearchRegex
   var reOptions = {reExtended, reStudy}
   var newPattern = pattern
-  if win.settings.search == SearchStyleInsens:
+  if mode == SearchStyleInsens:
     reOptions = reOptions + {reIgnoreCase}
     newPattern = styleInsensitive(newPattern)
-    echod(newPattern)
     isRegex = True  
     
   var matches: array[0..re.MaxSubpatterns, string]
@@ -123,14 +136,15 @@ proc findRePeg(forward: bool, startIter: PTextIter,
       else:
         # We are at the beginning. Restart from the end.
         buffer.getEndIter(addr(startMatch))
-      return findRePeg(forward, addr(startMatch), buffer, pattern, true)
+      return findRePeg(forward, addr(startMatch), buffer, pattern, mode, true)
   
     return (startMatch, endMatch, False)
 
 proc findSimple(forward: bool, startIter: PTextIter,
-                buffer: PTextBuffer, pattern: string, wrappedAround = false):
+                buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
+                wrappedAround = false):
                 tuple[startMatch, endMatch: TTextIter, found: bool] =
-  var options = getSearchOptions()
+  var options = getSearchOptions(mode)
   var matchFound: gboolean = false
   var startMatch, endMatch: TTextIter
   if forward:
@@ -148,9 +162,100 @@ proc findSimple(forward: bool, startIter: PTextIter,
       else:
         # We are at the beginning. Restart from end.
         buffer.getEndIter(addr(startMatch))
-      return findSimple(forward, addr(startMatch), buffer, pattern, true)
+      return findSimple(forward, addr(startMatch), buffer, pattern, mode, true)
     
   return (startMatch, endMatch, matchFound)
+
+iterator findTerm(buffer: PSourceBuffer, term: string, mode: TSearchEnum): tuple[startMatch, endMatch: TTextIter] {.closure.} =
+  var iter: TTextIter
+  buffer.getStartIter(addr(iter))
+  
+  var found = True
+  var startMatch, endMatch: TTextIter
+  var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
+  while found:
+    case mode
+    of SearchCaseInsens, SearchCaseSens:
+      ret = findSimple(true, addr(iter), buffer, $term, mode, wrappedAround = true)
+    of SearchRegex, SearchPeg, SearchStyleInsens:
+      ret = findRePeg(true, addr(iter), buffer, $term, mode, wrappedAround = true)
+    startMatch = ret[0]
+    endMatch = ret[1]
+    found = ret[2]
+    
+    iter = endMatch
+    if not found: break
+    yield (startMatch, endMatch)
+
+const HighlightTagName = "search-highlight-all"
+
+proc stopHighlightAll*(w: var MainWin, forSearch: bool) =
+  ## Resets the terms that are highlighted in the current tab, or if all terms
+  ## haven't yet been found cancels the idle proc job (resets the already
+  ## highlighted terms)
+  let current = getCurrentTab(w)
+  let t = w.tabs[current]
+  if t.highlighted.isHighlighted:
+    if not forSearch and w.tabs[current].highlighted.forSearch: return
+    
+    discard gSourceRemove(w.tabs[current].highlighted.idleID)
+    var startIter, endIter: TTextIter
+    w.tabs[current].buffer.getStartIter(addr(startIter))
+    w.tabs[current].buffer.getEndIter(addr(endIter))
+    w.tabs[current].buffer.removeTagByName(HighlightTagName, addr(startIter), addr(endIter))
+    doAssert w.tabs[current].buffer.removeTag(HighlightTagName)
+    w.tabs[current].highlighted = newNoHighlightAll()
+
+proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchCaseInsens) =
+  ## Asynchronously finds all occurrences of ``term`` in the current tab, and
+  ## highlights them.
+  var current = getCurrentTab(w)
+  if w.tabs[current].highlighted.isHighlighted:
+    if not forSearch and w.tabs[current].highlighted.forSearch:
+      return 
+  
+  if w.tabs[current].highlighted.text == term:
+    ## This is already highlighted.
+    return
+  
+  echod("Highlighting in ", mode)
+  stopHighlightAll(w, forSearch)
+  
+  type 
+    TIdleParam = object
+      buffer: PSourceBuffer
+      term: string 
+      mode: TSearchEnum
+      findIter: iterator (buffer: PSourceBuffer, 
+                          term: string, mode: TSearchEnum): 
+                        tuple[startMatch, endMatch: TTextIter] {.closure.}
+    
+  var idleParam: ref TIdleParam; new(idleParam)
+  idleParam.buffer = w.tabs[current].buffer
+  idleParam.term = term
+  idleParam.mode = mode
+  idleParam.findIter = findTerm
+  GCRef(idleParam) # Make sure `idleParam` is not deallocated by the GC.
+  
+  discard w.tabs[current].buffer.createTag(HighlightTagName,
+                                           "background", "#F28A13",
+                                           "foreground", "#ffffff", nil)
+  
+  proc idleHighlightAll(param: ptr TIdleParam): bool {.cdecl.} =
+    result = true
+    var (startMatch, endMatch) = param.findIter(param.buffer, param.term, param.mode)
+    if param.findIter.finished: return false
+    param.buffer.applyTagByName(HighlightTagName, addr startMatch, addr endMatch)
+    
+  proc idleHighlightAllRemove(param: ptr TIdleParam) {.cdecl.} =
+    echod("Unreffing highlight.")
+    GCUnref(cast[ref TIdleParam](param))
+    GC_fullCollect()
+  
+  let idleID =
+      gIdleAddFull(GPRIORITY_DEFAULT_IDLE, idleHighlightAll,
+                   cast[ptr TIdleParam](idleParam), idleHighlightAllRemove)
+  w.tabs[current].highlighted = newHighlightAll(term, forSearch, idleID)
 
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
@@ -160,6 +265,11 @@ proc findText*(forward: bool) =
 
   # Get the current tab
   var currentTab = win.SourceViewTabs.getCurrentPage()
+  if win.settings.searchHighlightAll:
+    highlightAll(win[], pattern, true, win.settings.search)
+  else:
+    # Stop it from highlighting due to selection.
+    win.tabs[currentTab].highlighted = newHighlightAll("", true, -1)
   
   # Get the position where the cursor is,
   # Search based on that.
@@ -171,14 +281,15 @@ proc findText*(forward: bool) =
   var matchFound: gboolean = false
   
   var buffer = win.Tabs[currentTab].buffer
+  var mode = win.settings.search
   
-  case win.settings.search
+  case mode
   of SearchCaseInsens, SearchCaseSens:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
     if forward:
-      ret = findSimple(forward, addr(endSel), buffer, pattern)
+      ret = findSimple(forward, addr(endSel), buffer, pattern, mode)
     else:
-      ret = findSimple(forward, addr(startSel), buffer, pattern)
+      ret = findSimple(forward, addr(startSel), buffer, pattern, mode)
     startMatch = ret[0]
     endMatch = ret[1]
     matchFound = ret[2]
@@ -186,9 +297,9 @@ proc findText*(forward: bool) =
   of SearchRegex, SearchPeg, SearchStyleInsens:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
     if forward:
-      ret = findRePeg(forward, addr(endSel), buffer, pattern)
+      ret = findRePeg(forward, addr(endSel), buffer, pattern, mode)
     else:
-      ret = findRePeg(forward, addr(startSel), buffer, pattern)
+      ret = findRePeg(forward, addr(startSel), buffer, pattern, mode)
     startMatch = ret[0]
     endMatch = ret[1]
     matchFound = ret[2]
@@ -252,11 +363,11 @@ proc replaceAll*(find, replace: cstring): Int =
   while found:
     case win.settings.search
     of SearchCaseInsens, SearchCaseSens:
-      var options = getSearchOptions()
+      var options = getSearchOptions(win.settings.search)
       found = gtksourceview.forwardSearch(addr(iter), find, 
           options, addr(startMatch), addr(endMatch), nil)
     of SearchRegex, SearchPeg, SearchStyleInsens:
-      var ret = findRePeg(true, addr(iter), buffer, $find)
+      var ret = findRePeg(true, addr(iter), buffer, $find, win.settings.search)
       startMatch = ret[0]
       endMatch = ret[1]
       found = ret[2]
@@ -275,16 +386,6 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.setHighlightMatchingBrackets(win.settings.highlightMatchingBrackets)
 
   return count
-  
-proc highlightAll*(term: string, mode = SearchCaseInsens) =
-  ## Asynchronously finds all occurrences of ``term`` in the current tab, and
-  ## highlights them.
-  
-  
-proc stopHighlightAll*() =
-  ## Resets the terms that are highlighted in the current tab, or if all terms
-  ## haven't yet been found cancels the idle proc job (resets the already
-  ## highlighted terms)
   
   
   

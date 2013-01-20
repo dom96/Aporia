@@ -15,6 +15,8 @@ type
 
 proc defaultSettings*(): TSettings =
   result.search = SearchCaseInsens
+  result.selectHighlightAll = true
+  result.searchHighlightAll = false
   result.wrapAround = true
   result.font = "Monospace 10"
   result.outputFont = "Monospace 10"
@@ -88,6 +90,8 @@ proc save*(win: MainWin) =
 
     f.writeSection("other")
     f.writeKeyVal("searchMethod", $int(settings.search))
+    f.writeKeyVal("selectHighlightAll", $settings.selectHighlightAll)
+    f.writeKeyVal("searchHighlightAll", $settings.searchHighlightAll)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     
     f.writeSection("auto")
@@ -158,6 +162,8 @@ proc load*(lastSession: var seq[string]): TSettings =
       of "suggestfeature": result.suggestFeature = isTrue(e.value)
       of "showcloseonalltabs": result.showCloseOnAllTabs = isTrue(e.value)
       of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
+      of "selecthighlightall": result.selectHighlightAll = isTrue(e.value)
+      of "searchhighlightall": result.searchHighlightAll = isTrue(e.value)
       of "singleinstanceport":
         result.singleInstancePort = int32(e.value.parseInt())
       of "winmaximized": result.winMaximized = isTrue(e.value)

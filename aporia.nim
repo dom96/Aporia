@@ -274,7 +274,7 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
 
 # -- SourceView(PSourceView) & SourceBuffer
 
-proc updateStatusBar(buffer: PTextBuffer) =
+proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
   # Incase this event gets fired before
   # statusBar is initialized
   if win.statusbar != nil and not win.tempStuff.stopSBUpdates:
@@ -286,15 +286,31 @@ proc updateStatusBar(buffer: PTextBuffer) =
       let frmChar = getLineOffset(addr(insert))
       let toChar = getLineOffset(addr(selectBound))
       win.statusbar.setDocInfoSelected(frmLn, toLn, frmChar, toChar)
+      if frmLn == toLn and win.settings.selectHighlightAll:
+        template h: expr = win.tabs[getCurrentTab(win)].highlighted
+        # Same line.
+        var term = buffer.getText(addr(insert), addr(selectBound), false)
+        highlightAll(win, $term, false)
+        if not win.settings.searchHighlightAll and h.forSearch and
+           markName == "selection_bound":
+          # Override the search selection block, this means that after searching
+          # selecting text manually will still highlight things instead of you
+          # having to close the find bar.
+          h = newNoHighlightAll()
     else:
       let ln = getLine(addr(insert)) + 1
       let ch = getLineOffset(addr(insert))
       win.statusbar.setDocInfo(ln, ch)
+      if win.settings.selectHighlightAll:
+        stopHighlightAll(win, false)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
-  # TODO: Stop this from going crazy when session is being restored.
-  updateStatusBar(buffer)
+  var markName = mark.getName()
+  if markName == nil:
+    return
+  if $markName == "insert" or $markName == "selection_bound":
+    updateStatusBar(buffer, $markName)
 
 proc onCloseTab(btn: PButton, user_data: PWidget)
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
@@ -630,6 +646,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   nTab.saved = (filename != "")
   nTab.filename = filename
   nTab.closeBtn = closeBtn
+  nTab.highlighted = newNoHighlightAll()
   if not win.settings.showCloseOnAllTabs:
     nTab.closeBtn.hide()
   win.Tabs.add(nTab)
@@ -1909,6 +1926,15 @@ proc initFindBar(MainBox: PBox) =
   
   MainBox.packStart(win.findBar, False, False, 0)
   #win.findBar.show()
+
+  proc findBar_Hide(widget: PWidget, dummy: gpointer) {.cdecl.} =
+    if win.settings.searchHighlightAll:
+      stopHighlightAll(win, true)
+    else:
+      win.tabs[win.getCurrentTab()].highlighted = newNoHighlightAll()
+
+  discard win.findBar.signalConnect("hide", 
+             SIGNAL_FUNC(findBar_Hide), nil)
 
 proc initGoLineBar(MainBox: PBox) =
   # Create a fixed container

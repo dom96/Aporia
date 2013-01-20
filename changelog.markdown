@@ -27,3 +27,9 @@ the Nimrod syntax highlighter.
 * Syntax highlighting can now be changed by going to View -> Syntax Highlighting.
 * Aporia's config file can now be opened in Aporia easily through the Edit menu.
 * Suggest and Go to definition is now executed asynchronously.
+* Fixed a bug where Style insensitive search does not find tabulators.
+* Fixed a bug where searching backwards may skip to the end of the file instead
+  of matching a term at the top of the file.
+* When searching, all occurrences in the document of your search will now be
+  highlighted.
+* When you select text all occurrences of the selected text will now be highlighted.

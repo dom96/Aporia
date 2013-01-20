@@ -5,7 +5,6 @@
 * Find all references
 * Save the last opened tab.
 * Test on Windows.
-* When you select a word, the same words in the doc should be highlighted.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * "Project" feature, look at existance of file.nimrod.cfg in dir.
 * Comment feature should add a space after '#' and between /* */ (For CSS)
@@ -18,6 +17,7 @@
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
 * Check current tabs language when F5 (etc.) is pressed.
+* Change GUI layout of find bar, add wrap around toggle button etc.
 
 ## Other language features
 * Ability to change to hard tabs.
