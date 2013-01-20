@@ -61,7 +61,7 @@ proc writeKeyValRaw(f: TFile, key: string, val: string) =
   else: f.write("\"" & val & "\"")
   f.write("\n")
 
-proc save*(win: MainWin) =
+proc save*(win: var MainWin) =
   var settings = win.settings
 
   if not os.existsDir(os.getConfigDir() / "Aporia"):
@@ -129,6 +129,10 @@ proc save*(win: MainWin) =
           tabs.add(i.filename & "|" & $cursorPos & ";")
       f.write(tabs & "\"\n")
     
+      # Save currently selected tab
+      var current = win.getCurrentTab()
+      f.writeKeyValRaw("lastSelectedTab", win.tabs[current].filename)
+    
     f.close()
 
 proc isTrue(s: string): bool = 
@@ -186,7 +190,8 @@ proc load*(lastSession: var seq[string]): TSettings =
           if file != "":
             if count > 19: raise newException(ECFGParse, "Too many recent files")
             result.recentlyOpenedFiles.add(file)
-      
+      of "lastselectedtab":
+        result.lastSelectedTab = e.value
     of cfgError:
       raise newException(ECFGParse, e.msg)
     of cfgSectionStart, cfgOption:

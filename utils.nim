@@ -47,7 +47,7 @@ type
     recentlyOpenedFiles*: seq[string] # paths of recently opened files
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
-    
+    lastSelectedTab*: string # The tab filename that was selected when aporia was last closed.
     
   MainWin* = object
     # Widgets

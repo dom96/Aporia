@@ -3,7 +3,6 @@
 ## Version 0.2.0
 
 * Find all references
-* Save the last opened tab.
 * Test on Windows.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * "Project" feature, look at existance of file.nimrod.cfg in dir.
@@ -18,6 +17,9 @@
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
 * Check current tabs language when F5 (etc.) is pressed.
 * Change GUI layout of find bar, add wrap around toggle button etc.
+* Gdk-CRITICAL **: gdk_window_invalidate_rect_full: assertion `GDK_IS_WINDOW (window)' failed
+  * Caused by a GtkSourceView from a tab other than the current one being focused.
+
 
 ## Other language features
 * Ability to change to hard tabs.

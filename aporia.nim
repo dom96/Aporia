@@ -1726,7 +1726,7 @@ proc initSourceViewTabs() =
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
-        addTab("", filename, False)
+        addTab("", filename, win.settings.lastSelectedTab == filename)
       
         var iter: TTextIter
         # TODO: Save last cursor position as line and column offset combo.
@@ -2087,7 +2087,7 @@ proc initControls() =
   # before initializing (I presume, could be another widget) the GtkSourceView
   # (maybe the ScrolledView) means that the stupid thing won't scroll on startup.
   # This took me a VERY long time to find.
-  win.w.show() 
+  win.w.show()
 
   when not defined(noSingleInstance):
     try:
