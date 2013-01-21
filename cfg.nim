@@ -138,11 +138,9 @@ proc save*(win: var MainWin) =
 proc isTrue(s: string): bool = 
   result = cmpIgnoreStyle(s, "true") == 0
 
-proc load*(lastSession: var seq[string]): TSettings = 
-  var f = newFileStream(os.getConfigDir() / "Aporia" / "config.ini", fmRead)
-  if f == nil: raise newException(EIO, "Could not open configuration file.")
+proc load*(input: PStream, lastSession: var seq[string]): TSettings =
   var p: TCfgParser
-  open(p, f, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
+  open(p, input, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
   result = defaultSettings()
@@ -192,10 +190,17 @@ proc load*(lastSession: var seq[string]): TSettings =
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.lastSelectedTab = e.value
+      else:
+        raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
     of cfgError:
       raise newException(ECFGParse, e.msg)
     of cfgSectionStart, cfgOption:
       nil
+
+proc load*(lastSession: var seq[string]): TSettings = 
+  var f = newFileStream(os.getConfigDir() / "Aporia" / "config.ini", fmRead)
+  if f == nil: raise newException(EIO, "Could not open configuration file.")
+  return load(f, lastSession)
 
 when isMainModule:
   echo(load().showLineNumbers)

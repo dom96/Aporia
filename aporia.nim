@@ -62,7 +62,7 @@ var loadFiles = parseArgs()
 # Load the settings
 try:
   win.settings = cfg.load(lastSession)
-except ECFGParse:
+except ECFGParse, EInvalidValue:
   # TODO: Make the dialog show the exception
   confParseFail = True
   win.settings = cfg.defaultSettings()
@@ -123,6 +123,20 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     buffer.getEndIter(addr(endIter))
     
     var text = buffer.getText(addr(startIter), addr(endIter), False)
+    
+    var config = false
+    if path == os.getConfigDir() / "Aporia" / "config.ini":
+      # If we are overwriting Aporia's config file. Validate it.
+      try:
+        var disc: seq[string] = @[]
+        var newSettings = cfg.load(newStringStream($text), disc)
+        win.settings = newSettings
+        config = true
+      except:
+        win.statusbar.setTemp("Error parsing config: " & getCurrentExceptionMsg(),
+                              UrgError, 8000)
+        return
+    
     # Save it to a file
     var f: TFile
     if open(f, path, fmWrite):
@@ -142,7 +156,10 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         cTab.label.setTooltipText(path)
         
         updateMainTitle(tabNr)
-        win.statusbar.setTemp("File saved successfully.", UrgSuccess, 5000)
+        if config:
+          win.statusbar.setTemp("Config saved successfully.", UrgSuccess, 5000)
+        else:
+          win.statusbar.setTemp("File saved successfully.", UrgSuccess, 5000)
     else:
       error(win.w, "Unable to write to file: " & OSErrorMsg())
 
