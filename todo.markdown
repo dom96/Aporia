@@ -7,8 +7,6 @@
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * "Project" feature, look at existance of file.nimrod.cfg in dir.
 * Sort View -> Syntax Highlighting
-* When opening a file from Recently opened file. They should be added to the top
-  of Recently opened files.
 * Fix docs in suggest.
 * Temporary file saves.
 * keywords.txt -> nimrod.lang

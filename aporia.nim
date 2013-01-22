@@ -796,6 +796,7 @@ proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   let filename = file[]
   try:
     addTab("", filename, True)
+    win.settings.recentlyOpenedFiles.add(filename)
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
