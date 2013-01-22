@@ -190,7 +190,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
     else:
       win.printProcOutput(event.line)
 
-proc peekProcOutput*(win: ptr MainWin): bool =
+proc peekProcOutput*(win: ptr MainWin): bool {.cdecl.} =
   result = True
   if win.tempStuff.currentExec != nil:
     var events = execThrEventChan.peek()
@@ -299,7 +299,7 @@ proc newExec*(command: string, workDir: string, mode: TExecMode, output = true,
   result.runAfter = runAfter
   result.runAfterSuccess = runAfterSuccess
 
-template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt =
+template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt {.immediate.} =
   ## Sends a thrEvent of type ``t``, does ``todo`` before sending.
   var event {.inject.}: TExecThrEvent
   event.typ = t

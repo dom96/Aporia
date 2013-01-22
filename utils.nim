@@ -252,7 +252,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   # sourceview is gone? The likelihood of this happening is probably very unlikely
   # though.
   
-  proc idleConfirmScroll(sv: PSourceView): bool =
+  proc idleConfirmScroll(sv: PSourceView): bool {.cdecl.} =
     result = false
     
     var buff = sv.getBuffer()
