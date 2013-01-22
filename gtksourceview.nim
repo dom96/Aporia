@@ -195,5 +195,8 @@ proc get_metadata*(lang: PSourceLanguage, name: cstring): cstring {.cdecl, dynli
 proc get_section*(lang: PSourceLanguage): cstring {.cdecl, dynlib: lib,
   importc: "gtk_source_language_get_section".}
 
+proc get_hidden*(lang: PSourceLanguage): gboolean {.cdecl, dynlib: lib,
+  importc: "gtk_source_language_get_hidden" .}
+
 proc set_smart_home_end*(sv: PSourceView, smart_he: TSmartHomeEndType) {.cdecl,
   dynlib: lib, importc: "gtk_source_view_set_smart_home_end".}

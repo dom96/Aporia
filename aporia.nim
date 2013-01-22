@@ -1443,6 +1443,7 @@ proc loadLanguageSections():
   for i in 0..len(languages.cstringArrayToSeq)-1:
     var lang = langMan.getLanguage(languages[i])
     assert lang != nil
+    if lang.getHidden(): continue
     let section = $lang.getSection()
     if not result.hasKey(section):
       result[section] = @[]
