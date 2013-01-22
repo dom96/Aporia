@@ -104,10 +104,10 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       var langMan = languageManagerGetDefault()
       var lang = langMan.guessLanguage(path, nil)
       if lang != nil:
-        win.Tabs[tabNr].buffer.setLanguage(lang)
-        win.Tabs[tabNr].buffer.setHighlightSyntax(True)
+        win.setLanguage(tabNr, lang)
+        win.setHighlightSyntax(tabNr, True)
       else:
-        win.Tabs[tabNr].buffer.setHighlightSyntax(False)
+        win.setHighlightSyntax(tabNr, False)
       if tabNr == win.getCurrentTab:
         plCheckUpdate(tabNr)
   else: 
@@ -979,11 +979,11 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
   
     let currentTab = win.getCurrentTab()
     if id == "":
-      win.Tabs[currentTab].buffer.setHighlightSyntax(False)
+      win.setHighlightSyntax(currentTab, False)
     else:
       var langMan = languageManagerGetDefault()
-      win.Tabs[currentTab].buffer.setHighlightSyntax(True)
-      win.Tabs[currentTab].buffer.setLanguage(langMan.getLanguage(id))
+      win.setHighlightSyntax(currentTab, True)
+      win.setLanguage(currentTab, langMan.getLanguage(id))
     plCheckUpdate(currentTab)
     
 proc GetCmd(cmd, filename: string): string = 

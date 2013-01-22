@@ -410,3 +410,11 @@ proc getCurrentLanguageComment*(win: var MainWin,
     syntax.blockStart = ""
     syntax.blockEnd = ""
     syntax.line = ""
+
+proc setLanguage*(win: var MainWin, tab: int, lang: PSourceLanguage) =
+  win.tabs[tab].buffer.setLanguage(lang)
+  getCurrentLanguageComment(win, win.tempStuff.commentSyntax, tab) 
+
+proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
+  win.tabs[tab].buffer.setHighlightSyntax(doHighlight)
+  win.tempStuff.commentSyntax = ("", "", "")
