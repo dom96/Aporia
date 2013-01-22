@@ -386,6 +386,22 @@ proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   else:
     return ""
 
+proc getLanguageName*(win: var MainWin, pageNum: int = -1): string =
+  ## Returns the language name of the ``pageNum`` tab.
+  ##
+  ## If there is no syntax highlighting for the current tab ``"Plain Text"`` is
+  ## returned.
+  var currentPage = pageNum
+  if currentPage == -1:
+    currentPage = win.getCurrentTab()
+  var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
+  if isHighlighted:
+    var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
+    if SourceLanguage == nil: return "Plain Text"
+    return $sourceLanguage.getName()
+  else:
+    return "Plain Text"
+
 proc getCurrentLanguageComment*(win: var MainWin,
           syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
   ## Gets the current line comment string and block comment string.

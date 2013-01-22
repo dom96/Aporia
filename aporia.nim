@@ -933,6 +933,13 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
       # TODO: Loop through each line and add `lineComment` 
       # (# in the case of Nimrod) to it.
   
+  if win.tempStuff.commentSyntax.line == "" and 
+     win.tempStuff.commentSyntax.blockStart == "" and
+     win.tempStuff.commentSyntax.blockEnd == "":
+     win.statusbar.setTemp("No comment syntax for " &
+              win.getLanguageName(currentPage) & ".", UrgError)
+     return
+  
   if cb.getSelectionBounds(addr(start), addr(theEnd)):
     var startOldLineOffset = (addr start).getLineOffset()
     
