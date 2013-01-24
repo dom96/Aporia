@@ -252,7 +252,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   # sourceview is gone? The likelihood of this happening is probably very unlikely
   # though.
   
-  proc idleConfirmScroll(sv: PSourceView): bool {.cdecl.} =
+  proc idleConfirmScroll(sv: PSourceView): bool =
     result = false
     
     var buff = sv.getBuffer()
@@ -434,3 +434,17 @@ proc setLanguage*(win: var MainWin, tab: int, lang: PSourceLanguage) =
 proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
   win.tabs[tab].buffer.setHighlightSyntax(doHighlight)
   win.tempStuff.commentSyntax = ("", "", "")
+
+proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string] =
+  ## Finds the .nim project file in ``directory``.
+  # Find project file
+  var configFiles: seq[string] = @[]
+  for cfgFile in walkFiles(directory / "*.nimrod.cfg"):
+    configFiles.add(cfgFile)
+  let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
+  var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
+  if not existsFile(projectFile):
+    # check for file.nimrod
+    if not existsFile(projectFile & "rod"):
+      projectFile = ""
+  return (projectFile, projectCfgFile)

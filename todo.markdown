@@ -5,14 +5,12 @@
 * Find all references
 * Test on Windows.
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
-* "Project" feature, look at existance of file.nimrod.cfg in dir.
 * Sort View -> Syntax Highlighting
 * Fix docs in suggest.
 * Temporary file saves.
 * keywords.txt -> nimrod.lang
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
-* Check current tabs language when F5 (etc.) is pressed.
 * Change GUI layout of find bar, add wrap around toggle button etc.
 * Gdk-CRITICAL **: gdk_window_invalidate_rect_full: assertion `GDK_IS_WINDOW (window)' failed
   * Caused by a GtkSourceView from a tab other than the current one being focused.
@@ -37,7 +35,6 @@
 * Find all.
 * Different editing modes - html, xml, etc. (These should make editing these particular things easier.)
 * Track history of file. When you edit and then undo the file should not be marked as being unsaved.
-* Use threads when executing the compiler.
 * Finish the suggest feature.
 * Project management.
 * Ability to split vertically into two separate tab views.
@@ -71,10 +68,13 @@
   of updating the gtk wrapper, I copy the "gtk_some_object_some_function" I want
   to press Ctrl+B+Something and get a nice wrapped function without the "gtk_"
 * Jump to proc/temp/iterator. Ctrl + P ?
-* Instead of project files, each file can have options specified as a comment?
-  Like in vim.
+* <del>Instead of project files, each file can have options specified as a comment?
+  Like in vim.</del>
   * Evaluate how to handle projects.
 * Feature: Select a block of code, split it up into 80 char lines.
 * Popular languages listed in View -> Syntax Highlighting?
 * When aporia's config file is saved, validate before saving. If incorrect, list errors in Error List?
 * List of debug's or echod functions, can be used to easily toggle them when debugging. This will decrease crap in your stdout when you're trying to debug something. And you don't have to hunt down each of your debug functions.
+* Color large blocks of indentations.
+  * Useful in osproc, the big when defined(windows), it's a bit hard to see when the block ends because it's so big, adding colors may make it easier to see.
+* Background indexer of files in the directories of the files that are open. This will allow for quickly searching for files. (Kind of like 't' in github repo pages)

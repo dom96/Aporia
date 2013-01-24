@@ -198,16 +198,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   if tab.filename != "":
     var currentTabSplit = splitFile(tab.filename)
   
-    # Find project file
-    var configFiles: seq[string] = @[]
-    for cfgFile in walkFiles(tab.filename.splitFile.dir / "*.nimrod.cfg"):
-      configFiles.add(cfgFile)
-    let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
-    var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
-    if not existsFile(projectFile):
-      # check for file.nimrod
-      if not existsFile(projectFile & "rod"):
-        projectFile = ""
+    var (projectFile, projectCfgFile) = findProjectFile(tab.filename.splitFile.dir)
     let splitPrjF = splitFile(projectFile)
     projectFile = prefixDir / splitPrjF.name & splitPrjF.ext
     

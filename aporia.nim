@@ -18,7 +18,6 @@ import settings, utils, cfg, search, suggest, AboutDialog, processes,
 {.push callConv:cdecl.}
 
 const
-  NimrodProjectExt = ".nimprj"
   GTKVerReq = (2'i32, 18'i32, 0'i32) # Version of GTK required for Aporia to run.
   aporiaVersion = "0.1.3"
   helpText = """./aporia [args] filename...
@@ -68,10 +67,6 @@ except ECFGParse, EInvalidValue:
   win.settings = cfg.defaultSettings()
 except EIO:
   win.settings = cfg.defaultSettings()
-    
-proc getProjectTab(): int = 
-  for i in 0..high(win.tabs): 
-    if win.tabs[i].filename.endswith(NimrodProjectExt): return i
 
 proc updateMainTitle(pageNum: int) =
   if win.Tabs.len()-1 >= pageNum:
@@ -1022,14 +1017,16 @@ proc saveForCompile(currentTab: int): string =
     saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir)
     result = win.tabs[currentTab].filename
 
-proc saveAllForCompile(projectTab: int): string =
-  for i, tab in win.tabs:
-    if i == projectTab:
-      result = saveForCompile(i)
-    else:
-      discard saveForCompile(i)
+proc supportedLang(): bool =
+  result = false
+  let currentLang = win.getCurrentLanguage()
+  if currentLang  == "nimrod": return true
+  win.statusbar.setTemp("Unable to determine what action to take for " &
+                        currentLang, UrgError, 5000) 
+
 
 proc compileRun(filename: string, shouldRun: bool) =
+  # N.B. Must return when filename is "", CompileProject depends on this behaviour.
   if filename.len == 0: return
   if win.tempStuff.currentExec != nil:
     win.statusbar.setTemp("Process already running!", UrgError, 5000)
@@ -1050,23 +1047,37 @@ proc compileRun(filename: string, shouldRun: bool) =
   win.execProcAsync newExec(cmd, workDir, ExecNimrod, runAfter = runAfter)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
+  if not supportedLang(): return
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
   compileRun(filename, false)
   
 proc CompileRunCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
+  if not supportedLang(): return
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
   compileRun(filename, true)
 
+proc prepareProjectCompile(): string =
+  let tabDir = win.tabs[getCurrentTab(win)].filename.splitFile.dir
+  let (projectFile, cfgFile) = findProjectFile(tabDir)
+  if projectFile == "":
+    win.statusbar.setTemp("Could not find project file for currently selected tab.",
+        UrgError, 5000)
+    return ""
+  let projectDir = projectFile.splitFile.dir
+  for i in 0..win.tabs.len-1:
+    if win.tabs[i].filename.splitFile.dir == projectDir:
+      doAssert saveForCompile(i) == win.tabs[i].filename
+  return projectFile
+
 proc CompileProject_Activate(menuitem: PMenuItem, user_data: pointer) =
-  let filename = saveAllForCompile(getProjectTab())
-  compileRun(filename, false)
+  if not supportedLang(): return
+  compileRun(prepareProjectCompile(), false)
   
 proc CompileRunProject_Activate(menuitem: PMenuItem, user_data: pointer) =
-  let filename = saveAllForCompile(getProjectTab())
-  compileRun(filename, true)
+  if not supportedLang(): return
+  compileRun(prepareProjectCompile(), true)
 
 proc StopProcess_Activate(menuitem: PMenuItem, user_data: pointer) =
-
   if win.tempStuff.currentExec != nil and 
      win.tempStuff.execProcess != nil:
     echod("Terminating process... ID: ", $win.tempStuff.idleFuncId)
@@ -1079,7 +1090,6 @@ proc StopProcess_Activate(menuitem: PMenuItem, user_data: pointer) =
     var errorTag = createColor(win.outputTextView, "errorTag", "red")
     win.outputTextView.addText("> Process terminated\n", errorTag)
   else:
-    echod("No process running.")
     win.statusbar.setTemp("No process running.", UrgError, 5000)
 
 proc RunCustomCommand(cmd: string) = 
