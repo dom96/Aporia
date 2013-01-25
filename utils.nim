@@ -38,6 +38,7 @@ type
     toolBarVisible*: bool # Whether the top panel is shown
     bottomPanelVisible*: bool # Whether the bottom panel is shown
     suggestFeature*: bool # Whether the suggest feature is enabled
+    compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
     
     nimrodCmd*: string  # command template to use to exec the Nimrod compiler
     customCmd1*: string # command template to use to exec a custom command
@@ -386,21 +387,25 @@ proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   else:
     return ""
 
-proc getLanguageName*(win: var MainWin, pageNum: int = -1): string =
-  ## Returns the language name of the ``pageNum`` tab.
+proc getLanguageName*(win: var MainWin, buffer: PSourceBuffer): string =
+  ## Returns the language name of ``buffer``.
   ##
   ## If there is no syntax highlighting for the current tab ``"Plain Text"`` is
   ## returned.
-  var currentPage = pageNum
-  if currentPage == -1:
-    currentPage = win.getCurrentTab()
-  var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
+  var isHighlighted = buffer.getHighlightSyntax()
   if isHighlighted:
-    var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
+    var SourceLanguage = buffer.getLanguage()
     if SourceLanguage == nil: return "Plain Text"
     return $sourceLanguage.getName()
   else:
     return "Plain Text"
+
+proc getLanguageName*(win: var MainWin, pageNum: int = -1): string =
+  ## Returns the language name of the ``pageNum`` tab.
+  var currentPage = pageNum
+  if currentPage == -1:
+    currentPage = win.getCurrentTab()
+  return getLanguageName(win, win.Tabs[currentPage].buffer)
 
 proc getCurrentLanguageComment*(win: var MainWin,
           syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
@@ -448,3 +453,8 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
     if not existsFile(projectFile & "rod"):
       projectFile = ""
   return (projectFile, projectCfgFile)
+
+proc isTemporary*(t: Tab): bool =
+  ## Determines whether ``t`` is saved in /tmp
+  return t.filename.startsWith(getTempDir())
+  

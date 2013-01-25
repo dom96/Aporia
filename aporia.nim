@@ -145,10 +145,16 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       win.Tabs[tabNr].saved = True
       if updateGUI:
         var name = extractFilename(path)
+        var tooltip = "<b>Path: </b> " & path & "\n" &
+                      "<b>Language: </b> " & getLanguageName(win, tabNr)
         
-        var cTab = win.Tabs[tabNr]
-        cTab.label.setText(name)
-        cTab.label.setTooltipText(path)
+        let cTab = win.Tabs[tabNr]
+        if cTab.isTemporary:
+          cTab.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+          tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
+        else:
+          cTab.label.setText(name)
+        cTab.label.setTooltipMarkup(tooltip)
         
         updateMainTitle(tabNr)
         if config:
@@ -320,7 +326,7 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
   var markName = mark.getName()
   if markName == nil:
-    return
+    return # We don't want anonymous marks.
   if $markName == "insert" or $markName == "selection_bound":
     updateStatusBar(buffer, $markName)
 
@@ -651,7 +657,13 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
     nam = extractFilename(filename)
 
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow)
-  if filename != "": TabLabel.setTooltipText(filename)
+  if filename != "":
+    var tooltip = "<b>Path: </b> " & filename & "\n" &
+                  "<b>Language: </b> " & getLanguageName(win, buffer)
+    if filename.startsWith(getTempDir()):
+      labelText.setMarkup(nam & "<span color=\"#CC0E0E\"> *</span>")
+      tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
+    TabLabel.setTooltipMarkup(tooltip)
   # Add a tab
   var nTab: Tab
   nTab.buffer = buffer
@@ -1010,9 +1022,12 @@ proc saveForCompile(currentTab: int): string =
     if not existsDir(getTempDir() / "aporia"): createDir(getTempDir() / "aporia")
     result = getTempDir() / "aporia" / "a" & ($currentTab).addFileExt("nim")
     win.Tabs[currentTab].filename = result
-    saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
-    win.Tabs[currentTab].filename = ""
-    win.Tabs[currentTab].saved = false
+    if win.settings.compileUnsavedSave:
+      saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, true)
+    else:
+      saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
+      win.Tabs[currentTab].filename = ""
+      win.Tabs[currentTab].saved = false
   else:
     saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir)
     result = win.tabs[currentTab].filename

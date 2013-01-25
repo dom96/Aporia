@@ -7,7 +7,6 @@
 * Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * Sort View -> Syntax Highlighting
 * Fix docs in suggest.
-* Temporary file saves.
 * keywords.txt -> nimrod.lang
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
@@ -15,6 +14,7 @@
 * Gdk-CRITICAL **: gdk_window_invalidate_rect_full: assertion `GDK_IS_WINDOW (window)' failed
   * Caused by a GtkSourceView from a tab other than the current one being focused.
   * Use the same strategy as scrolling for making sure that the selected tab gets focused.
+* Search for ⌚, it selects too much with regex.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -50,8 +50,6 @@
 * Fix VPaned after that change to win.show().
 * docking with http://developer.gnome.org/gdl/
 * minimum mode -- look at screenshots dir
-* When compiling an unsaved file, make it saved on the frontend. 
-  So that when i'm editing it further I can press Ctrl + S without getting angry.
 * If search term is misspelled, try to find something close to it and color
   the textbox orange but do go to it.
 * Ctrl+Shift up/down should move the current line up or down.

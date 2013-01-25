@@ -35,7 +35,8 @@ proc defaultSettings*(): TSettings =
   result.recentlyOpenedFiles = @[]
   result.singleInstancePort = 55679
   result.showCloseOnAllTabs = false
-
+  result.compileUnsavedSave = true
+  
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
   f.write(sectionName)
@@ -93,6 +94,7 @@ proc save*(win: var MainWin) =
     f.writeKeyVal("selectHighlightAll", $settings.selectHighlightAll)
     f.writeKeyVal("searchHighlightAll", $settings.searchHighlightAll)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
+    f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     
     f.writeSection("auto")
     f.write("; Stuff which is saved automatically," & 
@@ -190,6 +192,8 @@ proc load*(input: PStream, lastSession: var seq[string]): TSettings =
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.lastSelectedTab = e.value
+      of "compileunsavedsave":
+        result.compileUnsavedSave = isTrue(e.value)
       else:
         raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
     of cfgError:
