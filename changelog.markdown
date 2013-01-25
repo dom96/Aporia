@@ -35,3 +35,8 @@ the Nimrod syntax highlighter.
 * When you select text all occurrences of the selected text will now be highlighted.
 * You are now notified when search wraps around the end of the file through the 
   status bar.
+* Compiling an unsaved file now saves it to /tmp. Aporia will warn you about any
+  files which are saved in /tmp with a red ``*``. Old behaviour can be restored
+  by changing the ``compileUnsavedSave`` option in the config, more info in
+  SettingsDoc.markdown.
+* Tooltip improvements: tab's language is displayed as well as other information.

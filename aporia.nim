@@ -89,6 +89,8 @@ proc plCheckUpdate(pageNum: int) =
   win.tempStuff.stopPLToggle = false
 
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
+  ## If tab's filename is ``""`` and the user clicks "Cancel", the filename will
+  ## remain ``""``.
   if tabNr < 0: return
   if win.Tabs[tabNr].saved: return
   var path = ""
@@ -164,6 +166,24 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     else:
       error(win.w, "Unable to write to file: " & OSErrorMsg())
 
+proc saveTabAs(tab: int, startPath: string): bool =
+  ## Returns whether we saved to a different filename.
+  var (filename, saved) = (win.Tabs[tab].filename, win.Tabs[tab].saved)
+
+  win.Tabs[tab].saved = False
+  win.Tabs[tab].filename = ""
+  # saveTab will ask the user for a filename if the tab's filename is "".
+  saveTab(tab, startpath)
+  # If the user cancels the save file dialog. Restore the previous filename
+  # and saved state
+  if win.Tabs[tab].filename == "":
+    win.Tabs[tab].filename = filename
+    win.Tabs[tab].saved = saved
+
+  result = win.Tabs[tab].filename != filename
+
+  updateMainTitle(tab)
+
 proc saveAllTabs() =
   for i in 0..high(win.tabs): 
     saveTab(i, os.splitFile(win.tabs[i].filename).dir)
@@ -183,36 +203,76 @@ proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
 
 proc confirmUnsaved(win: var MainWin, t: Tab): int =
   var askSave = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
-  askSave.addButtons(STOCK_SAVE, ResponseAccept, STOCK_CANCEL, ResponseCancel,
-      "Close without saving", ResponseReject, nil)
+
   askSave.setTransientFor(win.w)
   if t.filename != "":
-    askSave.setMarkup(t.filename.extractFilename & " is unsaved, would you like to save it?")
+    let name = t.filename.extractFilename
+    if t.isTemporary:
+      if t.saved:
+        askSave.setMarkup(name & " is saved in your system's temporary" &
+                          " directory, what would you like to do?")
+        askSave.addButtons("Save in a different directory", ResponseAccept, 
+                           STOCK_CANCEL, ResponseCancel,
+                           "Close without saving", ResponseReject, nil)
+      else:
+        askSave.setMarkup("An old version of " & name & " is saved in your " &
+                          "system's temporary directory. What would you like to do?")
+        askSave.addButtons("Save in a different directory", ResponseAccept,
+                           STOCK_SAVE, ResponseOK,
+                           STOCK_CANCEL, ResponseCancel,
+                           "Close without saving", ResponseReject, nil)
+    else:
+      askSave.setMarkup(name & " is not saved, would you like to save it?")
+      askSave.addButtons(STOCK_SAVE, ResponseAccept, STOCK_CANCEL, ResponseCancel,
+          "Close without saving", ResponseReject, nil)
   else:
     askSave.setMarkup("Would you like to save this tab?")
+    askSave.addButtons(STOCK_SAVE, ResponseAccept, STOCK_CANCEL, ResponseCancel,
+              "Close without saving", ResponseReject, nil)
+
+  # TODO: GtkMessageDialog's label seems to wrap lines...
 
   result = askSave.run()
   gtk2.destroy(PWidget(askSave))
 
+proc askCloseTab(tab: int): bool =
+  result = true
+  if not win.tabs[tab].saved and not win.tabs[tab].isTemporary:
+    # Only ask to save if file isn't empty
+    if win.Tabs[tab].buffer.get_char_count != 0:
+      var resp = win.confirmUnsaved(win.tabs[tab])
+      if resp == RESPONSE_ACCEPT:
+        saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
+        result = True
+      elif resp == RESPONSE_CANCEL:
+        result = False
+      elif resp == RESPONSE_REJECT:
+        result = True
+      else:
+        result = False
+  
+  if win.tabs[tab].isTemporary:
+    var resp = win.confirmUnsaved(win.tabs[tab])
+    if resp == RESPONSE_ACCEPT:
+      result = saveTabAs(tab, os.splitFile(win.tabs[tab].filename).dir)
+    elif resp == RESPONSE_OK:
+      assert(not win.tabs[tab].saved)
+      saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
+      result = True
+    elif resp == RESPONSE_CANCEL:
+      result = False
+    elif resp == RESPONSE_REJECT:
+      result = True
+    else:
+      result = False
+
 proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
   var quit = True
   for i in win.Tabs.low .. win.Tabs.len-1:
-    if not win.Tabs[i].saved:
-      # Only ask to save if file isn't empty
-      if win.Tabs[i].buffer.get_char_count != 0:
-        win.sourceViewTabs.setCurrentPage(i.int32)
-        var resp = win.confirmUnsaved(win.tabs[i])
-        if resp == RESPONSE_ACCEPT:
-          saveTab(i, os.splitFile(win.tabs[i].filename).dir)
-          quit = True
-        elif resp == RESPONSE_CANCEL:
-          quit = False
-          break
-        elif resp == RESPONSE_REJECT:
-          quit = True
-        else:
-          quit = False
-          break
+    if not win.Tabs[i].saved or win.Tabs[i].isTemporary:
+      win.sourceViewTabs.setCurrentPage(i.int32)
+      quit = askCloseTab(i)
+      if not quit: break
 
   # If False is returned the window will close
   return not quit
@@ -245,21 +305,8 @@ proc cycleTab(win: var MainWin) =
   win.sourceViewTabs.setCurrentPage(current)
 
 proc closeTab(tab: int) =
-  var close = true
-  if not win.tabs[tab].saved:
-    # Only ask to save if file isn't empty
-    if win.Tabs[tab].buffer.get_char_count != 0:
-      var resp = win.confirmUnsaved(win.tabs[tab])
-      if resp == RESPONSE_ACCEPT:
-        saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-        close = True
-      elif resp == RESPONSE_CANCEL:
-        close = False
-      elif resp == RESPONSE_REJECT:
-        close = True
-      else:
-        close = False
-  
+  var close = askCloseTab(tab)
+
   if close:
     system.delete(win.Tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
@@ -330,7 +377,7 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
   if $markName == "insert" or $markName == "selection_bound":
     updateStatusBar(buffer, $markName)
 
-proc onCloseTab(btn: PButton, user_data: PWidget)
+proc onCloseTab(btn: PButton, child: PWidget)
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
                        userDat: pwidget): bool
 proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
@@ -782,22 +829,10 @@ proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
 
 proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
-  var (filename, saved) = (win.Tabs[current].filename, win.Tabs[current].saved)
   var startpath = os.splitFile(win.tabs[current].filename).dir
   if startpath == "":
     startpath = win.tempStuff.lastSaveDir
-
-  win.Tabs[current].saved = False
-  win.Tabs[current].filename = ""
-  # saveTab will ask the user for a filename if the tabs filename is "".
-  saveTab(current, startpath)
-  # If the user cancels the save file dialog. Restore the previous filename
-  # and saved state
-  if win.Tabs[current].filename == "":
-    win.Tabs[current].filename = filename
-    win.Tabs[current].saved = saved
-
-  updateMainTitle(current)
+  discard saveTabAs(current, startpath)
 
 proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   let filename = file[]
@@ -1184,18 +1219,14 @@ proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
 
 # -- SourceViewTabs - Notebook.
 
-proc closeTab(child: PWidget) =
-  var tab = win.sourceViewTabs.pageNum(child)
-  closeTab(tab)
-
-proc onCloseTab(btn: PButton, user_data: PWidget) =
+proc onCloseTab(btn: PButton, child: PWidget) =
   if win.sourceViewTabs.getNPages() > 1:
-    closeTab(user_data)
+    closeTab(win.sourceViewTabs.pageNum(child))
 
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
                        userDat: pwidget): bool =
   if ev.button == 2: # Middle click.
-    closeTab(userDat)
+    closeTab(win.sourceViewTabs.pageNum(userDat))
 
 proc onTabsPressed(widg: PWidget, ev: PEventButton,
                        userDat: pwidget):bool =
