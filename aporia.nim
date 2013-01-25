@@ -211,24 +211,24 @@ proc confirmUnsaved(win: var MainWin, t: Tab): int =
       if t.saved:
         askSave.setMarkup(name & " is saved in your system's temporary" &
                           " directory, what would you like to do?")
-        askSave.addButtons("Save in a different directory", ResponseAccept, 
+        askSave.addButtons("_Save in a different directory", ResponseAccept, 
                            STOCK_CANCEL, ResponseCancel,
-                           "Close without saving", ResponseReject, nil)
+                           "Close _without saving", ResponseReject, nil)
       else:
         askSave.setMarkup("An old version of " & name & " is saved in your " &
                           "system's temporary directory. What would you like to do?")
-        askSave.addButtons("Save in a different directory", ResponseAccept,
+        askSave.addButtons("Save in a _different directory", ResponseAccept,
                            STOCK_SAVE, ResponseOK,
                            STOCK_CANCEL, ResponseCancel,
-                           "Close without saving", ResponseReject, nil)
+                           "Close _without saving", ResponseReject, nil)
     else:
       askSave.setMarkup(name & " is not saved, would you like to save it?")
       askSave.addButtons(STOCK_SAVE, ResponseAccept, STOCK_CANCEL, ResponseCancel,
-          "Close without saving", ResponseReject, nil)
+          "Close _without saving", ResponseReject, nil)
   else:
     askSave.setMarkup("Would you like to save this tab?")
     askSave.addButtons(STOCK_SAVE, ResponseAccept, STOCK_CANCEL, ResponseCancel,
-              "Close without saving", ResponseReject, nil)
+              "Close _without saving", ResponseReject, nil)
 
   # TODO: GtkMessageDialog's label seems to wrap lines...
 
