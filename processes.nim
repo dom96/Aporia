@@ -158,11 +158,9 @@ proc printProcOutput(win: var MainWin, line: string) =
     win.outputTextView.addText(line & "\n", normalTag)
 
 proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
-  if event.line != "":
-    echod("Line is: " & event.line.repr)
   if event.line == "" or event.line.startsWith(pegSuccess) or
       event.line =~ pegOtherHint:
-    echod(1)
+    #echod(1)
     if win.tempStuff.errorMsgStarted:
       win.tempStuff.errorMsgStarted = false
       win.printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
@@ -170,13 +168,13 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
     if event.line != "":
       win.printProcOutput(event.line)
   elif event.line.startsWith(reLineMessage):
-    echod(2)
+    #echod(2)
     if not win.tempStuff.errorMsgStarted:
-      echod(2.1)
+      #echod(2.1)
       win.tempStuff.errorMsgStarted = true
       win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
     elif win.tempStuff.compilationErrorBuffer != "":
-      echod(2.2)
+      #echod(2.2)
       win.printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
       win.tempStuff.compilationErrorBuffer = ""
       win.tempStuff.errorMsgStarted = false
@@ -184,7 +182,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
     else:
       win.printProcOutput(event.line)
   else:
-    echod(3)
+    #echod(3)
     if win.tempStuff.errorMsgStarted:
       win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
     else:
@@ -261,7 +259,6 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   assert(win.tempStuff.currentExec == nil)
   
   # Reset some things; and set some flags.
-  echod("Spawning new process.")
   # Execute the process
   win.tempStuff.currentExec = exec
   echod(exec.command)
@@ -277,7 +274,6 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
     
   # Add a function which will be called when the UI is idle.
   win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, addr(win))
-  echod("gTimeoutAdd id = ", $win.tempStuff.idleFuncId)
 
   win.tempStuff.progressStatusID = win.statusbar.setProgress("Executing")
   win.statusbar.progressbar.pulse()

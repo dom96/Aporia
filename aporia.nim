@@ -281,6 +281,9 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState,
                          user_data: pgpointer) =
   win.settings.winMaximized = (event.newWindowState and 
                                WINDOW_STATE_MAXIMIZED) != 0
+  
+  if (event.newWindowState and WINDOW_STATE_ICONIFIED) != 0:
+    win.suggest.hide()
 
 proc window_configureEvent(widget: PWidget, event: PEventConfigure,
                            ud: pgpointer): gboolean =

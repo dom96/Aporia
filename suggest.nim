@@ -117,13 +117,13 @@ proc show*(suggest: var TSuggestDialog) =
 
 proc hide*(suggest: var TSuggestDialog) =
   if suggest.shown:
+    echod("[Suggest] Hide")
     suggest.shown = false
     suggest.dialog.hide()
     # Hide the tooltip too.
     suggest.tooltip.hide()
 
-proc filterSuggest*(win: var MainWin) =
-  ## Filters the current suggest items after whatever is behind the cursor.
+proc getFilter(win: var MainWin): string =
   # Get text before the cursor, up to a dot.
   var current = win.SourceViewTabs.getCurrentPage()
   var tab     = win.Tabs[current]
@@ -136,10 +136,15 @@ proc filterSuggest*(win: var MainWin) =
   var endMatch: TTextIter
   var matched = (addr(cursor)).backwardSearch(".", TEXT_SEARCH_TEXT_ONLY,
                                 addr(startMatch), addr(endMatch), nil)
+  
   if not matched:
-    return
-  var text = (addr(endMatch)).getText(addr(cursor))
-  echod("[Suggest] Filtering ", text)
+    return ""
+  result = $((addr(endMatch)).getText(addr(cursor)))
+
+proc filterSuggest*(win: var MainWin) =
+  ## Filters the current suggest items after whatever is behind the cursor.
+
+  var text = getFilter(win)
   win.suggest.currentFilter = normalize($text)
   # Filter the items.
   var allItems = win.suggest.allItems
@@ -171,8 +176,12 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
     var item: TSuggestItem
     if parseIDEToolsLine("sug", line, item):
       win.suggest.allItems.add(item)
-      filterSuggest(win)
+      let text = getFilter(win)
+      if normalize(item.nmName).startsWith(normalize(text)):
+        win.suggest.items.add(item)
+        win.addSuggestItem(item)
       win.suggest.show()
+      win.doMoveSuggest()
       
   proc onSugExit(win: var MainWin, opts: PExecOptions, exit: int) {.closure.} =
     win.suggest.gotAll = true
@@ -286,8 +295,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
       # - Save it.
       f.write(text)
     else:
-      win.statusbar.setTemp("Unable to save one or more files for suggest. Suggest may not be activated.", UrgError, 5000)
-      echod("[Warning] Unable to save one or more files, suggest won't work.")
+      win.statusbar.setTemp("Unable to save one or more files for suggest. Suggest will not be activated.", UrgError, 5000)
       return false
     f.close()
     asyncGetSuggest(win, filename, "", prefixDir, start.getLine(),
@@ -321,14 +329,8 @@ proc doSuggest*(win: var MainWin) =
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
-  echod("Populating suggest.")
-  if win.populateSuggest(addr(start), tab):
-    win.suggest.show()
-    moveSuggest(win, addr(start), tab)
-    #win.Tabs[current].sourceView.grabFocus()
-    #assert(win.Tabs[current].sourceView.isFocus())
-    #win.w.present()
-  else: win.suggest.hide()
+  let success = win.populateSuggest(addr(start), tab)
+  if not success: win.suggest.hide()
 
 proc insertSuggestItem*(win: var MainWin, index: int) =
   var name = win.suggest.items[index].nmName
@@ -442,7 +444,6 @@ proc showTooltip*(win: var MainWin, tab: Tab, item: TSuggestItem,
   
   tab.sourceView.grabFocus()
   assert(tab.sourceView.isFocus())
-  win.w.present()
 
 # -- Signals
 proc TreeView_RowActivated(tv: PTreeView, path: PTreePath, 
