@@ -4,9 +4,7 @@
 
 * Find all references
 * Test on Windows.
-* Search & Replace, when clicking replace and a lot of text is scrolled no syntax highlighting occurs.
 * Sort View -> Syntax Highlighting
-* Fix docs in suggest.
 * keywords.txt -> nimrod.lang
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.

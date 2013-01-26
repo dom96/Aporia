@@ -362,7 +362,7 @@ proc rstToPango(r: PRstNode, result: var string) =
     iterTrees(r, result)
     result.add("</span>")
   of rnInterpretedText:
-    result.add("<span font_style=\"oblique\">")
+    result.add("<span font_style=\"italic\" font_weight=\"bold\">")
     iterTrees(r, result)
     result.add("</span>")
   of rnDefList, rnDefBody, rnBlockQuote:
@@ -437,10 +437,9 @@ proc showTooltip*(win: var MainWin, tab: Tab, item: TSuggestItem,
   win.suggest.treeview.getCellArea(selectedPath, nil, addr(cellArea))
   y += cellArea.y
 
+  win.suggest.tooltip.resize(1, 1) # Reset the window size. Kinda hackish D:
   win.suggest.tooltip.move(x, y)
   win.suggest.tooltip.show()
-
-  win.suggest.tooltip.resize(1, 1) # Reset the window size. Kinda hackish D:
   
   tab.sourceView.grabFocus()
   assert(tab.sourceView.isFocus())
@@ -545,6 +544,7 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.tooltip.setTransientFor(win.w)
   win.suggest.tooltip.setSkipTaskbarHint(True)
   win.suggest.tooltip.setDecorated(False)
+  win.suggest.tooltip.setDefaultSize(250, 450)
   
   discard win.suggest.tooltip.signalConnect("focus-in-event",
     SIGNAL_FUNC(onFocusIn), addr(win))
@@ -554,12 +554,12 @@ proc createSuggestDialog*(win: var MainWin) =
   tpVBox.show()
   
   var tpHBox = hboxNew(false, 0)
-  tpVBox.packStart(tpHBox, false, false, 3)
+  tpVBox.packStart(tpHBox, false, false, 7)
   tpHBox.show()
   
   win.suggest.tooltipLabel = labelNew("")
   win.suggest.tooltipLabel.setLineWrap(true)
-  tpHBox.packStart(win.suggest.tooltipLabel, false, false, 3)
+  tpHBox.packStart(win.suggest.tooltipLabel, false, false, 5)
   win.suggest.tooltipLabel.show()
   
 
