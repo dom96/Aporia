@@ -12,6 +12,23 @@ import
   strutils, osproc, os,
   utils, processes, CustomStatusBar
 
+import rst, rstast
+
+proc escapePango(s: string): string =
+  result = ""
+  for i in s:
+    case i
+    of '<':
+      result.add("&lt;")
+    of '>':
+      result.add("&gt;")
+    of '&':
+      result.add("&amp;")
+    of '"':
+      result.add("&quot;")
+    else:
+      result.add(i)
+
 proc addSuggestItem*(win: var MainWin, name: string, markup: String,
                      tooltipText: string, color: String = "#000000") =
   var iter: TTreeIter
@@ -21,7 +38,7 @@ proc addSuggestItem*(win: var MainWin, name: string, markup: String,
 
 proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
   # TODO: Escape tooltip text for pango markup.
-  win.addSuggestItem(item.nmName, "<b>$1</b>" % [item.nmName], item.nimType)
+  win.addSuggestItem(item.nmName, "<b>$1</b>" % [escapePango(item.nmName)], item.nimType)
 
 proc getIterGlobalCoords(iter: PTextIter, tab: Tab):
     tuple[x, y: int32] =
@@ -69,7 +86,7 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
     item.file = s[4]
     item.line = int32(s[5].parseInt())
     item.col = int32(s[6].parseInt())
-    item.docs = s[7]
+    item.docs = unescape(s[7])
 
     # Get the name without the module name in front of it.
     var dots = item.name.split('.')
@@ -78,9 +95,6 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
     else:
       echod("[Suggest] Unknown module name for ", item.name)
       item.nmName = item.name
-
-    if item.docs[0] == '\"': item.docs = item.docs[1 .. -1]
-    if item.docs[item.docs.len-1] == '\"': item.docs = item.docs[0 .. -2]
 
     result = true
 
@@ -122,7 +136,8 @@ proc filterSuggest*(win: var MainWin) =
   var endMatch: TTextIter
   var matched = (addr(cursor)).backwardSearch(".", TEXT_SEARCH_TEXT_ONLY,
                                 addr(startMatch), addr(endMatch), nil)
-  assert(matched)
+  if not matched:
+    return
   var text = (addr(endMatch)).getText(addr(cursor))
   echod("[Suggest] Filtering ", text)
   win.suggest.currentFilter = normalize($text)
@@ -330,10 +345,81 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
   win.suggest.hide()
   win.suggest.clear()
 
-proc showTooltip*(win: var MainWin, tab: Tab, markup: string,
+proc rstToPango(r: PRstNode, result: var string) =
+  proc iterTrees(r: PRstNode, result: var string) =
+    for i in r.sons:
+      rstToPango(i, result)
+  if r == nil: return
+  case r.kind
+  of rnInner, rnDefItem, rnDefName, rnLiteralBlock, rnIdx, rnRef:
+    iterTrees(r, result)
+  of rnLeaf:
+    result.add(escapePango(r.text))
+  of rnEmphasis:
+    result.add("<span font_style=\"italic\">")
+    iterTrees(r, result)
+    result.add("</span>")
+  of rnInterpretedText:
+    result.add("<span font_style=\"oblique\">")
+    iterTrees(r, result)
+    result.add("</span>")
+  of rnDefList, rnDefBody, rnBlockQuote:
+    if result != "": result.add(" ")
+    iterTrees(r, result)
+  of rnParagraph:
+    result.add("\n")
+    iterTrees(r, result)
+    result.add("\n")
+  of rnLineBlock, rnBulletList:
+    result.add("\n")
+    iterTrees(r, result)
+  of rnBulletItem:
+    result.add("  ▪ ")
+    iterTrees(r, result)
+    result.add("\n")
+  of rnLineBlockItem:
+    result.add("\n<tt>")
+    iterTrees(r, result)
+    result.add("</tt>")
+  of rnInlineLiteral:
+    result.add("<tt>")
+    iterTrees(r, result)
+    result.add("</tt>")
+  of rnStrongEmphasis:
+    result.add("<span font_weight=\"ultrabold\">")
+    iterTrees(r, result)
+    result.add("</span>")
+  of rnTripleEmphasis:
+    result.add("<span font_weight=\"heavy\">")
+    iterTrees(r, result)
+    result.add("</span>")
+  of rnCodeBlock:
+    result.add("\n")
+    assert r.sons[0].kind == rnDirArg
+    let lang = r.sons[0].sons[0].text
+    assert r.sons[1] == nil
+    assert r.sons[2].kind == rnLiteralBlock
+    # TODO: Highlighting?
+    result.add("<tt>")
+    iterTrees(r.sons[2], result)
+    result.add("</tt>")
+  else:
+    echo(r.kind)
+    assert false
+
+proc rstToPango(s: string): string =
+  var hasToc = false
+  var r = rstParse(s, "input", 0, 1, hasToc, {})
+  result = ""
+  rstToPango(r, result)
+
+proc showTooltip*(win: var MainWin, tab: Tab, item: TSuggestItem,
                   selectedPath: PTreePath) =
-  # TODO: Play around with markup
-  win.suggest.tooltipLabel.setText(markup)
+  var markup = "<i>" & escapePango(item.nimType) & "</i>"
+  if item.docs != "":
+    markup.add("\n\n" & item.docs.rstToPango)
+  
+  win.suggest.tooltipLabel.setMarkup(markup)
   var cursor: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
@@ -376,8 +462,7 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
     var index = selectedPath.getIndices()[]
     if win.suggest.items.len() > index:
       if win.suggest.shown:
-        win[].showTooltip(tab, win.suggest.items[index].nimType & "\n" &
-                               win.suggest.items[index].docs, selectedPath)
+        win[].showTooltip(tab, win.suggest.items[index], selectedPath)
 
 proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
   win.w.present()
@@ -390,7 +475,7 @@ proc createSuggestDialog*(win: var MainWin) =
   ## Creates the suggest dialog, it does not show it.
   
   #win.suggest.dialog = dialogNew()
-  win.suggest.dialog = windowNew(0)
+  win.suggest.dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
 
   var vbox = vboxNew(False, 0)
   win.suggest.dialog.add(vbox)
@@ -455,7 +540,7 @@ proc createSuggestDialog*(win: var MainWin) =
 
   # -- Tooltip
   win.suggest.tooltip = windowNew(gtk2.WINDOW_TOPLEVEL)
-  win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
+  #win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
   win.suggest.tooltip.setTransientFor(win.w)
   win.suggest.tooltip.setSkipTaskbarHint(True)
   win.suggest.tooltip.setDecorated(False)

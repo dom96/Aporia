@@ -457,4 +457,3 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
 proc isTemporary*(t: Tab): bool =
   ## Determines whether ``t`` is saved in /tmp
   return t.filename.startsWith(getTempDir())
-  

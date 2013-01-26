@@ -470,7 +470,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
           var index = selectedPath.getIndices()[]
           if win.suggest.items.len() > index:
-            win.showTooltip(tab, win.suggest.items[index].nimType, selectedPath)
+            win.showTooltip(tab, win.suggest.items[index], selectedPath)
       else:
         # No item selected, select the first one.
         var selectedPath = tree_path_new_first()
@@ -479,7 +479,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         var index = selectedPath.getIndices()[]
         assert(index == 0)
         if win.suggest.items.len() > index:
-          win.showTooltip(tab, win.suggest.items[index].nimType, selectedPath)
+          win.showTooltip(tab, win.suggest.items[index], selectedPath)
       
       # Return true to stop this event from moving the cursor down in the
       # source view.
