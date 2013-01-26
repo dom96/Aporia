@@ -439,16 +439,19 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
       
+      let childrenLen = TreeModel.iter_n_children(nil)
+      
       # Get current tab(For tooltip)
       var current = win.SourceViewTabs.getCurrentPage()
       var tab     = win.Tabs[current]
       
-      template nextTimes(t: expr): stmt =
+      template nextTimes(t: expr): stmt {.immediate.} =
         for i in 0..t:
-          next(selectedPath)
-      template prevTimes(t: expr): stmt =
+          if selectedPath.getIndices[]+1 < childrenLen:
+            next(selectedPath)
+      template prevTimes(t: expr): stmt {.immediate.} =
         for i in 0..t:
-          moved = prev(selectedPath)
+          discard prev(selectedPath)
       
       if selection.getSelected(cast[PPGtkTreeModel](addr(TreeModel)),
                                addr(selectedIter)):
@@ -462,6 +465,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           moved = True
           next(selectedPath)
         of "page_up":
+          moved = True
           prevTimes(5)
         of "page_down":
           moved = True
