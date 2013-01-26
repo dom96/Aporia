@@ -428,7 +428,7 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
     updateStatusBar(buffer, "")
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
-                          userData: pgpointer): bool =
+                          userData: pgpointer): gboolean =
   result = false
   let ctrlPressed = (event.state and ControlMask) != 0
   var key = $keyval_name(event.keyval)
@@ -496,7 +496,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
     if win.settings.suggestFeature and win.suggest.shown:
       win.suggest.hide()
   
-  of "return", "space", "tab":
+  of "return", "space", "tab", "period":
     if win.settings.suggestFeature and win.suggest.shown:
       echod("[Suggest] Selected.")
       var selection = win.suggest.treeview.getSelection()
@@ -508,7 +508,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         var index = selectedPath.getIndices()[]
         win.insertSuggestItem(index)
         
-        return True
+        return key.toLower() != "period"
 
     if win.settings.suggestFeature and not win.suggest.shown and
         key.toLower() == "space" and ctrlPressed:
@@ -535,7 +535,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
   else: nil
 
 proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
-                          userData: pgpointer): bool =
+                          userData: pgpointer): gboolean =
   result = true
   var key = $keyval_name(event.keyval)
   case key.toLower()
