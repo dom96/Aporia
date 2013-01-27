@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
+import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils, dialogs
 import tables, os
 
 from CustomStatusBar import PCustomStatusBar, TStatusID
@@ -49,6 +49,8 @@ type
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
     lastSelectedTab*: string # The tab filename that was selected when aporia was last closed.
+
+    nimrodPath*: string
     
   MainWin* = object
     # Widgets
@@ -468,3 +470,13 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
 proc isTemporary*(t: Tab): bool =
   ## Determines whether ``t`` is saved in /tmp
   return t.filename.startsWith(getTempDir())
+
+proc getNimrodPath*(win: var MainWin): string =
+    if win.settings.nimrodPath == "":
+        win.settings.nimrodPath = findExe("nimrod")
+        
+        if win.settings.nimrodPath == "":
+            dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
+            win.settings.nimrodPath = ChooseFileToOpen(win.w, "")
+
+    result = win.settings.nimrodPath

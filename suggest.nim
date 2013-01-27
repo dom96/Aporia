@@ -1,4 +1,4 @@
-﻿#
+#
 #
 #            Aporia - Nimrod IDE
 #        (c) Copyright 2011 Dominik Picheta
@@ -10,8 +10,7 @@
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,
-  utils, processes, CustomStatusBar,
-  service
+  utils, processes, CustomStatusBar
 
 import rst, rstast
 
@@ -377,7 +376,7 @@ proc rstToPango(r: PRstNode, result: var string) =
     result.add("\n")
     iterTrees(r, result)
   of rnBulletItem:
-    result.add("  ▪ ")
+    result.add("  ? ")
     iterTrees(r, result)
     result.add("\n")
   of rnLineBlockItem:
