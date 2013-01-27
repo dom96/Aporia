@@ -1,2 +1,4 @@
 nimcache
 aporia
+*.exe
+*.dll
