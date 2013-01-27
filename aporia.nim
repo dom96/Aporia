@@ -1094,9 +1094,6 @@ proc compileRun(filename: string, shouldRun: bool) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var nim = getNimrodPath(win)
-  echo(nim)
-  echo(win.settings.nimrodCmd)
   var cmd = getNimrodPath(win) & " c " & filename
 
   # Execute the compiled application if compiled successfully.
