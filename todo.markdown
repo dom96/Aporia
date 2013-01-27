@@ -74,3 +74,4 @@
 * Color large blocks of indentations.
   * Useful in osproc, the big when defined(windows), it's a bit hard to see when the block ends because it's so big, adding colors may make it easier to see.
 * Background indexer of files in the directories of the files that are open. This will allow for quickly searching for files. (Kind of like 't' in github repo pages)
+* Separate settings. Add ability to have per-user settings (profiles).

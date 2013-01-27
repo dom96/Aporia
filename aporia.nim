@@ -562,51 +562,52 @@ proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
   win.suggest.hide()
 
 proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
+proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
+  let currentPage = win.sourceViewTabs.getCurrentPage()
+  let tab = win.Tabs[currentPage]
+  if win.getCurrentLanguage(currentPage) != "nimrod":
+    win.statusbar.setTemp("This feature is only supported for Nimrod.", UrgError)
+    return
+  
+  var cursor: TTextIter
+  tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
+  
+  proc onSugLine(win: var MainWin, opts: PExecOptions, line: string) {.closure.} =
+    if win.tempStuff.gotDefinition:
+      return
+    var def: TSuggestItem
+    if parseIDEToolsLine("def", line, def):
+      win.tempStuff.gotDefinition = true
+      let existingTab = win.findTab(def.file, true)
+      if existingTab != -1:
+        win.sourceViewTabs.setCurrentPage(existingTab.gint)
+      else:
+        addTab("", def.file, true)
+      
+      let currentPage = win.sourceViewTabs.getCurrentPage()
+      # Go to that line/col
+      var iter: TTextIter
+      win.tabs[currentPage].buffer.getIterAtLineIndex(addr(iter),
+          def.line-1, def.col-1)
+      
+      win.tabs[currentPage].buffer.placeCursor(addr(iter))
+      
+      win.forceScrollToInsert()
+      
+      echod(def.repr())
+  
+  proc onSugExit(win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.} =
+    if not win.tempStuff.gotDefinition:
+      win.statusbar.setTemp("Definition retrieval failed.", UrgError, 5000)
+  
+  var err = win.asyncGetDef(tab.filename, getLine(addr cursor), 
+                    getLineOffset(addr cursor), onSugLine, onSugExit)
+  if err != "":
+    win.statusbar.setTemp(err, UrgError, 5000)
 proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
   if win.getCurrentLanguage() == "nimrod":
     createSeparator(menu)
-    
-    createMenuItem(menu, "Go to definition...",
-      proc (i: PMenuItem, p: pointer) =
-        let currentPage = win.sourceViewTabs.getCurrentPage()
-        let tab = win.Tabs[currentPage]
-        var cursor: TTextIter
-        tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
-        
-        proc onSugLine(win: var MainWin, opts: PExecOptions, line: string) {.closure.} =
-          if win.tempStuff.gotDefinition:
-            return
-          var def: TSuggestItem
-          if parseIDEToolsLine("def", line, def):
-            win.tempStuff.gotDefinition = true
-            let existingTab = win.findTab(def.file, true)
-            if existingTab != -1:
-              win.sourceViewTabs.setCurrentPage(existingTab.gint)
-            else:
-              addTab("", def.file, true)
-            
-            let currentPage = win.sourceViewTabs.getCurrentPage()
-            # Go to that line/col
-            var iter: TTextIter
-            win.tabs[currentPage].buffer.getIterAtLineIndex(addr(iter),
-                def.line-1, def.col-1)
-            
-            win.tabs[currentPage].buffer.placeCursor(addr(iter))
-            
-            win.forceScrollToInsert()
-            
-            echod(def.repr())
-        
-        proc onSugExit(win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.} =
-          if not win.tempStuff.gotDefinition:
-            win.statusbar.setTemp("Definition retrieval failed.", UrgError, 5000)
-        
-        var err = win.asyncGetDef(tab.filename, getLine(addr cursor), 
-                          getLineOffset(addr cursor), onSugLine, onSugExit)
-        if err != "":
-          win.statusbar.setTemp(err, UrgError, 5000)
-        
-    )
+    createMenuItem(menu, "Go to definition...", goToDef_Activate)
 
 # Other(Helper) functions
 
@@ -1587,6 +1588,9 @@ proc initTopMenu(MainBox: PBox) =
   
   EditMenu.createAccelMenuItem(accGroup, "Go to line...", KEY_g, 
       GoLine_Activate, ControlMask, "")
+  
+  EditMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", Key_r,
+      goToDef_Activate, ControlMask or gdk2.ShiftMask)
   
   createSeparator(EditMenu)
   
