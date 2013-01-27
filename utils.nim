@@ -7,8 +7,8 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils, dialogs
-import tables, os
+import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
+import tables, os, dialogs, pegs
 
 from CustomStatusBar import PCustomStatusBar, TStatusID
 from gdk2 import TRectangle, intersect
@@ -385,6 +385,25 @@ proc getCurrentTab*(win: var MainWin): int =
   if result < 0:
     result = 0
 
+proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string] =
+  ## Finds the .nim project file in ``directory``.
+  # Find project file
+  var configFiles: seq[string] = @[]
+  for cfgFile in walkFiles(directory / "*.nimrod.cfg"):
+    configFiles.add(cfgFile)
+  let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
+  var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
+  if not existsFile(projectFile):
+    # check for file.nimrod
+    if not existsFile(projectFile & "rod"):
+      projectFile = ""
+  return (projectFile, projectCfgFile)
+
+proc isTemporary*(t: Tab): bool =
+  ## Determines whether ``t`` is saved in /tmp
+  return t.filename.startsWith(getTempDir())
+
+# -- Programming Language handling
 proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   ## Returns the current language ID.
   ##
@@ -453,30 +472,26 @@ proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
   win.tabs[tab].buffer.setHighlightSyntax(doHighlight)
   win.tempStuff.commentSyntax = ("", "", "")
 
-proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string] =
-  ## Finds the .nim project file in ``directory``.
-  # Find project file
-  var configFiles: seq[string] = @[]
-  for cfgFile in walkFiles(directory / "*.nimrod.cfg"):
-    configFiles.add(cfgFile)
-  let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
-  var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
-  if not existsFile(projectFile):
-    # check for file.nimrod
-    if not existsFile(projectFile & "rod"):
-      projectFile = ""
-  return (projectFile, projectCfgFile)
+# -- Compilation-specific
 
-proc isTemporary*(t: Tab): bool =
-  ## Determines whether ``t`` is saved in /tmp
-  return t.filename.startsWith(getTempDir())
-
-proc getNimrodPath*(win: var MainWin): string =
-  if win.settings.nimrodPath == "":
-    win.settings.nimrodPath = findExe("nimrod")
-
+proc GetCmd*(win: var MainWin, cmd, filename: string): string =
+  ## ``cmd`` specifies the format string. ``findExe(exe)`` is allowed as well
+  ## as ``#$``. The ``#$`` is replaced by ``filename``.
+  var f = quoteIfContainsWhite(filename)
+  proc promptNimrodPath(win: var MainWin): string =
+    ## If ``settings.nimrodPath`` is not set, prompts the user for the nimrod path.
+    ## Otherwise returns ``settings.nimrodPath``.
     if win.settings.nimrodPath == "":
-        dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
-        win.settings.nimrodPath = ChooseFileToOpen(win.w, "")
-
-  result = win.settings.nimrodPath
+      dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
+      win.settings.nimrodPath = ChooseFileToOpen(win.w, "")
+    result = win.settings.nimrodPath
+  
+  if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
+    var exe = quoteIfContainsWhite(findExe(matches[0]))
+    if matches[0].normalize == "nimrod" and exe.len == 0:
+      exe = quoteIfContainsWhite(promptNimrodPath(win))
+    
+    if exe.len == 0: exe = matches[0]
+    result = exe & " " & matches[1] % f
+  else:
+    result = cmd % f

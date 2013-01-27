@@ -14,6 +14,7 @@
   * Use the same strategy as scrolling for making sure that the selected tab gets focused.
 * Search for ⌚, it selects too much with regex.
 * Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
+* Recent files... should be populated upon tab close.
 
 ## Other language features
 * Ability to change to hard tabs.

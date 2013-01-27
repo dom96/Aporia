@@ -96,7 +96,7 @@ proc save*(win: var MainWin) =
     f.writeKeyVal("searchHighlightAll", $settings.searchHighlightAll)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
-    f.writeKeyValRaw("nimrodpath", $settings.nimrodPath)
+    f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     
     f.writeSection("auto")
     f.write("; Stuff which is saved automatically," & 
