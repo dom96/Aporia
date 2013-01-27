@@ -28,7 +28,7 @@ proc defaultSettings*(): TSettings =
   result.winWidth = 800
   result.winHeight = 600
   result.autoIndent = True
-  result.nimrodCmd = "findExe(nimrod) c --listFullPaths $#"
+  result.nimrodCmd = "$findExe(nimrod) c --listFullPaths $#"
   result.customCmd1 = ""
   result.customCmd2 = ""
   result.customCmd3 = ""
@@ -96,7 +96,7 @@ proc save*(win: var MainWin) =
     f.writeKeyVal("searchHighlightAll", $settings.searchHighlightAll)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
-    f.writeKeyVal("nimrodpath", $settings.nimrodPath)
+    f.writeKeyValRaw("nimrodpath", $settings.nimrodPath)
     
     f.writeSection("auto")
     f.write("; Stuff which is saved automatically," & 
