@@ -1,4 +1,4 @@
-#
+﻿#
 #
 #            Aporia - Nimrod IDE
 #        (c) Copyright 2011 Dominik Picheta
@@ -376,7 +376,7 @@ proc rstToPango(r: PRstNode, result: var string) =
     result.add("\n")
     iterTrees(r, result)
   of rnBulletItem:
-    result.add("  ? ")
+    result.add("  ▪ ")
     iterTrees(r, result)
     result.add("\n")
   of rnLineBlockItem:
