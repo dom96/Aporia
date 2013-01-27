@@ -13,7 +13,7 @@ import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
 import tables, algorithm
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes,
-       CustomStatusBar
+       CustomStatusBar, service
 
 {.push callConv:cdecl.}
 
@@ -1094,7 +1094,11 @@ proc compileRun(filename: string, shouldRun: bool) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = GetCmd(win.settings.nimrodCmd, filename)
+  var nim = getNimrodPath(win)
+  echo(nim)
+  echo(win.settings.nimrodCmd)
+  var cmd = getNimrodPath(win) & " c " & filename
+
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
   var runAfter: PExecOptions = nil
@@ -1187,7 +1191,7 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = GetCmd("$findExe(nimrod) check --listFullPaths $#", filename)
+  var cmd = getNimrodPath(win) & " check --listFullPaths " & filename
   win.execProcAsync newExec(cmd, "", ExecNimrod)
 
 proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =

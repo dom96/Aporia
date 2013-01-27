@@ -10,7 +10,8 @@
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,
-  utils, processes, CustomStatusBar
+  utils, processes, CustomStatusBar,
+  service
 
 import rst, rstast
 
