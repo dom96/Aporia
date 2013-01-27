@@ -38,15 +38,22 @@ The GtkSourceView doesn't have an installer, however binaries are available
 from [here](http://ftp.acc.umu.se/pub/gnome/binaries/win32/gtksourceview/ "GtkSourceView")
  ([win64](http://ftp.acc.umu.se/pub/gnome/binaries/win64/gtksourceview/ "GtkSourceView")). Just pick
 the latest version and download the archive then copy the files/folders
-in the archive into the directory that gtk is installed in.
+in the archive into the 'bin' directory in gtk's directory
+(Most likely: ``C:\Program Files\GTK2-Runtime\bin``).
 #### libxml2-2
 GtkSourceView depends on libxml2-2. This should be downloaded from 
 [here](http://ftp.gnome.org/pub/GNOME/binaries/win32/dependencies/ "dependencies")
  ([win64](http://ftp.gnome.org/pub/GNOME/binaries/win64/dependencies/ "dependencies")).
-And the contents of it should be copied to the directory that GTK was installed in.
+And the contents of it should be copied the same 'bin' directory as GtkSourceView above.
+The zip you are looking for is usually called ``libxml2_2.X.X-1_win32.zip``
 #### pcre
 The dll for this can be found in Nimrod's repo, in the ``"dist"`` directory. Just
 copy it into aporia's directory or somewhere into your PATH.
+#### Microsoft Visual C++ 2010 Redistributable Package (*optional*)
+If you are experiencing a ``MSVC100.dll cannot be found`` then you may need to install
+the Microsoft Visual C++ 2010 Redistributable Package, this can be downloaded from [here](http://www.microsoft.com/download/en/details.aspx?id=5555)
+ ([win64](http://www.microsoft.com/download/en/details.aspx?id=14632))
+
 ### Linux
 Use your package manager to install the dependencies.
 ### Mac OS X

@@ -13,6 +13,7 @@
   * Caused by a GtkSourceView from a tab other than the current one being focused.
   * Use the same strategy as scrolling for making sure that the selected tab gets focused.
 * Search for ⌚, it selects too much with regex.
+* Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
 
 ## Other language features
 * Ability to change to hard tabs.
