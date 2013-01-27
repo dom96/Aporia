@@ -14,7 +14,6 @@ import tables, algorithm
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes,
        CustomStatusBar
-
 {.push callConv:cdecl.}
 
 const
@@ -1047,7 +1046,7 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
 proc GetCmd(cmd, filename: string): string = 
   var f = quoteIfContainsWhite(filename)
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
-    var exe = quoteIfContainsWhite(findExe(matches[0]))
+    var exe = quoteIfContainsWhite(getNimrodPath(win))
     if exe.len == 0: exe = matches[0]
     result = exe & " " & matches[1] % f
   else:
@@ -1095,6 +1094,7 @@ proc compileRun(filename: string, shouldRun: bool) =
   showBottomPanel()
 
   var cmd = GetCmd(win.settings.nimrodCmd, filename)
+
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
   var runAfter: PExecOptions = nil

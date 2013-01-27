@@ -1,4 +1,4 @@
-#
+﻿#
 #
 #            Aporia - Nimrod IDE
 #        (c) Copyright 2011 Dominik Picheta
@@ -167,7 +167,7 @@ proc filterSuggest*(win: var MainWin) =
 
 proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
                      line, column: int) =
-  let sugCmd = findExe("nimrod") & 
+  let sugCmd = getNimrodPath(win) & 
         " idetools --path:$4 --track:$1,$2,$3 --suggest $5" % 
         [file, $(line+1), $column, addToPath,
          if projectFile != "": projectFile else: file]
@@ -309,7 +309,7 @@ proc asyncGetDef*(win: var MainWin, file: string,
                   line, column: int,
     onSugLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.},
     onSugExit: proc (win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.}): string =
-  let sugCmd = findExe("nimrod") & 
+  let sugCmd = getNimrodPath(win) & 
         " idetools --path:$4 --track:$1,$2,$3 --def $1" % 
         [file, $(line+1), $column, getTempDir()]
   
