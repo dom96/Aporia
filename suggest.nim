@@ -224,7 +224,10 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   
     var (projectFile, projectCfgFile) = findProjectFile(tab.filename.splitFile.dir)
     let splitPrjF = splitFile(projectFile)
-    projectFile = prefixDir / splitPrjF.name & splitPrjF.ext
+    if projectFile != "":
+      projectFile = prefixDir / splitPrjF.name & splitPrjF.ext
+    else:
+      projectFile = prefixDir / currentTabSplit.name & currentTabSplit.ext
     
     echod("[Suggest] Project cfg file is: ", projectCfgFile)
     echod("[Suggest] Project file is: ", projectFile)

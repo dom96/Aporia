@@ -397,6 +397,8 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
     # check for file.nimrod
     if not existsFile(projectFile & "rod"):
       projectFile = ""
+    else:
+      projectFile = projectFile & "rod"
   return (projectFile, projectCfgFile)
 
 proc isTemporary*(t: Tab): bool =
