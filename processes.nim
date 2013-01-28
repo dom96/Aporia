@@ -356,7 +356,6 @@ proc execThreadProc(){.thread.} =
         # Process exited.
         var exitCode = p.waitForExit()
         p.close()
-        o.close()
         started = false
         createExecThrEvent(EvStopped):
           event.exitCode = exitCode

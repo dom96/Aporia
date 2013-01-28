@@ -15,6 +15,7 @@
 * Search for ⌚, it selects too much with regex.
 * Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
 * Recent files... should be populated upon tab close.
+* Suggest: Compile some file so it's saved as aXX.nim, and then try using suggest. It fails...
 
 ## Other language features
 * Ability to change to hard tabs.
