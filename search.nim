@@ -227,7 +227,7 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
   var current = getCurrentTab(w)
   if w.tabs[current].highlighted.isHighlighted:
     if not forSearch and w.tabs[current].highlighted.forSearch:
-      return 
+      return
   
   if w.tabs[current].highlighted.text == term:
     ## This is already highlighted.

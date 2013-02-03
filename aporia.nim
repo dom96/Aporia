@@ -353,6 +353,8 @@ proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
       let frmChar = getLineOffset(addr(insert))
       let toChar = getLineOffset(addr(selectBound))
       win.statusbar.setDocInfoSelected(frmLn, toLn, frmChar, toChar)
+      
+      # Highlighting
       if frmLn == toLn and win.settings.selectHighlightAll:
         template h: expr = win.tabs[getCurrentTab(win)].highlighted
         # Same line.
@@ -364,6 +366,9 @@ proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
           # selecting text manually will still highlight things instead of you
           # having to close the find bar.
           h = newNoHighlightAll()
+      else: # multiple lines selected
+        if win.settings.selectHighlightAll:
+          stopHighlightAll(win, false)
     else:
       let ln = getLine(addr(insert)) + 1
       let ch = getLineOffset(addr(insert))
@@ -1823,7 +1828,6 @@ proc initSourceViewTabs() =
         # TODO: Save last cursor position as line and column offset combo.
         # This will help with int overflows which would happen more often with
         # a char offset.
-        echo count, " ", win.tabs.len
         win.Tabs[newTab].buffer.getIterAtOffset(addr(iter), int32(offset.parseInt()))
         win.Tabs[newTab].buffer.placeCursor(addr(iter))
         

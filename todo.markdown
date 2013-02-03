@@ -21,7 +21,6 @@
     mainFile = main.nim
 * Amount of matches when coloring upon highlight.
 * Ctrl+/ doesn't work on commented lines with no space after the #
-* Get rid of highlighted matches when selecting (single matches are distracting...)
 * Use gtk_text_buffer_set_modified()
 
 
