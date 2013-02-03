@@ -15,6 +15,15 @@
 * Search for ⌚, it selects too much with regex.
 * Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
 * Recent files... should be populated upon tab close.
+* If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
+* Ability to specify main file by creating a simple project.aporia.cfg file in root dir?
+
+    mainFile = main.nim
+* Amount of matches when coloring upon highlight.
+* Ctrl+/ doesn't work on commented lines with no space after the #
+* Get rid of highlighted matches when selecting (single matches are distracting...)
+* Use gtk_text_buffer_set_modified()
+
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -77,3 +86,4 @@
   * Useful in osproc, the big when defined(windows), it's a bit hard to see when the block ends because it's so big, adding colors may make it easier to see.
 * Background indexer of files in the directories of the files that are open. This will allow for quickly searching for files. (Kind of like 't' in github repo pages)
 * Separate settings. Add ability to have per-user settings (profiles).
+* Use GtkSourceView instead of output text view? This will allow better control of colouring the output from processes.

@@ -560,7 +560,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
 proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
   win.suggest.hide()
 
-proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
+proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8"): int
 proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   let currentPage = win.sourceViewTabs.getCurrentPage()
   let tab = win.Tabs[currentPage]
@@ -581,7 +581,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
       if existingTab != -1:
         win.sourceViewTabs.setCurrentPage(existingTab.gint)
       else:
-        addTab("", def.file, true)
+        doAssert addTab("", def.file, true) != -1
       
       let currentPage = win.sourceViewTabs.getCurrentPage()
       # Go to that line/col
@@ -651,11 +651,14 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8") =
+proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8"): int =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
   ## of the filename.
   ## If filename doesn't exist EIO is raised.
+  ##
+  ## Returns the index of the added tab (or existing tab if setCurrent is true).
+  ## ``-1`` is returned upon error.
   assert(win.nimLang != nil)
   
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
@@ -667,7 +670,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
       if existingTab != -1:
         # Select the existing tab
         win.sourceViewTabs.setCurrentPage(int32(existingTab))
-        return
+        return existingTab
     
     # Guess the language of the file loaded
     var langMan = languageManagerGetDefault()
@@ -699,7 +702,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
         win.statusbar.setTemp("Could not open file with " &
                               encoding & " encoding.", UrgError, 5000)
         win.infobar.show()
-        return
+        return -1
       # Read in the file.
       buffer.set_text(fileTxt, len(fileTxt).int32)
     except EIO: raise
@@ -750,6 +753,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   if setCurrent:
     # Select the newly created tab
     win.sourceViewTabs.setCurrentPage(int32(win.Tabs.len())-1)
+  return win.Tabs.len()-1
 
 # GTK Events Contd.
 # -- TopMenu & TopBar
@@ -801,7 +805,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       win.FileMenu.append(moreMenuItem)
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 
-proc newFile(menuItem: PMenuItem, user_data: pointer) = addTab("", "", True)
+proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", True)
   
 proc openFile(menuItem: PMenuItem, user_data: pointer) =
   var startpath = ""
@@ -819,7 +823,7 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
   if files.len() > 0:
     for f in items(files):
       try:
-        addTab("", f, True)
+        discard addTab("", f, True)
         # Add to recently opened files.
         # TODO: Save settings?
         win.settings.recentlyOpenedFiles.add(f)
@@ -844,7 +848,7 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
 proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   let filename = file[]
   try:
-    addTab("", filename, True)
+    discard addTab("", filename, True)
     win.settings.recentlyOpenedFiles.add(filename)
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
@@ -912,6 +916,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
   var currentPage = win.sourceViewTabs.GetCurrentPage()
   var start, theEnd: TTextIter
   proc toggleSingle() =
+    cb.beginUserAction()
     # start and end are the same line no.
     # get the whole
     var line = cb.getText(addr(start), addr(theEnd),
@@ -935,8 +940,10 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
                              locNonWS.gint)
       # Insert the line comment string.
       cb.insert(addr(locNonWSIter), lineComment, lineComment.len.gint)
+    cb.endUserAction()
   
   proc toggleMultiline() =
+    cb.beginUserAction()
     (addr theEnd).moveToEndLine() # Move to end of line.
     var selectedTxt = cb.getText(addr(start), addr(theEnd), false)
     # Check if this language supports block comments.
@@ -982,7 +989,8 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     else:
       # TODO: Loop through each line and add `lineComment` 
       # (# in the case of Nimrod) to it.
-  
+    cb.endUserAction()
+    
   if win.tempStuff.commentSyntax.line == "" and 
      win.tempStuff.commentSyntax.blockStart == "" and
      win.tempStuff.commentSyntax.blockEnd == "":
@@ -1207,7 +1215,7 @@ proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
     assert active >= 0 and active <= UTF16LE.int
     comboBox.setActive(0) # Reset selection.
     infobar.hide()
-    addTab("", win.tempStuff.pendingFilename, true,
+    discard addTab("", win.tempStuff.pendingFilename, true,
            $TEncodingsAvailable(active))
     # addTab may set pendingFilename so we can't reset it here.
     # bad things shouldn't happen if it doesn't get reset though.
@@ -1240,7 +1248,7 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
     else:
       if ev.x < galloc.x.float: return # Didn't click on empty space.
     
-    addTab("", "", true)
+    discard addTab("", "", true)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
@@ -1286,7 +1294,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
           if existingTab != -1:
             win.sourceViewTabs.setCurrentPage(int32(existingTab))
           else:
-            addTab("", path, True)
+            discard addTab("", path, True)
       success = True
     else: echod("dragDataReceived: Unknown `info`")
 
@@ -1309,16 +1317,12 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
   if item.file == "":
     win.statusbar.setTemp("Could not find correct tab.", UrgError, 5000)
     return
-  var existingTab = win.findTab(item.file, false)
+  var existingTab = addTab("", item.file, true)
   if existingTab == -1:
-    if existsFile(item.file):
-      addTab("", item.file, false)
-      existingTab = win.Tabs.len-1
-    else:
-      win.statusbar.setTemp(item.file & " does not exist.", UrgError, 5000)
-      return
-
-  win.sourceViewTabs.setCurrentPage(int32(existingTab))
+    assert (not existsFile(item.file))
+    
+    win.statusbar.setTemp(item.file & " does not exist.", UrgError, 5000)
+    return
   
   # Move cursor to where the error is.
   var line = item.line.parseInt-1
@@ -1593,7 +1597,7 @@ proc initTopMenu(MainBox: PBox) =
   
   EditMenu.createMenuItem("Raw Preferences",
     proc (i: PMenuItem, p: pointer) {.cdecl.} =
-      addTab("", joinPath(os.getConfigDir(), "Aporia", "config.ini")))
+      discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.ini")))
   
   # Settings
   EditMenu.createImageMenuItem(StockPreferences, aporia.settings_Activate)
@@ -1813,16 +1817,17 @@ proc initSourceViewTabs() =
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
-        addTab("", filename, win.settings.lastSelectedTab == filename)
-      
+        let newTab = addTab("", filename, win.settings.lastSelectedTab == filename)
+        
         var iter: TTextIter
         # TODO: Save last cursor position as line and column offset combo.
         # This will help with int overflows which would happen more often with
         # a char offset.
-        win.Tabs[count].buffer.getIterAtOffset(addr(iter), int32(offset.parseInt()))
-        win.Tabs[count].buffer.placeCursor(addr(iter))
+        echo count, " ", win.tabs.len
+        win.Tabs[newTab].buffer.getIterAtOffset(addr(iter), int32(offset.parseInt()))
+        win.Tabs[newTab].buffer.placeCursor(addr(iter))
         
-        win.forceScrollToInsert(int32(win.Tabs.len-1))
+        win.forceScrollToInsert(int32(newTab))
         inc(count)
       else: dialogs.error(win.w, "Could not restore file from session, file not found: " & filename)
     
@@ -1831,13 +1836,13 @@ proc initSourceViewTabs() =
         var absPath = f
         if not isAbsolute(absPath):
           absPath = getCurrentDir() / f
-        addTab("", absPath)
+        discard addTab("", absPath)
       else:
         dialogs.error(win.w, "Could not open " & f)
         quit(QuitFailure)
     
   else:
-    addTab("", "", False)
+    discard addTab("", "", False)
 
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
@@ -2095,7 +2100,7 @@ proc initSocket() =
               if not filePath.isAbsolute():
                 filePath = getCurrentDir() / filePath
               if existsFile(filepath):
-                addTab("", filepath, true)
+                discard addTab("", filepath, true)
                 win.w.present()
               else:
                 win.w.error("File not found: " & filepath)
