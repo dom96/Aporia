@@ -23,7 +23,6 @@
 * Ctrl+/ doesn't work on commented lines with no space after the #
 * Use gtk_text_buffer_set_modified()
 
-
 ## Other language features
 * Ability to change to hard tabs.
 * Per file type space vs tab settings and indent width. Also languages should have
@@ -33,6 +32,7 @@
     be the space width.
   * If there are tabs at the beginning of a line then the indentation is tabs.
   * If there are no tabs and there are spaces then spaces.
+* Clang-based suggest for C-family languages?
 
 ## Miscellaneous
 

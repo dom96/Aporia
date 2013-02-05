@@ -719,6 +719,8 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
     nam = extractFilename(filename)
 
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow)
+  
+  # Set the tooltip.
   if filename != "":
     var tooltip = "<b>Path: </b> " & filename & "\n" &
                   "<b>Language: </b> " & getLanguageName(win, buffer)
@@ -726,6 +728,11 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
       labelText.setMarkup(nam & "<span color=\"#CC0E0E\"> *</span>")
       tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
     TabLabel.setTooltipMarkup(tooltip)
+  else:
+    var tooltip = "<i>Tab is not saved.</i>\n" &
+                  "<b>Language: </b> " & getLanguageName(win, buffer)
+    TabLabel.setTooltipMarkup(tooltip)
+  
   # Add a tab
   var nTab: Tab
   nTab.buffer = buffer
