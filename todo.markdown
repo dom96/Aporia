@@ -22,6 +22,7 @@
 * Amount of matches when coloring upon highlight.
 * Ctrl+/ doesn't work on commented lines with no space after the #
 * Use gtk_text_buffer_set_modified()
+* Syntax Highlighting change is not reflected in the tab's tooltip.
 
 ## Other language features
 * Ability to change to hard tabs.
