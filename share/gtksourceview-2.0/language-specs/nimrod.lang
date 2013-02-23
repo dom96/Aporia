@@ -127,7 +127,7 @@
         </define-regex>
         
         <define-regex id="numbersuffix" extended="true">
-          (\'[Ff]32|\'[Ff]64|\'[Ii]8|\'[Ii]16|\'[Ii]32|\'[Ii]64)
+          (\'[Ff]32|\'[Ff]64|\'[IiUu]8|\'[IiUu]16|\'[IiUu]32|\'[IiUu]64)
         </define-regex>
 
         <context id="float" style-ref="floating-point">

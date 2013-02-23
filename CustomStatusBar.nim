@@ -59,6 +59,9 @@ proc initCustomStatusBar*(MainBox: PBox): PCustomStatusBar =
 
 proc restorePrevious*(bar: PCustomStatusBar)
 proc setStatus(bar: PCustomStatusBar, st: TStatus) =
+  if bar == nil:
+    echo("[Warning] CustomStatusBar is not yet initialised. SetStatus failed.")
+    return
   bar.statuses.add(bar.status)
 
   bar.status = st
