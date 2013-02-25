@@ -88,3 +88,5 @@
 * Background indexer of files in the directories of the files that are open. This will allow for quickly searching for files. (Kind of like 't' in github repo pages)
 * Separate settings. Add ability to have per-user settings (profiles).
 * Use GtkSourceView instead of output text view? This will allow better control of colouring the output from processes.
+* http://editorconfig.org/ (Use similar config files for differen language configs?)
+* Better diff highlighting? green/red on left with proper highlighting (separate SVs for each file type?) (maybe only for git plugin)
