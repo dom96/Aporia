@@ -81,7 +81,7 @@
   * Evaluate how to handle projects.
 * Feature: Select a block of code, split it up into 80 char lines.
 * Popular languages listed in View -> Syntax Highlighting?
-* When aporia's config file is saved, validate before saving. If incorrect, list errors in Error List?
+* <del>When aporia's config file is saved, validate before saving.</del> If incorrect, list errors in Error List?
 * List of debug's or echod functions, can be used to easily toggle them when debugging. This will decrease crap in your stdout when you're trying to debug something. And you don't have to hunt down each of your debug functions.
 * Color large blocks of indentations.
   * Useful in osproc, the big when defined(windows), it's a bit hard to see when the block ends because it's so big, adding colors may make it easier to see.
