@@ -10,7 +10,6 @@
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
 * Change GUI layout of find bar, add wrap around toggle button etc.
 * Search for ⌚, it selects too much with regex.
-* Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
 * If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
 * Ability to specify main file by creating a simple project.aporia.cfg file in root dir?
 
