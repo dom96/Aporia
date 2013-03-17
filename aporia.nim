@@ -2227,7 +2227,8 @@ proc checkAlreadyRunning(): bool =
 
 proc afterInit() =
   if win.Tabs.len > 0:
-    win.Tabs[0].sourceView.grabFocus()
+    var current = win.SourceViewTabs.getCurrentPage()
+    win.Tabs[current].sourceView.grabFocus()
 
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:

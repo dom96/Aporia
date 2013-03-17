@@ -9,9 +9,9 @@
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
 * Change GUI layout of find bar, add wrap around toggle button etc.
-* Gdk-CRITICAL **: gdk_window_invalidate_rect_full: assertion `GDK_IS_WINDOW (window)' failed
+* <del>Gdk-CRITICAL **: gdk_window_invalidate_rect_full: assertion `GDK_IS_WINDOW (window)' failed
   * Caused by a GtkSourceView from a tab other than the current one being focused.
-  * Use the same strategy as scrolling for making sure that the selected tab gets focused.
+  * Use the same strategy as scrolling for making sure that the selected tab gets focused.</del>
 * Search for ⌚, it selects too much with regex.
 * Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
 * Recent files... should be populated upon tab close.
