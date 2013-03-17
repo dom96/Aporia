@@ -13,7 +13,7 @@
   * <del>Caused by a GtkSourceView from a tab other than the current one being focused.</del>
   * <del>Use the same strategy as scrolling for making sure that the selected tab gets focused.</del>
 * Search for ⌚, it selects too much with regex.
-* Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
+* <del>Move "Find", "Go to line" etc. to a "Search" menu in the top bar.</del>
 * Recent files... should be populated upon tab close.
 * If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
 * Ability to specify main file by creating a simple project.aporia.cfg file in root dir?
