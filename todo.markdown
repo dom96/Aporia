@@ -9,9 +9,6 @@
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
 * Change GUI layout of find bar, add wrap around toggle button etc.
-* Gdk-CRITICAL **: gdk_window_invalidate_rect_full: assertion `GDK_IS_WINDOW (window)' failed
-  * Caused by a GtkSourceView from a tab other than the current one being focused.
-  * Use the same strategy as scrolling for making sure that the selected tab gets focused.
 * Search for ⌚, it selects too much with regex.
 * Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
 * If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
@@ -20,7 +17,6 @@
     mainFile = main.nim
 * Amount of matches when coloring upon highlight.
 * Ctrl+/ doesn't work on commented lines with no space after the #
-* Use gtk_text_buffer_set_modified()
 * Syntax Highlighting change is not reflected in the tab's tooltip.
 * When invoking suggest, check if cursor is on a "string" tag? Can I determine this?
 * Multiple cursors?
@@ -99,3 +95,4 @@
 * limit tab's title to 20 chars?
 * Go to function with autocompletion.
 * Being able to go to column with go to line feature
+* Force focus the selected tab after initialisation.

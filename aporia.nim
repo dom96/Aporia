@@ -143,19 +143,9 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       
       # Change the tab name and .Tabs.filename etc.
       win.Tabs[tabNr].filename = path
-      win.Tabs[tabNr].saved = True
+      
       if updateGUI:
-        var name = extractFilename(path)
-        var tooltip = "<b>Path: </b> " & path & "\n" &
-                      "<b>Language: </b> " & getLanguageName(win, tabNr)
-        
-        let cTab = win.Tabs[tabNr]
-        if cTab.isTemporary:
-          cTab.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
-          tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
-        else:
-          cTab.label.setText(name)
-        cTab.label.setTooltipMarkup(tooltip)
+        win.Tabs[tabNr].buffer.setModified(false)
         
         updateMainTitle(tabNr)
         if config:
@@ -414,6 +404,36 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
 
   eventBox.add(box)
   return (eventBox, label, closeBtn)
+
+proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
+  ## This signal is called when the modification state of ``buffer`` is changed.
+  # *Warning* we assume here that the currently selected tab was modified.
+  var ctab = cast[Tab](theTab)
+  #assert ((current > 0) and (current < win.tabs.len))
+  var modified = ctab.buffer.getModified()
+  if modified:
+    var name = ""
+    if cTab.filename == "":
+      cTab.saved = False
+      name = "Untitled *"
+    else:
+      cTab.saved = False
+      name = extractFilename(cTab.filename) & " *"
+    
+    cTab.label.setText(name)
+  else:
+    cTab.saved = true
+    
+    var name = extractFilename(cTab.filename)
+    var tooltip = "<b>Path: </b> " & cTab.filename & "\n" &
+                  "<b>Language: </b> " & getLanguageName(win, ctab.buffer)
+
+    if cTab.isTemporary:
+      cTab.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+      tooltip.add("\n<i>File is saved in temporary files and may be lost.</i>")
+    else:
+      cTab.label.setText(name)
+    cTab.label.setTooltipMarkup(tooltip)
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -739,6 +759,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   
   # Add a tab
   var nTab: Tab
+  new(nTab)
   nTab.buffer = buffer
   nTab.sourceView = sourceView
   nTab.label = labelText
@@ -761,10 +782,15 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   discard gsignalConnect(buffer, "mark-set", 
                          GCallback(aporia.cursorMoved), nil)
   
+  discard gsignalConnect(buffer, "modified-changed",
+                         GCallback(onModifiedChanged),
+                         cast[gpointer](win.tabs[win.tabs.len-1]))
+  
   # TODO: If the following gets called at any time because text was loaded from a file,
   # use connect_after to connect "insert-text" signal, and then connect this signal
   # in the handler of "insert-text".
-  discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), sourceView)
+  #discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), sourceView)
+  buffer.setModified(filename == "")
 
   if setCurrent:
     # Select the newly created tab
@@ -774,7 +800,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
 # GTK Events Contd.
 # -- TopMenu & TopBar
 
-proc recentFile_Activate(menuItem: PMenuItem, file: ptr string)
+proc recentFile_Activate(menuItem: PMenuItem, file: gpointer)
 proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
   if win.tempStuff.recentFileMenuItems.len > 0:
     for i in win.tempStuff.recentFileMenuItems:
@@ -814,7 +840,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       
       discard signal_connect(recentFileMI, "activate", 
                              SIGNAL_FUNC(recentFile_Activate),
-                             addr(win.settings.recentlyOpenedFiles[i]))
+                             cast[gpointer](win.settings.recentlyOpenedFiles[i]))
       addedItems.inc()
     
     if recent.len > 10:
@@ -858,8 +884,8 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
     startpath = win.tempStuff.lastSaveDir
   discard saveTabAs(current, startpath)
 
-proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
-  let filename = file[]
+proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
+  let filename = cast[string](file)
   try:
     discard addTab("", filename, True)
   except EIO:
@@ -2224,10 +2250,6 @@ proc checkAlreadyRunning(): bool =
     result = true
     client.send("\c\L")
 
-proc afterInit() =
-  if win.Tabs.len > 0:
-    win.Tabs[0].sourceView.grabFocus()
-
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:
   # Incorrect GTK version.
@@ -2241,5 +2263,4 @@ when not defined(noSingleInstance):
 createProcessThreads(win)
 nimrod_init()
 initControls()
-afterInit()
 main()

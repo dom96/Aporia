@@ -63,7 +63,8 @@ type
     
     infobar*: PInfoBar ## For encoding selection
     
-    toolBar*: PToolBar # FIXME: should be notebook?
+    toolBar*: PToolBar # \
+    # FIXME: should be notebook?
     bottomPanelTabs*: PNotebook
     outputTextView*: PTextView
     errorListWidget*: PTreeView
@@ -159,7 +160,7 @@ type
     stopPLToggle*: bool
     currentToggledLang*: string # ID of the currently active pl
 
-  Tab* = object
+  Tab* = ref object
     buffer*: PSourceBuffer
     sourceView*: PSourceView
     label*: PLabel
