@@ -59,13 +59,17 @@ var loadFiles = parseArgs()
 
 # Load the settings
 try:
-  win.settings = cfg.load(lastSession)
+  let (auto, global) = cfg.load(lastSession)
+  win.autoSettings = auto
+  win.globalSettings = global
 except ECFGParse, EInvalidValue:
   # TODO: Make the dialog show the exception
   confParseFail = True
-  win.settings = cfg.defaultSettings()
+  win.autoSettings = cfg.defaultAutoSettings()
+  win.globalSettings = cfg.defaultGlobalSettings()
 except EIO:
-  win.settings = cfg.defaultSettings()
+  win.autoSettings = cfg.defaultAutoSettings()
+  win.globalSettings = cfg.defaultGlobalSettings()
 
 proc updateMainTitle(pageNum: int) =
   if win.Tabs.len()-1 >= pageNum:
@@ -121,12 +125,11 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     var text = buffer.getText(addr(startIter), addr(endIter), False)
     
     var config = false
-    if path == os.getConfigDir() / "Aporia" / "config.ini":
+    if path == os.getConfigDir() / "Aporia" / "config.global.ini":
       # If we are overwriting Aporia's config file. Validate it.
       try:
-        var disc: seq[string] = @[]
-        var newSettings = cfg.load(newStringStream($text), disc)
-        win.settings = newSettings
+        var newSettings = cfg.loadGlobal(newStringStream($text))
+        win.globalSettings = newSettings
         config = true
       except:
         win.statusbar.setTemp("Error parsing config: " & getCurrentExceptionMsg(),
@@ -149,9 +152,9 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         
         updateMainTitle(tabNr)
         if config:
-          win.statusbar.setTemp("Config saved successfully.", UrgSuccess, 5000)
+          win.statusbar.setTemp("Config saved successfully.", UrgSuccess)
         else:
-          win.statusbar.setTemp("File saved successfully.", UrgSuccess, 5000)
+          win.statusbar.setTemp("File saved successfully.", UrgSuccess)
     else:
       error(win.w, "Unable to write to file: " & OSErrorMsg())
 
@@ -181,9 +184,9 @@ proc saveAllTabs() =
 # -- w(PWindow)
 proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
   # gather some settings
-  win.settings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
-  win.settings.winWidth = win.w.allocation.width
-  win.settings.winHeight = win.w.allocation.height
+  win.autoSettings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
+  win.autoSettings.winWidth = win.w.allocation.width
+  win.autoSettings.winHeight = win.w.allocation.height
 
   # save the settings
   win.save()
@@ -268,7 +271,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
 
 proc windowState_Changed(widget: PWidget, event: PEventWindowState, 
                          user_data: pgpointer) =
-  win.settings.winMaximized = (event.newWindowState and 
+  win.autoSettings.winMaximized = (event.newWindowState and 
                                WINDOW_STATE_MAXIMIZED) != 0
   
   if (event.newWindowState and WINDOW_STATE_ICONIFIED) != 0:
@@ -302,7 +305,7 @@ proc closeTab(tab: int) =
   if close:
     # Add to recently opened files.
     # TODO: Save settings?
-    win.settings.recentlyOpenedFiles.add(win.Tabs[tab].filename)
+    win.autoSettings.recentlyOpenedFiles.add(win.Tabs[tab].filename)
     system.delete(win.Tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
 
@@ -348,25 +351,25 @@ proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
       win.statusbar.setDocInfoSelected(frmLn, toLn, frmChar, toChar)
       
       # Highlighting
-      if frmLn == toLn and win.settings.selectHighlightAll:
+      if frmLn == toLn and win.globalSettings.selectHighlightAll:
         template h: expr = win.tabs[getCurrentTab(win)].highlighted
         # Same line.
         var term = buffer.getText(addr(insert), addr(selectBound), false)
         highlightAll(win, $term, false)
-        if not win.settings.searchHighlightAll and h.forSearch and
+        if not win.globalSettings.searchHighlightAll and h.forSearch and
            markName == "selection_bound":
           # Override the search selection block, this means that after searching
           # selecting text manually will still highlight things instead of you
           # having to close the find bar.
           h = newNoHighlightAll()
       else: # multiple lines selected
-        if win.settings.selectHighlightAll:
+        if win.globalSettings.selectHighlightAll:
           stopHighlightAll(win, false)
     else:
       let ln = getLine(addr(insert)) + 1
       let ch = getLineOffset(addr(insert))
       win.statusbar.setDocInfo(ln, ch)
-      if win.settings.selectHighlightAll:
+      if win.globalSettings.selectHighlightAll:
         stopHighlightAll(win, false)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
@@ -461,7 +464,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
   var key = $keyval_name(event.keyval)
   case key.toLower()
   of "up", "down", "page_up", "page_down":
-    if win.settings.suggestFeature and win.suggest.shown:
+    if win.globalSettings.suggestFeature and win.suggest.shown:
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
       var TreeModel = win.suggest.TreeView.getModel()
@@ -520,11 +523,11 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       return True
   
   of "left", "right", "home", "end", "delete":
-    if win.settings.suggestFeature and win.suggest.shown:
+    if win.globalSettings.suggestFeature and win.suggest.shown:
       win.suggest.hide()
   
   of "return", "space", "tab", "period":
-    if win.settings.suggestFeature and win.suggest.shown:
+    if win.globalSettings.suggestFeature and win.suggest.shown:
       echod("[Suggest] Selected.")
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
@@ -537,14 +540,14 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         
         return key.toLower() != "period"
 
-    if win.settings.suggestFeature and not win.suggest.shown and
+    if win.globalSettings.suggestFeature and not win.suggest.shown and
         key.toLower() == "space" and ctrlPressed and
         win.getCurrentLanguage() == "nimrod":
       if win.suggest.items.len() != 0: win.suggest.clear()
       doSuggest(win)
 
   of "backspace":
-    if win.settings.suggestFeature and win.suggest.shown:
+    if win.globalSettings.suggestFeature and win.suggest.shown:
       var current = win.SourceViewTabs.getCurrentPage()
       var tab     = win.Tabs[current]
       var endIter: TTextIter
@@ -568,12 +571,12 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
   var key = $keyval_name(event.keyval)
   case key.toLower()
   of "period":
-    if win.settings.suggestFeature and win.getCurrentLanguage() == "nimrod":
+    if win.globalSettings.suggestFeature and win.getCurrentLanguage() == "nimrod":
       if win.suggest.items.len() != 0: win.suggest.clear()
       doSuggest(win)
 
   of "backspace":
-    if win.settings.suggestFeature and win.suggest.shown:
+    if win.globalSettings.suggestFeature and win.suggest.shown:
       # Don't need to know the char behind, because if it is a dot, then
       # the suggest dialog is hidden by ...KeyPress
       
@@ -582,7 +585,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
   else:
     if key.toLower() notin ["up", "down", "page_up", "page_down", "home", "end"]:
 
-      if win.settings.suggestFeature and win.suggest.shown:
+      if win.globalSettings.suggestFeature and win.suggest.shown:
         win.filterSuggest()
         win.doMoveSuggest()
 
@@ -651,26 +654,26 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   # SourceView(gtkSourceView)
   SourceView = sourceViewNew(buffer)
   SourceView.setInsertSpacesInsteadOfTabs(True)
-  SourceView.setIndentWidth(win.settings.indentWidth)
-  SourceView.setShowLineNumbers(win.settings.showLineNumbers)
+  SourceView.setIndentWidth(win.globalSettings.indentWidth)
+  SourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
   SourceView.setHighlightCurrentLine(
-               win.settings.highlightCurrentLine)
-  SourceView.setShowRightMargin(win.settings.rightMargin)
-  SourceView.setAutoIndent(win.settings.autoIndent)
+               win.globalSettings.highlightCurrentLine)
+  SourceView.setShowRightMargin(win.globalSettings.rightMargin)
+  SourceView.setAutoIndent(win.globalSettings.autoIndent)
   SourceView.setSmartHomeEnd(SmartHomeEndBefore)
   discard signalConnect(SourceView, "button-press-event",
                         signalFunc(SourceViewMousePress), nil)
   discard gSignalConnect(sourceView, "populate-popup",
                          GCallback(sourceViewPopulatePopup), nil)
 
-  var font = font_description_from_string(win.settings.font)
+  var font = font_description_from_string(win.globalSettings.font)
   SourceView.modifyFont(font)
   
   scrollWindow.add(SourceView)
   SourceView.show()
 
   buffer.setHighlightMatchingBrackets(
-      win.settings.highlightMatchingBrackets)
+      win.globalSettings.highlightMatchingBrackets)
   
   discard gsignalConnect(sourceView, "key-press-event", 
                          GCallback(SourceViewKeyPress), nil)
@@ -767,7 +770,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   nTab.filename = filename
   nTab.closeBtn = closeBtn
   nTab.highlighted = newNoHighlightAll()
-  if not win.settings.showCloseOnAllTabs:
+  if not win.globalSettings.showCloseOnAllTabs:
     nTab.closeBtn.hide()
   win.Tabs.add(nTab)
   
@@ -807,11 +810,13 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       PWidget(i).destroy()
 
   win.tempStuff.recentFileMenuItems = @[]
+  
+  const insertOffset = 6
 
   # Recently opened files
   # -- Show first ten in the File menu
-  if win.settings.recentlyOpenedFiles.len > 0:
-    let recent = win.settings.recentlyOpenedFiles
+  if win.autoSettings.recentlyOpenedFiles.len > 0:
+    let recent = win.autoSettings.recentlyOpenedFiles
   
     var moreMenu = menuNew()
     var moreMenuItem = menuItemNew("More recent files...")
@@ -835,16 +840,16 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
         # Add to the "More recent files" menu.
         moreMenu.append(recentFileMI)
       else:
-        win.FileMenu.append(recentFileMI)
+        win.FileMenu.insert(recentFileMI, gint(insertOffset+addedItems))
       show(recentFileMI)
       
       discard signal_connect(recentFileMI, "activate", 
                              SIGNAL_FUNC(recentFile_Activate),
-                             cast[gpointer](win.settings.recentlyOpenedFiles[i]))
+                       cast[gpointer](win.autoSettings.recentlyOpenedFiles[i]))
       addedItems.inc()
     
     if recent.len > 10:
-      win.FileMenu.append(moreMenuItem)
+      win.FileMenu.insert(moreMenuItem, gint(insertOffset+10))
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 
 proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", True)
@@ -876,11 +881,6 @@ proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
     startpath = win.tempStuff.lastSaveDir
   
   saveTab(current, startpath)
-
-proc quitFile(menuItem: PMenuItem, user_data: pointer) =
-  var quit = delete_event(nil,nil,nil)
-  if not quit:
-    destroy(nil,nil);
     
 proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
@@ -1061,15 +1061,15 @@ proc settings_Activate(menuitem: PMenuItem, user_data: pointer) =
   settings.showSettings(win)
 
 proc viewToolBar_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
-  win.settings.toolBarVisible = menuitem.itemGetActive()
-  if win.settings.toolBarVisible:
+  win.globalSettings.toolBarVisible = menuitem.itemGetActive()
+  if win.globalSettings.toolBarVisible:
     win.toolBar.show()
   else:
     win.toolBar.hide()
 
 proc viewBottomPanel_Toggled(menuitem: PCheckMenuItem, user_data: pointer) =
-  win.settings.bottomPanelVisible = menuitem.itemGetActive()
-  if win.settings.bottomPanelVisible:
+  win.autoSettings.bottomPanelVisible = menuitem.itemGetActive()
+  if win.autoSettings.bottomPanelVisible:
     win.bottomPanelTabs.show()
   else:
     win.bottomPanelTabs.hide()
@@ -1095,9 +1095,9 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
     plCheckUpdate(currentTab)
 
 proc showBottomPanel() =
-  if not win.settings.bottomPanelVisible:
+  if not win.autoSettings.bottomPanelVisible:
     win.bottomPanelTabs.show()
-    win.settings.bottomPanelVisible = true
+    win.autoSettings.bottomPanelVisible = true
     PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
 
 proc saveForCompile(currentTab: int): string =
@@ -1106,7 +1106,7 @@ proc saveForCompile(currentTab: int): string =
     if not existsDir(getTempDir() / "aporia"): createDir(getTempDir() / "aporia")
     result = getTempDir() / "aporia" / "a" & ($currentTab).addFileExt("nim")
     win.Tabs[currentTab].filename = result
-    if win.settings.compileUnsavedSave:
+    if win.globalSettings.compileUnsavedSave:
       saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, true)
     else:
       saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
@@ -1135,7 +1135,7 @@ proc compileRun(filename: string, shouldRun: bool) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = win.GetCmd(win.settings.nimrodCmd, filename)
+  var cmd = win.GetCmd(win.globalSettings.nimrodCmd, filename)
 
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
@@ -1211,13 +1211,13 @@ proc RunCustomCommand(cmd: string) =
     newExec(win.GetCmd(cmd, win.Tabs[currentTab].filename), workDir, ExecCustom))
 
 proc RunCustomCommand1(menuitem: PMenuItem, user_data: pointer) =
-  RunCustomCommand(win.settings.customCmd1)
+  RunCustomCommand(win.globalSettings.customCmd1)
 
 proc RunCustomCommand2(menuitem: PMenuItem, user_data: pointer) =
-  RunCustomCommand(win.settings.customCmd2)
+  RunCustomCommand(win.globalSettings.customCmd2)
 
 proc RunCustomCommand3(menuitem: PMenuItem, user_data: pointer) =
-  RunCustomCommand(win.settings.customCmd3)
+  RunCustomCommand(win.globalSettings.customCmd3)
 
 proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
@@ -1296,7 +1296,7 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
                  user_data: pgpointer) =
   # hide close button of last active tab
-  if not win.settings.showCloseOnAllTabs and 
+  if not win.globalSettings.showCloseOnAllTabs and 
       win.tempStuff.lastTab < win.Tabs.len:
     win.Tabs[win.tempStuff.lastTab].closeBtn.hide()
   
@@ -1311,7 +1311,7 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   # Hide the suggest dialog
   win.suggest.hide()
   
-  if not win.settings.showCloseOnAllTabs:
+  if not win.globalSettings.showCloseOnAllTabs:
     # Show close button of tab
     win.Tabs[pageNum].closeBtn.show()
 
@@ -1447,15 +1447,15 @@ proc closeBtn_Clicked(button: PButton, user_data: pgpointer) =
   win.findBar.hide()
 
 proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = SearchCaseSens
+  win.autoSettings.search = SearchCaseSens
 proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = SearchCaseInsens
+  win.autoSettings.search = SearchCaseInsens
 proc style_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = SearchStyleInsens
+  win.autoSettings.search = SearchStyleInsens
 proc regex_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = SearchRegex
+  win.autoSettings.search = SearchRegex
 proc peg_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
-  win.settings.search = SearchPeg
+  win.autoSettings.search = SearchPeg
 
 proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   var extraMenu = menuNew()
@@ -1496,7 +1496,7 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   pegMenuItem.show()
   
   # Make the correct radio button active
-  case win.settings.search
+  case win.autoSettings.search
   of SearchCaseSens:
     PCheckMenuItem(caseSensMenuItem).ItemSetActive(True)
   of SearchCaseInsens:
@@ -1584,24 +1584,23 @@ proc initTopMenu(MainBox: PBox) =
   # New
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_n, newFile, ControlMask,
                                    StockNew)
-
   createSeparator(win.FileMenu)
-
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_o, openFile, ControlMask,
                                    StockOpen)
-  
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFile_activate, 
                                    ControlMask, StockSave)
-  
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
-  
-  createSeparator(win.FileMenu) 
-                                  
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitFile, ControlMask,
-                                   StockQuit)
-                                     
   createSeparator(win.FileMenu)
+  
+  createSeparator(win.FileMenu)
+  let quitAporia = 
+    proc (menuItem: PMenuItem, user_data: pointer) =
+      if not deleteEvent(menuItem, nil, nil):
+        quit()
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitAporia,
+                                   ControlMask,
+                                   StockQuit)
   
   var FileMenuItem = menuItemNewWithMnemonic("_File")
   discard signalConnect(FileMenuItem, "activate",
@@ -1616,49 +1615,41 @@ proc initTopMenu(MainBox: PBox) =
   
   # Undo/Redo
   EditMenu.createImageMenuItem(STOCK_UNDO, aporia.undo)
-  
   EditMenu.createImageMenuItem(STOCK_Redo, aporia.redo)
-  
   createSeparator(EditMenu)
-  
   EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", KEY_slash, 
       CommentLines_Activate, ControlMask, "")
-  
   createSeparator(EditMenu)
   
   EditMenu.createMenuItem("Raw Preferences",
     proc (i: PMenuItem, p: pointer) {.cdecl.} =
-      discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.ini")))
+      try:
+        discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.global.ini"))
+      except EIO:
+        win.statusBar.setTemp(getCurrentExceptionMsg(), UrgError)  
+  )
+      
   
   # Settings
   EditMenu.createImageMenuItem(StockPreferences, aporia.settings_Activate)
-  
   var EditMenuItem = menuItemNewWithMnemonic("_Edit")
-
   EditMenuItem.setSubMenu(EditMenu)
   EditMenuItem.show()
   TopMenu.append(EditMenuItem)
   
   # Search menu
   var SearchMenu = menuNew()
-   
   # Find/Find & Replace
   SearchMenu.createAccelMenuItem(accGroup, "", KEY_f, aporia.find_Activate,
       ControlMask, StockFind)
-
   SearchMenu.createAccelMenuItem(accGroup, "", KEY_h, aporia.replace_Activate,
       ControlMask, StockFindAndReplace)
-
   createSeparator(SearchMenu)
-  
   SearchMenu.createAccelMenuItem(accGroup, "Go to line...", KEY_g, 
       GoLine_Activate, ControlMask, "")
-  
   SearchMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", Key_r,
       goToDef_Activate, ControlMask or gdk2.ShiftMask)
-      
   var SearchMenuItem = menuItemNewWithMnemonic("_Search")
-
   SearchMenuItem.setSubMenu(SearchMenu)
   SearchMenuItem.show()
   TopMenu.append(SearchMenuItem) 
@@ -1668,7 +1659,7 @@ proc initTopMenu(MainBox: PBox) =
  
   win.viewToolBarMenuItem = check_menu_item_new("Tool Bar")
   PCheckMenuItem(win.viewToolBarMenuItem).itemSetActive(
-         win.settings.toolBarVisible)
+         win.globalSettings.toolBarVisible)
   ViewMenu.append(win.viewToolBarMenuItem)
   show(win.viewToolBarMenuItem)
   discard signal_connect(win.viewToolBarMenuItem, "toggled", 
@@ -1676,7 +1667,7 @@ proc initTopMenu(MainBox: PBox) =
   
   win.viewBottomPanelMenuItem = check_menu_item_new("Bottom Panel")
   PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(
-         win.settings.bottomPanelVisible)
+         win.autoSettings.bottomPanelVisible)
   win.viewBottomPanelMenuItem.add_accelerator("activate", accGroup, 
                   KEY_b, CONTROL_MASK or SHIFT_MASK, ACCEL_VISIBLE) 
   ViewMenu.append(win.viewBottomPanelMenuItem)
@@ -1797,12 +1788,9 @@ proc initToolBar(MainBox: PBox) =
   win.toolBar.appendSpace()
   var SearchItem = win.toolBar.insertStock(STOCK_FIND, "Find",
                       "Find", SIGNAL_FUNC(aporia.find_Activate), nil, -1)
-  win.toolBar.appendSpace()
-  var QuitItem = win.toolBar.insertStock(STOCK_QUIT, "Quit",
-                      "Quit", SIGNAL_FUNC(aporia.quitFile), nil, -1) 
   
   MainBox.packStart(win.toolBar, False, False, 0)
-  if win.settings.toolBarVisible == true:
+  if win.globalSettings.toolBarVisible == true:
     win.toolBar.show()
 
 proc initInfoBar(MainBox: PBox) =
@@ -1878,7 +1866,7 @@ proc initSourceViewTabs() =
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
-        let newTab = addTab("", filename, win.settings.lastSelectedTab == filename)
+        let newTab = addTab("", filename, win.autoSettings.lastSelectedTab == filename)
         
         var iter: TTextIter
         # TODO: Save last cursor position as line and column offset combo.
@@ -1906,7 +1894,7 @@ proc initSourceViewTabs() =
 
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
-  if win.settings.bottomPanelVisible:
+  if win.autoSettings.bottomPanelVisible:
     win.bottomPanelTabs.show()
   
   # -- output tab
@@ -1922,7 +1910,7 @@ proc initBottomTabs() =
   win.outputTextView = textviewNew()
   outputScrolledWindow.add(win.outputTextView)
   win.outputTextView.show()
-  var font = font_description_from_string(win.settings.outputFont)
+  var font = font_description_from_string(win.globalSettings.outputFont)
   win.outputTextView.modifyFont(font)
   
   # Create a mark at the end of the outputTextView.
@@ -1977,7 +1965,7 @@ proc initTAndBP(MainBox: PBox) =
   tandbpVPaned.pack1(win.sourceViewTabs, resize=True, shrink=False)
   tandbpVPaned.pack2(win.bottomPanelTabs, resize=False, shrink=False)
   MainBox.packStart(TAndBPVPaned, True, True, 0)
-  tandbpVPaned.setPosition(win.settings.VPanedPos)
+  tandbpVPaned.setPosition(win.autoSettings.VPanedPos)
   TAndBPVPaned.show()
 
 proc initFindBar(MainBox: PBox) =
@@ -2082,7 +2070,7 @@ proc initFindBar(MainBox: PBox) =
   #win.findBar.show()
 
   proc findBar_Hide(widget: PWidget, dummy: gpointer) {.cdecl.} =
-    if win.settings.searchHighlightAll:
+    if win.globalSettings.searchHighlightAll:
       stopHighlightAll(win, true)
     else:
       win.tabs[win.getCurrentTab()].highlighted = newNoHighlightAll()
@@ -2170,7 +2158,7 @@ proc initSocket() =
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)
-  win.oneInstSock.bindAddr(TPort(win.settings.singleInstancePort.toU16), "localhost")
+  win.oneInstSock.bindAddr(TPort(win.globalSettings.singleInstancePort.toU16), "localhost")
   win.oneInstSock.listen()
 {.push cdecl.}
 
@@ -2193,13 +2181,13 @@ proc initControls() =
   # Load the scheme
   var schemeMan = schemeManagerGetDefault()
   schemeMan.appendSearchPath(os.getAppDir() / styles)
-  win.scheme = schemeMan.getScheme(win.settings.colorSchemeID)
+  win.scheme = schemeMan.getScheme(win.globalSettings.colorSchemeID)
   
   # Window
   win.w = windowNew(gtk2.WINDOW_TOPLEVEL)
-  win.w.setDefaultSize(win.settings.winWidth, win.settings.winHeight)
+  win.w.setDefaultSize(win.autoSettings.winWidth, win.autoSettings.winHeight)
   win.w.setTitle("Aporia")
-  if win.settings.winMaximized: win.w.maximize()
+  if win.autoSettings.winMaximized: win.w.maximize()
     
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(aporia.destroy), nil)
   discard win.w.signalConnect("delete_event", 
@@ -2257,7 +2245,7 @@ proc checkAlreadyRunning(): bool =
   result = false
   var client = socket()
   try:
-    client.connect("localhost", TPort(win.settings.singleInstancePort.toU16))
+    client.connect("localhost", TPort(win.globalSettings.singleInstancePort.toU16))
   except EOS:
     return false
   echo("An instance of aporia is already running.")

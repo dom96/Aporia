@@ -109,7 +109,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
     text = getText(addr(iter), startIter)
   
   # Set up some options.
-  var isRegex = win.settings.search == SearchRegex
+  var isRegex = win.autoSettings.search == SearchRegex
   var reOptions = {reExtended, reStudy}
   var newPattern = pattern
   if mode == SearchStyleInsens:
@@ -144,7 +144,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
           
     return (startMatch, endMatch, True)
   else:
-    if win.settings.wrapAround and not wrappedAround:
+    if win.autoSettings.wrapAround and not wrappedAround:
       if forward:
         # We are at the end. Restart at the beginning.
         buffer.getStartIter(addr(startMatch))
@@ -170,7 +170,7 @@ proc findSimple(forward: bool, startIter: PTextIter,
         options, addr(startMatch), addr(endMatch), nil)
 
   if not matchFound:
-    if win.settings.wrapAround and not wrappedAround:
+    if win.autoSettings.wrapAround and not wrappedAround:
       if forward:
         # We are at the end. Restart from beginning.
         buffer.getStartIter(addr(startMatch))
@@ -284,8 +284,8 @@ proc findText*(forward: bool) =
 
   # Get the current tab
   var currentTab = win.SourceViewTabs.getCurrentPage()
-  if win.settings.searchHighlightAll:
-    highlightAll(win[], pattern, true, win.settings.search)
+  if win.globalSettings.searchHighlightAll:
+    highlightAll(win[], pattern, true, win.autoSettings.search)
   else:
     # Stop it from highlighting due to selection.
     win.tabs[currentTab].highlighted = newHighlightAll("", true, -1)
@@ -300,7 +300,7 @@ proc findText*(forward: bool) =
   var matchFound: gboolean = false
   
   var buffer = win.Tabs[currentTab].buffer
-  var mode = win.settings.search
+  var mode = win.autoSettings.search
   
   case mode
   of SearchCaseInsens, SearchCaseSens:
@@ -380,13 +380,13 @@ proc replaceAll*(find, replace: cstring): Int =
   # Replace all
   var found = True
   while found:
-    case win.settings.search
+    case win.autoSettings.search
     of SearchCaseInsens, SearchCaseSens:
-      var options = getSearchOptions(win.settings.search)
+      var options = getSearchOptions(win.autoSettings.search)
       found = gtksourceview.forwardSearch(addr(iter), find, 
           options, addr(startMatch), addr(endMatch), nil)
     of SearchRegex, SearchPeg, SearchStyleInsens:
-      var ret = findRePeg(true, addr(iter), buffer, $find, win.settings.search)
+      var ret = findRePeg(true, addr(iter), buffer, $find, win.autoSettings.search)
       startMatch = ret[0]
       endMatch = ret[1]
       found = ret[2]
@@ -402,7 +402,7 @@ proc replaceAll*(find, replace: cstring): Int =
   
   # Re-Enable bracket matching and status bar updates
   win.tempStuff.stopSBUpdates = False
-  buffer.setHighlightMatchingBrackets(win.settings.highlightMatchingBrackets)
+  buffer.setHighlightMatchingBrackets(win.globalSettings.highlightMatchingBrackets)
 
   return count
   

@@ -9,6 +9,7 @@
 * Output text view limit. OOMed my system because of a lot of output already.
 * Go to definition: if forward declarations are present, go to definition should go to the definition not forward declaration.
 * Change GUI layout of find bar, add wrap around toggle button etc.
+* Find word
 * Search for ⌚, it selects too much with regex.
 * If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
 * Ability to specify main file by creating a simple project.aporia.cfg file in root dir?
@@ -20,7 +21,6 @@
 * When invoking suggest, check if cursor is on a "string" tag? Can I determine this?
 * Multiple cursors?
 * Command bar?
-* Separate automatically saved settings by aporia and settings which can be changed by user.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -37,7 +37,6 @@
 
 * Make sure suggest dialog gets moved up if we're at the bottom of the screen
 * UI shouldn't freeze when opening large files.
-* Fix other encodings. (Selection for encodings like in gedit)
 * Fix drag and drop of files onto Notebook.
 * Find all.
 * Different editing modes - html, xml, etc. (These should make editing these particular things easier.)
@@ -95,3 +94,4 @@
 * Go to function with autocompletion.
 * Being able to go to column with go to line feature
 * Force focus the selected tab after initialisation.
+* When Raw Preferences are edited, need to reapply some settings to sourceview (color scheme, indentation width etc) among other settings.

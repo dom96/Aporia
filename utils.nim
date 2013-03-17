@@ -14,12 +14,24 @@ from CustomStatusBar import PCustomStatusBar, TStatusID
 from gdk2 import TRectangle, intersect
 
 type
-  TSettings* = object
+  TAutoSettings* = object # Settings which should not be set by the user manually
     search*: TSearchEnum # Search mode.
     wrapAround*: bool # Whether to wrap the search around.
+    
+    winMaximized*: bool # Whether the MainWindow is maximized on startup
+    VPanedPos*: int32 # Position of the VPaned, which splits
+                      # the sourceViewTabs and bottomPanelTabs
+    winWidth*, winHeight*: int32 # The size of the window.
+    
+    recentlyOpenedFiles*: seq[string] # paths of recently opened files
+    
+    lastSelectedTab*: string # The tab filename that was selected when aporia was last closed.
+    
+    bottomPanelVisible*: bool # Whether the bottom panel is shown
+  
+  TGlobalSettings* = object
     selectHighlightAll*: bool # Whether to highlight all occurrences upon selection
     searchHighlightAll*: bool # Whether to highlight all occurrences of the currently searched text
-    
     font*: string # font used by the sourceview
     outputFont*: string # font used by the output textview
     colorSchemeID*: string # color scheme used by the sourceview
@@ -28,30 +40,18 @@ type
     highlightMatchingBrackets*: bool # whether to highlight matching brackets
     rightMargin*: bool # Whether to show the right margin
     highlightCurrentLine*: bool # Whether to highlight the current line
-    autoIndent*: bool
-
-    winMaximized*: bool # Whether the MainWindow is maximized on startup
-    VPanedPos*: int32 # Position of the VPaned, which splits
-                      # the sourceViewTabs and bottomPanelTabs
-    winWidth*, winHeight*: int32 # The size of the window.
-    
+    autoIndent*: bool # Whether to automatically indent
     toolBarVisible*: bool # Whether the top panel is shown
-    bottomPanelVisible*: bool # Whether the bottom panel is shown
     suggestFeature*: bool # Whether the suggest feature is enabled
     compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
-    
     nimrodCmd*: string  # command template to use to exec the Nimrod compiler
     customCmd1*: string # command template to use to exec a custom command
     customCmd2*: string # command template to use to exec a custom command
     customCmd3*: string # command template to use to exec a custom command
-    
-    recentlyOpenedFiles*: seq[string] # paths of recently opened files
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
-    lastSelectedTab*: string # The tab filename that was selected when aporia was last closed.
-
-    nimrodPath*: string
-    
+    nimrodPath*: string # Path to the nimrod compiler
+  
   MainWin* = object
     # Widgets
     w*: gtk2.PWindow
@@ -87,7 +87,8 @@ type
     
     tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
     
-    settings*: TSettings
+    autoSettings*: TAutoSettings
+    globalSettings*: TGlobalSettings
     oneInstSock*: PAsyncSocket
     IODispatcher*: PDispatcher
 
@@ -484,10 +485,10 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
   proc promptNimrodPath(win: var MainWin): string =
     ## If ``settings.nimrodPath`` is not set, prompts the user for the nimrod path.
     ## Otherwise returns ``settings.nimrodPath``.
-    if win.settings.nimrodPath == "":
+    if win.globalSettings.nimrodPath == "":
       dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
-      win.settings.nimrodPath = ChooseFileToOpen(win.w, "")
-    result = win.settings.nimrodPath
+      win.globalSettings.nimrodPath = ChooseFileToOpen(win.w, "")
+    result = win.globalSettings.nimrodPath
   
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
     var exe = quoteIfContainsWhite(findExe(matches[0]))
