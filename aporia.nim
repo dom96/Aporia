@@ -851,6 +851,11 @@ proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
   
   saveTab(current, startpath)
 
+proc quitFile(menuItem: PMenuItem, user_data: pointer) =
+  var quit = delete_event(nil,nil,nil)
+  if not quit:
+    destroy(nil,nil);
+    
 proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   var startpath = os.splitFile(win.tabs[current].filename).dir
@@ -1566,6 +1571,11 @@ proc initTopMenu(MainBox: PBox) =
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
   
+  createSeparator(win.FileMenu) 
+                                  
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitFile, ControlMask,
+                                   StockQuit)
+                                     
   createSeparator(win.FileMenu)
   
   var FileMenuItem = menuItemNewWithMnemonic("_File")
@@ -1583,23 +1593,6 @@ proc initTopMenu(MainBox: PBox) =
   EditMenu.createImageMenuItem(STOCK_UNDO, aporia.undo)
   
   EditMenu.createImageMenuItem(STOCK_Redo, aporia.redo)
-
-  createSeparator(EditMenu)
-  
-  # Find/Find & Replace
-  EditMenu.createAccelMenuItem(accGroup, "", KEY_f, aporia.find_Activate,
-      ControlMask, StockFind)
-
-  EditMenu.createAccelMenuItem(accGroup, "", KEY_h, aporia.replace_Activate,
-      ControlMask, StockFindAndReplace)
-
-  createSeparator(EditMenu)
-  
-  EditMenu.createAccelMenuItem(accGroup, "Go to line...", KEY_g, 
-      GoLine_Activate, ControlMask, "")
-  
-  EditMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", Key_r,
-      goToDef_Activate, ControlMask or gdk2.ShiftMask)
   
   createSeparator(EditMenu)
   
@@ -1621,9 +1614,33 @@ proc initTopMenu(MainBox: PBox) =
   EditMenuItem.show()
   TopMenu.append(EditMenuItem)
   
+  # Search menu
+  var SearchMenu = menuNew()
+   
+  # Find/Find & Replace
+  SearchMenu.createAccelMenuItem(accGroup, "", KEY_f, aporia.find_Activate,
+      ControlMask, StockFind)
+
+  SearchMenu.createAccelMenuItem(accGroup, "", KEY_h, aporia.replace_Activate,
+      ControlMask, StockFindAndReplace)
+
+  createSeparator(SearchMenu)
+  
+  SearchMenu.createAccelMenuItem(accGroup, "Go to line...", KEY_g, 
+      GoLine_Activate, ControlMask, "")
+  
+  SearchMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", Key_r,
+      goToDef_Activate, ControlMask or gdk2.ShiftMask)
+      
+  var SearchMenuItem = menuItemNewWithMnemonic("_Search")
+
+  SearchMenuItem.setSubMenu(SearchMenu)
+  SearchMenuItem.show()
+  TopMenu.append(SearchMenuItem) 
+  
   # View menu
   var ViewMenu = menuNew()
-  
+ 
   win.viewToolBarMenuItem = check_menu_item_new("Tool Bar")
   PCheckMenuItem(win.viewToolBarMenuItem).itemSetActive(
          win.settings.toolBarVisible)
@@ -1752,6 +1769,12 @@ proc initToolBar(MainBox: PBox) =
                       "Undo", SIGNAL_FUNC(aporia.undo), nil, -1)
   var RedoItem = win.toolBar.insertStock(STOCK_REDO, "Redo",
                       "Redo", SIGNAL_FUNC(aporia.redo), nil, -1)
+  win.toolBar.appendSpace()
+  var SearchItem = win.toolBar.insertStock(STOCK_FIND, "Find",
+                      "Find", SIGNAL_FUNC(aporia.find_Activate), nil, -1)
+  win.toolBar.appendSpace()
+  var QuitItem = win.toolBar.insertStock(STOCK_QUIT, "Quit",
+                      "Quit", SIGNAL_FUNC(aporia.quitFile), nil, -1) 
   
   MainBox.packStart(win.toolBar, False, False, 0)
   if win.settings.toolBarVisible == true:
@@ -2227,7 +2250,8 @@ proc checkAlreadyRunning(): bool =
 
 proc afterInit() =
   if win.Tabs.len > 0:
-    win.Tabs[0].sourceView.grabFocus()
+    var current = win.SourceViewTabs.getCurrentPage()
+    win.Tabs[current].sourceView.grabFocus()
 
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:
