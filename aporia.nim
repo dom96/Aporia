@@ -851,6 +851,11 @@ proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
   
   saveTab(current, startpath)
 
+proc quitFile(menuItem: PMenuItem, user_data: pointer) =
+  var quit = delete_event(nil,nil,nil)
+  if not quit:
+    destroy(nil,nil);
+    
 proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
   var current = win.SourceViewTabs.getCurrentPage()
   var startpath = os.splitFile(win.tabs[current].filename).dir
@@ -1566,6 +1571,11 @@ proc initTopMenu(MainBox: PBox) =
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
   
+  createSeparator(win.FileMenu) 
+                                  
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitFile, ControlMask,
+                                   StockQuit)
+                                     
   createSeparator(win.FileMenu)
   
   var FileMenuItem = menuItemNewWithMnemonic("_File")
@@ -1752,6 +1762,9 @@ proc initToolBar(MainBox: PBox) =
                       "Undo", SIGNAL_FUNC(aporia.undo), nil, -1)
   var RedoItem = win.toolBar.insertStock(STOCK_REDO, "Redo",
                       "Redo", SIGNAL_FUNC(aporia.redo), nil, -1)
+  win.toolBar.appendSpace()
+  var QuitItem = win.toolBar.insertStock(STOCK_QUIT, "Quit",
+                      "Quit", SIGNAL_FUNC(aporia.quitFile), nil, -1) 
   
   MainBox.packStart(win.toolBar, False, False, 0)
   if win.settings.toolBarVisible == true:
