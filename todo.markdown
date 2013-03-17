@@ -14,7 +14,6 @@
   * Use the same strategy as scrolling for making sure that the selected tab gets focused.
 * Search for ⌚, it selects too much with regex.
 * Move "Find", "Go to line" etc. to a "Search" menu in the top bar.
-* Recent files... should be populated upon tab close.
 * If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
 * Ability to specify main file by creating a simple project.aporia.cfg file in root dir?
 
@@ -24,6 +23,9 @@
 * Use gtk_text_buffer_set_modified()
 * Syntax Highlighting change is not reflected in the tab's tooltip.
 * When invoking suggest, check if cursor is on a "string" tag? Can I determine this?
+* Multiple cursors?
+* Command bar?
+* Separate automatically saved settings by aporia and settings which can be changed by user.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -80,6 +82,7 @@
   Like in vim.</del>
   * Evaluate how to handle projects.
 * Feature: Select a block of code, split it up into 80 char lines.
+  * Should be able to do this on the current line!
 * Popular languages listed in View -> Syntax Highlighting?
 * <del>When aporia's config file is saved, validate before saving.</del> If incorrect, list errors in Error List?
 * List of debug's or echod functions, can be used to easily toggle them when debugging. This will decrease crap in your stdout when you're trying to debug something. And you don't have to hunt down each of your debug functions.
@@ -90,3 +93,9 @@
 * Use GtkSourceView instead of output text view? This will allow better control of colouring the output from processes.
 * http://editorconfig.org/ (Use similar config files for differen language configs?)
 * Better diff highlighting? green/red on left with proper highlighting (separate SVs for each file type?) (maybe only for git plugin)
+* Add fake space at bottom so that code is not at the bottom of the screen.
+* Ability to set a syntax highlighting theme per language.
+* Ability to temporarily focus on content, do this by switching to a theme similar to: https://github.com/sindresorhus/focus
+* limit tab's title to 20 chars?
+* Go to function with autocompletion.
+* Being able to go to column with go to line feature

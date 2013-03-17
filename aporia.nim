@@ -310,6 +310,9 @@ proc closeTab(tab: int) =
   var close = askCloseTab(tab)
 
   if close:
+    # Add to recently opened files.
+    # TODO: Save settings?
+    win.settings.recentlyOpenedFiles.add(win.Tabs[tab].filename)
     system.delete(win.Tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
 
@@ -837,9 +840,6 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
     for f in items(files):
       try:
         discard addTab("", f, True)
-        # Add to recently opened files.
-        # TODO: Save settings?
-        win.settings.recentlyOpenedFiles.add(f)
       except EIO:
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
   
@@ -862,7 +862,6 @@ proc recentFile_Activate(menuItem: PMenuItem, file: ptr string) =
   let filename = file[]
   try:
     discard addTab("", filename, True)
-    win.settings.recentlyOpenedFiles.add(filename)
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
