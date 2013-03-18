@@ -47,7 +47,7 @@ proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
     schemeModel.set(addr(iter), 0, schemes[i], 1, "<b>" & escapeMarkup(name) &
                     "</b> - " & escapeMarkup(desc), -1)
 
-    if schemes[i] == win.settings.colorSchemeID:
+    if schemes[i] == win.globalSettings.colorSchemeID:
       schemeTree.getSelection.selectIter(addr(iter))
 
 proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
@@ -57,7 +57,7 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
   
   if getSelected(PTreeSelection(selection), addr(model), addr(iter)):
     model.get(addr(iter), 0, addr(value), -1)
-    win.settings.colorSchemeID = $value
+    win.globalSettings.colorSchemeID = $value
 
     var schemeMan = schemeManagerGetDefault()
     win.scheme = schemeMan.getScheme(value)
@@ -75,7 +75,7 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
   # Initialize the FontDialog
   var fontDialog = fontSelectionDialogNew("Select font")
   fontDialog.setTransientFor(win.w)
-  discard fontDialog.dialogSetFontName(win.settings.font)
+  discard fontDialog.dialogSetFontName(win.globalSettings.font)
   
   discard fontDialog.okButton.GSignalConnect("clicked", 
       G_CALLBACK(fontDialog_OK), fontDialog)
@@ -86,11 +86,11 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
   var result = fontDialog.run()
   # If the response, is OK, then change the font.
   if result == RESPONSE_OK:
-    win.settings.font = $fontDialog.dialogGetFontName()
+    win.globalSettings.font = $fontDialog.dialogGetFontName()
     userData.setText(fontDialog.dialogGetFontName())
     # Loop through each tab, and change the font
     for i in items(win.Tabs):
-      var font = fontDescriptionFromString(win.settings.font)
+      var font = fontDescriptionFromString(win.globalSettings.font)
       i.sourceView.modifyFont(font)
     
   gtk2.POBject(fontDialog).destroy()
@@ -125,10 +125,10 @@ proc initTools(settingsTabs: PNotebook) =
   discard settingsTabs.appendPage(t, labelNew("Tools"))
   t.show()
   
-  nimrodEdit = addTextEdit(t, "Nimrod", win.settings.nimrodCmd)
-  custom1Edit = addTextEdit(t, "Custom Command 1", win.settings.customCmd1)
-  custom2Edit = addTextEdit(t, "Custom Command 2", win.settings.customCmd2)
-  custom3Edit = addTextEdit(t, "Custom Command 3", win.settings.customCmd3)
+  nimrodEdit = addTextEdit(t, "Nimrod", win.globalSettings.nimrodCmd)
+  custom1Edit = addTextEdit(t, "Custom Command 1", win.globalSettings.customCmd1)
+  custom2Edit = addTextEdit(t, "Custom Command 2", win.globalSettings.customCmd2)
+  custom3Edit = addTextEdit(t, "Custom Command 3", win.globalSettings.customCmd3)
 
 
 proc initFontsColors(settingsTabs: PNotebook) =
@@ -154,7 +154,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   
   var fontEntry = entryNew()
   fontEntry.setEditable(False)
-  fontEntry.setText(win.settings.font)
+  fontEntry.setText(win.globalSettings.font)
   fontEntryHBox.packStart(fontEntry, False, False, 20)
   fontEntry.show()
   
@@ -208,51 +208,51 @@ proc initFontsColors(settingsTabs: PNotebook) =
 
 # -- Editor settings
 proc showLineNums_Toggled(button: PToggleButton, user_data: pgpointer) =
-  win.settings.showLineNumbers = button.getActive()
+  win.globalSettings.showLineNumbers = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    i.sourceView.setShowLineNumbers(win.settings.showLineNumbers)
+    i.sourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
     
 proc hlCurrLine_Toggled(button: PToggleButton, user_data: pgpointer) =
-  win.settings.highlightCurrentLine = button.getActive()
+  win.globalSettings.highlightCurrentLine = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     i.sourceView.setHighlightCurrentLine(
-        win.settings.highlightCurrentLine)
+        win.globalSettings.highlightCurrentLine)
     
 proc showMargin_Toggled(button: PToggleButton, user_data: pgpointer) =
-  win.settings.rightMargin = button.getActive()
+  win.globalSettings.rightMargin = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    i.sourceView.setShowRightMargin(win.settings.rightMargin)
+    i.sourceView.setShowRightMargin(win.globalSettings.rightMargin)
 
 proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
-  win.settings.highlightMatchingBrackets = button.getActive()
+  win.globalSettings.highlightMatchingBrackets = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
     i.buffer.setHighlightMatchingBrackets(
-        win.settings.highlightMatchingBrackets)
+        win.globalSettings.highlightMatchingBrackets)
 
 proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
-  win.settings.indentWidth = int32(spinbtn.getValue())
+  win.globalSettings.indentWidth = int32(spinbtn.getValue())
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    i.sourceView.setIndentWidth(win.settings.indentWidth)
+    i.sourceView.setIndentWidth(win.globalSettings.indentWidth)
   
 proc autoIndent_Toggled(button: PToggleButton, user_data: pgpointer) =
-  win.settings.autoIndent = button.getActive()
+  win.globalSettings.autoIndent = button.getActive()
   # Loop through each tab, and change the setting.
   for i in items(win.Tabs):
-    i.sourceView.setAutoIndent(win.settings.autoIndent)
+    i.sourceView.setAutoIndent(win.globalSettings.autoIndent)
 
 proc suggestFeature_Toggled(button: PToggleButton, user_data: pgpointer) =
-  win.settings.suggestFeature = button.getActive()
+  win.globalSettings.suggestFeature = button.getActive()
 
 proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: pgpointer) =
-  win.settings.showCloseOnAllTabs = button.getActive()
+  win.globalSettings.showCloseOnAllTabs = button.getActive()
   # Loop through each tab, and change the setting.
   for i in 0..len(win.Tabs)-1:
-    if win.settings.showCloseOnAllTabs:
+    if win.globalSettings.showCloseOnAllTabs:
       win.Tabs[i].closeBtn.show()
     else:
       if i == win.SourceViewTabs.getCurrentPage():
@@ -276,7 +276,7 @@ proc initEditor(settingsTabs: PNotebook) =
   indentWidthLabel.show()
   
   var indentWidthSpinButton = spinButtonNew(1.0, 24.0, 1.0)
-  indentWidthSpinButton.setValue(win.settings.indentWidth.toFloat())
+  indentWidthSpinButton.setValue(win.globalSettings.indentWidth.toFloat())
   discard indentWidthSpinButton.GSignalConnect("value-changed", 
     G_CALLBACK(indentWidth_changed), nil)
   indentWidthHBox.packStart(indentWidthSpinButton, False, False, 0)
@@ -288,7 +288,7 @@ proc initEditor(settingsTabs: PNotebook) =
   showLineNumsHBox.show()
   
   var showLineNumsCheckBox = checkButtonNew("Show line numbers")
-  showLineNumsCheckBox.setActive(win.settings.showLineNumbers)
+  showLineNumsCheckBox.setActive(win.globalSettings.showLineNumbers)
   discard showLineNumsCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(showLineNums_Toggled), nil)
   showLineNumsHBox.packStart(showLineNumsCheckBox, False, False, 20)
@@ -300,7 +300,7 @@ proc initEditor(settingsTabs: PNotebook) =
   hlCurrLineHBox.show()
   
   var hlCurrLineCheckBox = checkButtonNew("Highlight selected line")
-  hlCurrLineCheckBox.setActive(win.settings.highlightCurrentLine)
+  hlCurrLineCheckBox.setActive(win.globalSettings.highlightCurrentLine)
   discard hlCurrLineCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(hlCurrLine_Toggled), nil)
   hlCurrLineHBox.packStart(hlCurrLineCheckBox, False, False, 20)
@@ -312,7 +312,7 @@ proc initEditor(settingsTabs: PNotebook) =
   showMarginHBox.show()
   
   var showMarginCheckBox = checkButtonNew("Show right margin")
-  showMarginCheckBox.setActive(win.settings.rightMargin)
+  showMarginCheckBox.setActive(win.globalSettings.rightMargin)
   discard showMarginCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(showMargin_Toggled), nil)
   showMarginHBox.packStart(showMarginCheckBox, False, False, 20)
@@ -324,7 +324,7 @@ proc initEditor(settingsTabs: PNotebook) =
   brackMatchHBox.show()
   
   var brackMatchCheckBox = checkButtonNew("Enable bracket matching")
-  brackMatchCheckBox.setActive(win.settings.highlightMatchingBrackets)
+  brackMatchCheckBox.setActive(win.globalSettings.highlightMatchingBrackets)
   discard brackMatchCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(brackMatch_Toggled), nil)
   brackMatchHBox.packStart(brackMatchCheckBox, False, False, 20)
@@ -336,7 +336,7 @@ proc initEditor(settingsTabs: PNotebook) =
   autoIndentHBox.show()
   
   var autoIndentCheckBox = checkButtonNew("Enable auto indent")
-  autoIndentCheckBox.setActive(win.settings.autoIndent)
+  autoIndentCheckBox.setActive(win.globalSettings.autoIndent)
   discard autoIndentCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(autoIndent_Toggled), nil)
   autoIndentHBox.packStart(autoIndentCheckBox, False, False, 20)
@@ -348,7 +348,7 @@ proc initEditor(settingsTabs: PNotebook) =
   suggestFeatureHBox.show()
   
   var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature")
-  suggestFeatureCheckBox.setActive(win.settings.suggestFeature)
+  suggestFeatureCheckBox.setActive(win.globalSettings.suggestFeature)
   discard suggestFeatureCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(suggestFeature_Toggled), nil)
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, False, False, 20)
@@ -360,7 +360,7 @@ proc initEditor(settingsTabs: PNotebook) =
   showCloseOnAllTabsHBox.show()
   
   var showCloseOnAllTabsCheckBox = checkButtonNew("Show close button on all tabs")
-  showCloseOnAllTabsCheckBox.setActive(win.settings.showCloseOnAllTabs)
+  showCloseOnAllTabsCheckBox.setActive(win.globalSettings.showCloseOnAllTabs)
   discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
   showCloseOnAllTabsHBox.packStart(showCloseOnAllTabsCheckBox, False, False, 20)
@@ -370,10 +370,10 @@ var
   dialog: gtk2.PWindow
 
 proc closeDialog(widget: pWidget, user_data: pgpointer) =
-  win.settings.nimrodCmd = $nimrodEdit.getText()
-  win.settings.customCmd1 = $custom1Edit.getText()
-  win.settings.customCmd2 = $custom2Edit.getText()
-  win.settings.customCmd3 = $custom3Edit.getText()
+  win.globalSettings.nimrodCmd = $nimrodEdit.getText()
+  win.globalSettings.customCmd1 = $custom1Edit.getText()
+  win.globalSettings.customCmd2 = $custom2Edit.getText()
+  win.globalSettings.customCmd3 = $custom3Edit.getText()
 
   gtk2.PObject(dialog).destroy()
 
