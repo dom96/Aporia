@@ -222,12 +222,14 @@ proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSe
       nil
 
 proc loadAuto(lastSession: var seq[string]): TAutoSettings =
+  result = defaultAutoSettings()
+  let autoPath = os.getConfigDir() / "Aporia" / "config.auto.ini"
+  if not existsFile(autoPath): return
   var pAuto: TCfgParser
-  var AutoStream = newFileStream(os.getConfigDir() / "Aporia" / "config.auto.ini", fmRead)
-  open(pAuto, autoStream, os.getConfigDir() / "Aporia" / "config.auto.ini")
+  var AutoStream = newFileStream(autoPath, fmRead)
+  open(pAuto, autoStream, autoPath)
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
-  result = defaultAutoSettings()
   while True:
     var e = next(pAuto)
     case e.kind
@@ -262,9 +264,10 @@ proc loadAuto(lastSession: var seq[string]): TAutoSettings =
       nil
 
 proc loadGlobal*(input: PStream): TGlobalSettings =
+  result = defaultGlobalSettings()
+  if input == nil: return
   var pGlobal: TCfgParser
   open(pGlobal, input, os.getConfigDir() / "Aporia" / "config.global.ini")
-  result = defaultGlobalSettings()
   while True:
     var e = next(pGlobal)
     case e.kind
