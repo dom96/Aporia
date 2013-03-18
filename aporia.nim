@@ -967,14 +967,17 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     # Find first non-whitespace
     var locNonWS = ($line).skipWhitespace()
     # Check if the line is commented.
-    let lineComment = win.tempStuff.commentSyntax.line & ' '
+    let lineComment = win.tempStuff.commentSyntax.line
     if ($line)[locNonWS .. locNonWS+lineComment.len-1] == lineComment:
       # Line is commented
       var startCmntIter, endCmntIter: TTextIter
+      var comlen = gint(locNonWS+lineComment.len)
+      if ($line)[locNonWS+lineComment.len] == ' ':
+        comlen=comlen+1
       cb.getIterAtLineOffset(addr(startCmntIter), (addr start).getLine(),
                              locNonWS.gint)
       cb.getIterAtLineOffset(addr(endCmntIter), (addr start).getLine(),
-                             gint(locNonWS+lineComment.len))
+                             comlen)
       # Remove comment char(s)
       gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
     else:
@@ -982,7 +985,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
       cb.getIterAtLineOffset(addr(locNonWSIter), (addr start).getLine(),
                              locNonWS.gint)
       # Insert the line comment string.
-      cb.insert(addr(locNonWSIter), lineComment, lineComment.len.gint)
+      cb.insert(addr(locNonWSIter), lineComment & ' ', lineComment.len.gint+1)
     cb.endUserAction()
   
   proc toggleMultiline() =
