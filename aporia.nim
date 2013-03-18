@@ -964,6 +964,10 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     # get the whole
     var line = cb.getText(addr(start), addr(theEnd),
                   false)
+    if not (addr theEnd).ends_line:
+      discard (addr theEnd).forward_to_line_end
+      line = cb.getText(addr(start), addr(theEnd),
+                    false)
     # Find first non-whitespace
     var locNonWS = ($line).skipWhitespace()
     # Check if the line is commented.

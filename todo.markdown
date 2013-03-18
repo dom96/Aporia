@@ -16,8 +16,6 @@
 
     mainFile = main.nim
 * Amount of matches when coloring upon highlight.
-* <del>Ctrl+/ doesn't work on commented lines with no space after the #</del>
-  * A former bug remains: when caret is before the # then line is commented again
 * Syntax Highlighting change is not reflected in the tab's tooltip.
 * When invoking suggest, check if cursor is on a "string" tag? Can I determine this?
 * Multiple cursors?
