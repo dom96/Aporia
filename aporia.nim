@@ -233,8 +233,8 @@ proc confirmUnsaved(win: var MainWin, t: Tab): int =
 proc askCloseTab(tab: int): bool =
   result = true
   if not win.tabs[tab].saved and not win.tabs[tab].isTemporary:
-    # Only ask to save if file isn't empty
-    if win.Tabs[tab].buffer.get_char_count != 0:
+    # Only ask to save if file isn't empty or has a "history" (undo can be performed)
+    if win.Tabs[tab].buffer.get_char_count != 0 or can_undo(win.Tabs[tab].buffer):
       var resp = win.confirmUnsaved(win.tabs[tab])
       if resp == RESPONSE_ACCEPT:
         saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)

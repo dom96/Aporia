@@ -11,7 +11,6 @@
 * Change GUI layout of find bar, add wrap around toggle button etc.
 * Find word
 * Search for ⌚, it selects too much with regex.
-* If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
 * Ability to specify main file by creating a simple project.aporia.cfg file in root dir?
 
     mainFile = main.nim
