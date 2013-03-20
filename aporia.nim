@@ -180,9 +180,7 @@ proc saveAllTabs() =
   for i in 0..high(win.tabs): 
     saveTab(i, os.splitFile(win.tabs[i].filename).dir)
 
-# GTK Events
-# -- w(PWindow)
-proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
+proc Exit() =
   # gather some settings
   win.autoSettings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
   win.autoSettings.winWidth = win.w.allocation.width
@@ -192,6 +190,11 @@ proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
   win.save()
   # then quit
   main_quit()
+
+# GTK Events
+# -- w(PWindow)
+proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
+  aporia.Exit()
 
 proc confirmUnsaved(win: var MainWin, t: Tab): int =
   var askSave = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
@@ -1604,7 +1607,7 @@ proc initTopMenu(MainBox: PBox) =
   let quitAporia = 
     proc (menuItem: PMenuItem, user_data: pointer) =
       if not deleteEvent(menuItem, nil, nil):
-        quit()
+        aporia.Exit()
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitAporia,
                                    ControlMask,
                                    StockQuit)
