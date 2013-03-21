@@ -1102,6 +1102,16 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
       var langMan = languageManagerGetDefault()
       win.setHighlightSyntax(currentTab, True)
       win.setLanguage(currentTab, langMan.getLanguage(id))
+
+    # Set tooltip
+    var name = extractFilename(win.Tabs[currentTab].filename)
+    var tooltip = "<b>Path: </b> " &  name & "\n" &
+                  "<b>Language: </b> " & getLanguageName(win, win.Tabs[currentTab].buffer)
+    if win.Tabs[currentTab].isTemporary:
+      win.Tabs[currentTab].label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+      tooltip.add("\n<i>File is saved in temporary files and may be lost.</i>")
+    win.Tabs[currentTab].label.setTooltipMarkup(tooltip)
+
     plCheckUpdate(currentTab)
 
 proc showBottomPanel() =
