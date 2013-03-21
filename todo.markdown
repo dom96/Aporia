@@ -11,13 +11,10 @@
 * Change GUI layout of find bar, add wrap around toggle button etc.
 * Find word
 * Search for ⌚, it selects too much with regex.
-* If file is empty, but has a "history" (undo can be performed), user should be asked whether to save.
 * Ability to specify main file by creating a simple project.aporia.cfg file in root dir?
 
     mainFile = main.nim
 * Amount of matches when coloring upon highlight.
-* Ctrl+/ doesn't work on commented lines with no space after the #
-* Syntax Highlighting change is not reflected in the tab's tooltip.
 * When invoking suggest, check if cursor is on a "string" tag? Can I determine this?
 * Multiple cursors?
 * Command bar?

@@ -180,9 +180,7 @@ proc saveAllTabs() =
   for i in 0..high(win.tabs): 
     saveTab(i, os.splitFile(win.tabs[i].filename).dir)
 
-# GTK Events
-# -- w(PWindow)
-proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
+proc Exit() =
   # gather some settings
   win.autoSettings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
   win.autoSettings.winWidth = win.w.allocation.width
@@ -192,6 +190,11 @@ proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
   win.save()
   # then quit
   main_quit()
+
+# GTK Events
+# -- w(PWindow)
+proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
+  aporia.Exit()
 
 proc confirmUnsaved(win: var MainWin, t: Tab): int =
   var askSave = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
@@ -230,8 +233,8 @@ proc confirmUnsaved(win: var MainWin, t: Tab): int =
 proc askCloseTab(tab: int): bool =
   result = true
   if not win.tabs[tab].saved and not win.tabs[tab].isTemporary:
-    # Only ask to save if file isn't empty
-    if win.Tabs[tab].buffer.get_char_count != 0:
+    # Only ask to save if file isn't empty or has a "history" (undo can be performed)
+    if win.Tabs[tab].buffer.get_char_count != 0 or can_undo(win.Tabs[tab].buffer):
       var resp = win.confirmUnsaved(win.tabs[tab])
       if resp == RESPONSE_ACCEPT:
         saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
@@ -964,17 +967,24 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     # get the whole
     var line = cb.getText(addr(start), addr(theEnd),
                   false)
+    if not (addr theEnd).ends_line:
+      discard (addr theEnd).forward_to_line_end
+      line = cb.getText(addr(start), addr(theEnd),
+                    false)
     # Find first non-whitespace
     var locNonWS = ($line).skipWhitespace()
     # Check if the line is commented.
-    let lineComment = win.tempStuff.commentSyntax.line & ' '
+    let lineComment = win.tempStuff.commentSyntax.line
     if ($line)[locNonWS .. locNonWS+lineComment.len-1] == lineComment:
       # Line is commented
       var startCmntIter, endCmntIter: TTextIter
+      var comlen = gint(locNonWS+lineComment.len)
+      if ($line)[locNonWS+lineComment.len] == ' ':
+        comlen=comlen+1
       cb.getIterAtLineOffset(addr(startCmntIter), (addr start).getLine(),
                              locNonWS.gint)
       cb.getIterAtLineOffset(addr(endCmntIter), (addr start).getLine(),
-                             gint(locNonWS+lineComment.len))
+                             comlen)
       # Remove comment char(s)
       gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
     else:
@@ -982,7 +992,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
       cb.getIterAtLineOffset(addr(locNonWSIter), (addr start).getLine(),
                              locNonWS.gint)
       # Insert the line comment string.
-      cb.insert(addr(locNonWSIter), lineComment, lineComment.len.gint)
+      cb.insert(addr(locNonWSIter), lineComment & ' ', lineComment.len.gint+1)
     cb.endUserAction()
   
   proc toggleMultiline() =
@@ -1092,6 +1102,16 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
       var langMan = languageManagerGetDefault()
       win.setHighlightSyntax(currentTab, True)
       win.setLanguage(currentTab, langMan.getLanguage(id))
+
+    # Set tooltip
+    var name = extractFilename(win.Tabs[currentTab].filename)
+    var tooltip = "<b>Path: </b> " &  name & "\n" &
+                  "<b>Language: </b> " & getLanguageName(win, win.Tabs[currentTab].buffer)
+    if win.Tabs[currentTab].isTemporary:
+      win.Tabs[currentTab].label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+      tooltip.add("\n<i>File is saved in temporary files and may be lost.</i>")
+    win.Tabs[currentTab].label.setTooltipMarkup(tooltip)
+
     plCheckUpdate(currentTab)
 
 proc showBottomPanel() =
@@ -1597,7 +1617,7 @@ proc initTopMenu(MainBox: PBox) =
   let quitAporia = 
     proc (menuItem: PMenuItem, user_data: pointer) =
       if not deleteEvent(menuItem, nil, nil):
-        quit()
+        aporia.Exit()
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitAporia,
                                    ControlMask,
                                    StockQuit)
