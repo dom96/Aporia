@@ -77,7 +77,7 @@ proc save(settings: TAutoSettings, win: var MainWin) =
     f.write(confInfo & "\n")
     
     f.writeKeyVal("searchMethod", $int(settings.search))
-    f.writeKeyVal("wrapAround", $int(settings.wrapAround))
+    f.writeKeyVal("wrapAround", $settings.wrapAround)
     f.writeKeyVal("winMaximized", $settings.winMaximized)
     f.writeKeyVal("VPanedPos", settings.VPanedPos)
     f.writeKeyVal("winWidth", settings.winWidth)
