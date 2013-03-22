@@ -92,3 +92,4 @@
 * Being able to go to column with go to line feature
 * Force focus the selected tab after initialisation.
 * When Raw Preferences are edited, need to reapply some settings to sourceview (color scheme, indentation width etc) among other settings.
+* When wrap around is disabled, if term searched for is above the cursor a "Match not found" error is shown. More informative message should be shown instead.

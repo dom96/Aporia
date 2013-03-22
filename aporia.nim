@@ -193,8 +193,6 @@ proc Exit() =
 
 # GTK Events
 # -- w(PWindow)
-proc destroy(widget: PWidget, data: pgpointer) {.cdecl.} =
-  aporia.Exit()
 
 proc confirmUnsaved(win: var MainWin, t: Tab): int =
   var askSave = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
@@ -386,7 +384,7 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
 proc onCloseTab(btn: PButton, child: PWidget)
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
                        userDat: pwidget): bool
-proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
+proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box: PWidget,
                     label: PLabel, closeBtn: PButton] =                  
   var eventBox = eventBoxNew()
   eventBox.setVisibleWindow(false)
@@ -395,6 +393,10 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
   
   var box = hboxNew(False, 0)
   var label = labelNew(name)
+  if filename.startsWith(getTempDir()):
+    # If this is a temporary tab, mark it as such.
+    label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+  
   var closebtn = buttonNew()
   closeBtn.setLabel(nil)
   var iconSize = iconSizeFromName("tabIconSize")
@@ -410,6 +412,20 @@ proc createTabLabel(name: string, t_child: PWidget): tuple[box: PWidget,
 
   eventBox.add(box)
   return (eventBox, label, closeBtn)
+
+
+proc setTabTooltip(t: Tab) =
+  ## (Re)sets the tab tooltip text.
+  if t.filename != "":
+    var tooltip = "<b>Path: </b> " & t.filename & "\n" &
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
+    if t.filename.startsWith(getTempDir()):
+      tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
+    t.label.setTooltipMarkup(tooltip)
+  else:
+    var tooltip = "<i>Tab is not saved.</i>\n" &
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
+    t.label.setTooltipMarkup(tooltip)
 
 proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   ## This signal is called when the modification state of ``buffer`` is changed.
@@ -430,16 +446,7 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   else:
     cTab.saved = true
     
-    var name = extractFilename(cTab.filename)
-    var tooltip = "<b>Path: </b> " & cTab.filename & "\n" &
-                  "<b>Language: </b> " & getLanguageName(win, ctab.buffer)
-
-    if cTab.isTemporary:
-      cTab.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
-      tooltip.add("\n<i>File is saved in temporary files and may be lost.</i>")
-    else:
-      cTab.label.setText(name)
-    cTab.label.setTooltipMarkup(tooltip)
+    setTabTooltip(cTab)
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -748,20 +755,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
     # Get the name.ext of the filename, for the tabs title
     nam = extractFilename(filename)
 
-  var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow)
-  
-  # Set the tooltip.
-  if filename != "":
-    var tooltip = "<b>Path: </b> " & filename & "\n" &
-                  "<b>Language: </b> " & getLanguageName(win, buffer)
-    if filename.startsWith(getTempDir()):
-      labelText.setMarkup(nam & "<span color=\"#CC0E0E\"> *</span>")
-      tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
-    TabLabel.setTooltipMarkup(tooltip)
-  else:
-    var tooltip = "<i>Tab is not saved.</i>\n" &
-                  "<b>Language: </b> " & getLanguageName(win, buffer)
-    TabLabel.setTooltipMarkup(tooltip)
+  var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow, filename)
   
   # Add a tab
   var nTab: Tab
@@ -776,6 +770,9 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   if not win.globalSettings.showCloseOnAllTabs:
     nTab.closeBtn.hide()
   win.Tabs.add(nTab)
+  
+  # Set the tooltip
+  setTabTooltip(win.Tabs[win.tabs.len-1])
   
   # Add the tab to the GtkNotebook
   let res = win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
@@ -1103,14 +1100,7 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
       win.setHighlightSyntax(currentTab, True)
       win.setLanguage(currentTab, langMan.getLanguage(id))
 
-    # Set tooltip
-    var name = extractFilename(win.Tabs[currentTab].filename)
-    var tooltip = "<b>Path: </b> " &  name & "\n" &
-                  "<b>Language: </b> " & getLanguageName(win, win.Tabs[currentTab].buffer)
-    if win.Tabs[currentTab].isTemporary:
-      win.Tabs[currentTab].label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
-      tooltip.add("\n<i>File is saved in temporary files and may be lost.</i>")
-    win.Tabs[currentTab].label.setTooltipMarkup(tooltip)
+    setTabTooltip(win.tabs[currentTab])
 
     plCheckUpdate(currentTab)
 
@@ -2208,8 +2198,12 @@ proc initControls() =
   win.w.setDefaultSize(win.autoSettings.winWidth, win.autoSettings.winHeight)
   win.w.setTitle("Aporia")
   if win.autoSettings.winMaximized: win.w.maximize()
-    
-  discard win.w.signalConnect("destroy", SIGNAL_FUNC(aporia.destroy), nil)
+  
+  let winDestroy = 
+    proc (widget: PWidget, data: pgpointer) {.cdecl.} =
+      aporia.Exit()
+  
+  discard win.w.signalConnect("destroy", SIGNAL_FUNC(winDestroy), nil)
   discard win.w.signalConnect("delete_event", 
     SIGNAL_FUNC(aporia.delete_event), nil)
   discard win.w.signalConnect("window-state-event", 
