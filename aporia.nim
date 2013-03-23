@@ -432,21 +432,17 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   # *Warning* we assume here that the currently selected tab was modified.
   var ctab = cast[Tab](theTab)
   #assert ((current > 0) and (current < win.tabs.len))
-  var modified = ctab.buffer.getModified()
-  if modified:
-    var name = ""
-    if cTab.filename == "":
-      cTab.saved = False
-      name = "Untitled *"
-    else:
-      cTab.saved = False
-      name = extractFilename(cTab.filename) & " *"
-    
-    cTab.label.setText(name)
+  cTab.saved = not ctab.buffer.getModified()
+  var name = ""
+  if cTab.filename == "":
+    name = "Untitled"
   else:
-    cTab.saved = true
-    
-    setTabTooltip(cTab)
+    name = extractFilename(cTab.filename)
+  if not cTab.saved:
+    name.add(" *")
+
+  cTab.label.setText(name)
+  setTabTooltip(cTab)
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
