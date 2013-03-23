@@ -182,24 +182,32 @@ proc findSimple(forward: bool, startIter: PTextIter,
   return (startMatch, endMatch, matchFound)
 
 iterator findTerm(buffer: PSourceBuffer, term: string, mode: TSearchEnum): tuple[startMatch, endMatch: TTextIter] {.closure.} =
-  var iter: TTextIter
-  buffer.getStartIter(addr(iter))
+  const CurrentSearchPosName = "CurrentSearchPosMark"
+  var searchPosMark = buffer.getMark(CurrentSearchPosName)
+  var startIter: TTextIter
+  buffer.getStartIter(addr(startIter))
+  if searchPosMark == nil:
+    searchPosMark = buffer.createMark(CurrentSearchPosName, addr(startIter), false)
+  else:
+    buffer.moveMark(searchPosMark, addr(startIter))
   
   var found = True
+  var startSearchIter: TTextIter
   var startMatch, endMatch: TTextIter
   var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
   while found:
+    buffer.getIterAtMark(addr(startSearchIter), searchPosMark)
     case mode
     of SearchCaseInsens, SearchCaseSens:
-      ret = findSimple(true, addr(iter), buffer, $term, mode, wrappedAround = true)
+      ret = findSimple(true, addr(startSearchIter), buffer, $term, mode, wrappedAround = true)
     of SearchRegex, SearchPeg, SearchStyleInsens:
-      ret = findRePeg(true, addr(iter), buffer, $term, mode, wrappedAround = true)
+      ret = findRePeg(true, addr(startSearchIter), buffer, $term, mode, wrappedAround = true)
     startMatch = ret[0]
     endMatch = ret[1]
     found = ret[2]
     
-    iter = endMatch
     if not found: break
+    buffer.moveMark(searchPosMark, addr(endMatch))
     yield (startMatch, endMatch)
 
 const HighlightTagName = "search-highlight-all"
