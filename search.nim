@@ -33,12 +33,12 @@ proc newNoHighlightAll*(): THighlightAll =
 
 proc canBeHighlighted(term: string): bool =
   ## Determines whether ``term`` should be highlighted.
-  result = false
-  if term.len == 0: return false
+  result = true
+  if term.len < 2: return false
   let c = term[0]
-  if c notin NonHighlightChars: return true
+  if c in NonHighlightChars: return false
   for i in 1..term.len-1:
-    if term[i] notin NonHighlightChars: return true
+    if term[i] in NonHighlightChars: return false
   
 proc getSearchOptions(mode: TSearchEnum): TTextSearchFlags =
   case mode
@@ -241,12 +241,13 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
     ## This is already highlighted.
     return
   
+  stopHighlightAll(w, forSearch)
+  
   if not forSearch:
     if not canBeHighlighted(term):
       return
   
   echod("Highlighting in ", mode)
-  stopHighlightAll(w, forSearch)
   
   type 
     TIdleParam = object
