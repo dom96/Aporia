@@ -18,6 +18,11 @@
 * When invoking suggest, check if cursor is on a "string" tag? Can I determine this?
 * Multiple cursors?
 * Command bar?
+* You broke saved in /tmp notification in tab title, fix it.
+* When prompted for whether a file should be saved on aporia exit, the tab in 
+  question is selected causing it to be saved to the config and it cannot be
+  selected when aporia is loaded again, causing a different tab to be selected.
+* Highlight all not reset when typing?
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -93,3 +98,9 @@
 * Force focus the selected tab after initialisation.
 * When Raw Preferences are edited, need to reapply some settings to sourceview (color scheme, indentation width etc) among other settings.
 * When wrap around is disabled, if term searched for is above the cursor a "Match not found" error is shown. More informative message should be shown instead.
+* Stripping of useless whitespace
+  * This should not just happen magically on save.
+  * Whitespace should be detected, user should be asked whether they want to strip it.
+  * Whitespace should be stripped automatically only as it's introduced in the editor, (feature should be disable-able).
+* Fancy save icons? http://branch.com/b/redesigning-the-save-symbol-let-s-do-this#AbwZEhoVgHc (A broken up disc when unsaved, turns into a full disc when saved, resembles HDD disk)
+  * In status bar during save operation?

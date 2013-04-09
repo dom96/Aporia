@@ -196,7 +196,9 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
     win.tempStuff.currentExec.runAfter = execute
     win.tempStuff.currentExec.runAfterSuccess = false
     # Kill the current suggest process:
-    win.tempStuff.execProcess.terminate()
+    try:
+      win.tempStuff.execProcess.terminate()
+    except EOS: nil # fail may occur if process exited already
     win.tempStuff.execProcess.close()
   else:
     # Run now!
