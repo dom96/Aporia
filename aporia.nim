@@ -306,7 +306,8 @@ proc closeTab(tab: int) =
   if close:
     # Add to recently opened files.
     # TODO: Save settings?
-    win.autoSettings.recentlyOpenedFiles.add(win.Tabs[tab].filename)
+    if win.tabs[tab].filename != "":
+      win.autoSettings.recentlyOpenedFiles.add(win.Tabs[tab].filename)
     system.delete(win.Tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
 

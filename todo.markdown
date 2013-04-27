@@ -22,7 +22,6 @@
   question is selected causing it to be saved to the config and it cannot be
   selected when aporia is loaded again, causing a different tab to be selected.
 * when false: ... should be highlighted as a comment intelligently.
-* Unsaved tabs are being added to recently closed files.
 
 ## Other language features
 * Ability to change to hard tabs.
