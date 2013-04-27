@@ -451,7 +451,10 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   if not cTab.saved:
     name.add(" *")
 
-  cTab.label.setText(name)
+  if cTab.saved and cTab.isTemporary:
+    cTab.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+  else:
+    cTab.label.setText(name)
   setTabTooltip(cTab)
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
