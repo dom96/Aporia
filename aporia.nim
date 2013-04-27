@@ -338,6 +338,33 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
 
 # -- SourceView(PSourceView) & SourceBuffer
 
+proc updateHighlightAll(buffer: PTextBuffer, markName: string = "") =
+  # Called when the highlighted text should be updated. i.e. new selection
+  # has been made.
+  var insert, selectBound: TTextIter
+  if buffer.getSelectionBounds(addr(insert), addr(selectBound)):
+    # There is a selection
+    let frmLn = getLine(addr(insert)) + 1
+    let toLn = getLine(addr(selectBound)) + 1
+    # Highlighting
+    if frmLn == toLn and win.globalSettings.selectHighlightAll:
+      template h: expr = win.tabs[getCurrentTab(win)].highlighted
+      # Same line.
+      var term = buffer.getText(addr(insert), addr(selectBound), false)
+      highlightAll(win, $term, false)
+      if not win.globalSettings.searchHighlightAll and h.forSearch and
+         markName == "selection_bound":
+        # Override the search selection block, this means that after searching
+        # selecting text manually will still highlight things instead of you
+        # having to close the find bar.
+        h = newNoHighlightAll()
+    else: # multiple lines selected
+      if win.globalSettings.selectHighlightAll:
+        stopHighlightAll(win, false)
+  else:
+    if win.globalSettings.selectHighlightAll:
+      stopHighlightAll(win, false)
+
 proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
   # Incase this event gets fired before
   # statusBar is initialized
@@ -350,28 +377,10 @@ proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
       let frmChar = getLineOffset(addr(insert))
       let toChar = getLineOffset(addr(selectBound))
       win.statusbar.setDocInfoSelected(frmLn, toLn, frmChar, toChar)
-      
-      # Highlighting
-      if frmLn == toLn and win.globalSettings.selectHighlightAll:
-        template h: expr = win.tabs[getCurrentTab(win)].highlighted
-        # Same line.
-        var term = buffer.getText(addr(insert), addr(selectBound), false)
-        highlightAll(win, $term, false)
-        if not win.globalSettings.searchHighlightAll and h.forSearch and
-           markName == "selection_bound":
-          # Override the search selection block, this means that after searching
-          # selecting text manually will still highlight things instead of you
-          # having to close the find bar.
-          h = newNoHighlightAll()
-      else: # multiple lines selected
-        if win.globalSettings.selectHighlightAll:
-          stopHighlightAll(win, false)
     else:
       let ln = getLine(addr(insert)) + 1
       let ch = getLineOffset(addr(insert))
       win.statusbar.setDocInfo(ln, ch)
-      if win.globalSettings.selectHighlightAll:
-        stopHighlightAll(win, false)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
                  mark: PTextMark, user_data: pgpointer){.cdecl.} =
@@ -380,6 +389,7 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
     return # We don't want anonymous marks.
   if $markName == "insert" or $markName == "selection_bound":
     updateStatusBar(buffer, $markName)
+    updateHighlightAll(buffer, $markName)
 
 proc onCloseTab(btn: PButton, child: PWidget)
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
