@@ -22,7 +22,8 @@
 * When prompted for whether a file should be saved on aporia exit, the tab in 
   question is selected causing it to be saved to the config and it cannot be
   selected when aporia is loaded again, causing a different tab to be selected.
-* Highlight all not reset when typing?
+* when false: ... should be highlighted as a comment intelligently.
+
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -87,7 +88,7 @@
 * Background indexer of files in the directories of the files that are open. This will allow for quickly searching for files. (Kind of like 't' in github repo pages)
 * Separate settings. Add ability to have per-user settings (profiles).
 * Use GtkSourceView instead of output text view? This will allow better control of colouring the output from processes.
-* http://editorconfig.org/ (Use similar config files for differen language configs?)
+* http://editorconfig.org/ (Use similar config files for different language configs?)
 * Better diff highlighting? green/red on left with proper highlighting (separate SVs for each file type?) (maybe only for git plugin)
 * Add fake space at bottom so that code is not at the bottom of the screen.
 * Ability to set a syntax highlighting theme per language.

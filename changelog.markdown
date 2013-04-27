@@ -40,3 +40,7 @@ the Nimrod syntax highlighter.
   by changing the ``compileUnsavedSave`` option in the config, more info in
   SettingsDoc.markdown.
 * Tooltip improvements: tab's language is displayed as well as other information.
+* Settings are now seperated into two files: config.global.ini and config.auto.ini.
+  The latter contains settings which should not be edited as they might be overwritten
+  when Aporia is closed (last session info, window width/height etc.). The former
+  can be edited.

@@ -446,22 +446,7 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
-  # Change the tabs state to 'unsaved'
-  # and add '*' to the Tab Name
-  var current = win.SourceViewTabs.getCurrentPage()
-  if current < win.tabs.len:
-    var name = ""
-    if win.Tabs[current].filename == "":
-      win.Tabs[current].saved = False
-      name = "Untitled *"
-    else:
-      win.Tabs[current].saved = False
-      name = extractFilename(win.Tabs[current].filename) & " *"
-    
-    var cTab = win.Tabs[current]
-    cTab.label.setText(name)
-    
-    updateStatusBar(buffer, "")
+  updateStatusBar(buffer, "")
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): gboolean =
@@ -788,7 +773,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   # TODO: If the following gets called at any time because text was loaded from a file,
   # use connect_after to connect "insert-text" signal, and then connect this signal
   # in the handler of "insert-text".
-  #discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), sourceView)
+  discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), sourceView)
   buffer.setModified(filename == "")
 
   if setCurrent:
