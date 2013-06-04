@@ -1291,7 +1291,7 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
     if galloc.x == -1:
       # Use the label x instead
       let labelAlloc = win.tabs[win.tabs.len-1].label.allocation
-      assert labelAlloc.x != -1
+      if labelAlloc.x == -1: return # Last tab's label isn't realized?
       if ev.x < labelAlloc.x.float: return # Didn't click on empty space.
     else:
       if ev.x < galloc.x.float: return # Didn't click on empty space.

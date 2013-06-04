@@ -22,6 +22,13 @@
   question is selected causing it to be saved to the config and it cannot be
   selected when aporia is loaded again, causing a different tab to be selected.
 * when false: ... should be highlighted as a comment intelligently.
+* When tab is closed, TFile is not closed.
+* Closing a tab, and then immediatelly switching to another one causes two close tab
+  buttons to be shown.
+* Recently closed files get populated with the same filenames, instead of the
+  filename being moved to the top.
+* Refactor aporia.nim into smaller files like toolbar.nim, tabs.nim, sourceview.nim etc.
+* Consistent line endings -- auto detection and perhaps prompt if line endings are mixed.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -103,3 +110,4 @@
   * Whitespace should be stripped automatically only as it's introduced in the editor, (feature should be disable-able).
 * Fancy save icons? http://branch.com/b/redesigning-the-save-symbol-let-s-do-this#AbwZEhoVgHc (A broken up disc when unsaved, turns into a full disc when saved, resembles HDD disk)
   * In status bar during save operation?
+* When Ctrl is pressed I want info in the status bar about what is in my clipboard. For example: "3 lines in clipboard"
