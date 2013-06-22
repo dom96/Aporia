@@ -150,6 +150,7 @@ proc save*(win: var MainWin) =
   win.autoSettings.save(win)
   win.globalSettings.save()
   if existsFile(os.getConfigDir() / "Aporia" / "config.ini"):
+    echo(os.getConfigDir() / "Aporia" / "config.ini")
     removeFile(os.getConfigDir() / "Aporia" / "config.ini")
 
 
@@ -220,6 +221,8 @@ proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSe
       raise newException(ECFGParse, e.msg)
     of cfgSectionStart, cfgOption:
       nil
+  input.close()
+  p.close()
 
 proc loadAuto(lastSession: var seq[string]): TAutoSettings =
   result = defaultAutoSettings()
@@ -262,6 +265,9 @@ proc loadAuto(lastSession: var seq[string]): TAutoSettings =
       raise newException(ECFGParse, e.msg)
     of cfgSectionStart, cfgOption:
       nil
+
+  autoStream.close()
+  pAuto.close()
 
 proc loadGlobal*(input: PStream): TGlobalSettings =
   result = defaultGlobalSettings()
@@ -306,6 +312,7 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
       raise newException(ECFGParse, e.msg)
     of cfgSectionStart, cfgOption:
       nil
+  close(pGlobal)
 
 proc load*(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] = 
   if existsFile(os.getConfigDir() / "Aporia" / "config.ini"):
@@ -314,5 +321,5 @@ proc load*(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSett
     result.a = loadAuto(lastSession)
     var globalStream = newFileStream(os.getConfigDir() / "Aporia" / "config.global.ini", fmRead)
     result.g = loadGlobal(globalStream)
-
+    globalStream.close()
 

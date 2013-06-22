@@ -393,7 +393,7 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
 
 proc onCloseTab(btn: PButton, child: PWidget)
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget): bool
+                       userDat: pwidget): gboolean
 proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box: PWidget,
                     label: PLabel, closeBtn: PButton] =                  
   var eventBox = eventBoxNew()
@@ -1279,12 +1279,12 @@ proc onCloseTab(btn: PButton, child: PWidget) =
     closeTab(win.sourceViewTabs.pageNum(child))
 
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget): bool =
+                       userDat: pwidget): gboolean =
   if ev.button == 2: # Middle click.
     closeTab(win.sourceViewTabs.pageNum(userDat))
 
 proc onTabsPressed(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget):bool =
+                       userDat: pwidget): gboolean =
   if ev.button == 1 and ev.`type` == BUTTON2_PRESS:
     let galloc = win.tabs[win.tabs.len-1].closeBtn.allocation
     if galloc.x == -1:
