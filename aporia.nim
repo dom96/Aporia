@@ -2142,7 +2142,7 @@ proc initSocket() =
       client.handleRead =
         proc (c: PAsyncSocket) =
           var line = ""
-          if c.recvLine(line):
+          if c.readLine(line):
             if line == "":
               c.close()
             elif line == "\c\L":

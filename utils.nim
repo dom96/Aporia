@@ -257,7 +257,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   # sourceview is gone? The likelihood of this happening is probably very unlikely
   # though.
   
-  proc idleConfirmScroll(sv: PSourceView): bool {.cdecl.} =
+  proc idleConfirmScroll(sv: PSourceView): gboolean {.cdecl.} =
     result = false
     
     var buff = sv.getBuffer()
@@ -373,7 +373,7 @@ proc createSeparator*(menu: PMenu) =
 proc forcePresent*(w: PWindow) =
   w.present()
   
-  proc idleConfirmPresent(y: PWindow): bool {.cdecl.} =
+  proc idleConfirmPresent(y: PWindow): gboolean {.cdecl.} =
     y.present()
     result = not y.isActive()
   
