@@ -179,7 +179,7 @@ proc findSimple(forward: bool, startIter: PTextIter,
         buffer.getEndIter(addr(startMatch))
       return findSimple(forward, addr(startMatch), buffer, pattern, mode, true)
     
-  return (startMatch, endMatch, matchFound)
+  return (startMatch, endMatch, matchFound.bool)
 
 iterator findTerm(buffer: PSourceBuffer, term: string, mode: TSearchEnum): tuple[startMatch, endMatch: TTextIter] {.closure.} =
   const CurrentSearchPosName = "CurrentSearchPosMark"

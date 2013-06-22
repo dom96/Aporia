@@ -259,14 +259,13 @@ proc askCloseTab(tab: int): bool =
     else:
       result = False
 
-proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): bool =
+proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): gboolean =
   var quit = True
   for i in win.Tabs.low .. win.Tabs.len-1:
     if not win.Tabs[i].saved or win.Tabs[i].isTemporary:
       win.sourceViewTabs.setCurrentPage(i.int32)
       quit = askCloseTab(i)
       if not quit: break
-
   # If False is returned the window will close
   return not quit
 
@@ -312,7 +311,7 @@ proc closeTab(tab: int) =
     win.sourceViewTabs.removePage(int32(tab))
 
 proc window_keyPress(widg: PWidget, event: PEventKey, 
-                          userData: pgpointer): bool =
+                          userData: pgpointer): gboolean =
   result = false
   var modifiers = acceleratorGetDefaultModMask()
 
@@ -594,7 +593,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
         win.filterSuggest()
         win.doMoveSuggest()
 
-proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): bool=
+proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): gboolean =
   win.suggest.hide()
 
 proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8"): int
@@ -680,10 +679,10 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   buffer.setHighlightMatchingBrackets(
       win.globalSettings.highlightMatchingBrackets)
   
-  discard gsignalConnect(sourceView, "key-press-event", 
-                         GCallback(SourceViewKeyPress), nil)
-  discard gsignalConnect(sourceView, "key-release-event", 
-                         GCallback(SourceViewKeyRelease), nil)
+  discard signalConnect(sourceView, "key-press-event", 
+                        signalFunc(SourceViewKeyPress), nil)
+  discard signalConnect(sourceView, "key-release-event", 
+                        signalFunc(SourceViewKeyRelease), nil)
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
