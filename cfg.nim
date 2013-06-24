@@ -321,5 +321,6 @@ proc load*(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSett
     result.a = loadAuto(lastSession)
     var globalStream = newFileStream(os.getConfigDir() / "Aporia" / "config.global.ini", fmRead)
     result.g = loadGlobal(globalStream)
-    globalStream.close()
+    if globalStream != nil:
+      globalStream.close()
 
