@@ -2268,6 +2268,7 @@ proc checkAlreadyRunning(): bool =
   else:
     result = true
     client.send("\c\L")
+    client.close()
 
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:
