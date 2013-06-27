@@ -465,7 +465,8 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
                           userData: pgpointer): gboolean =
   result = false
   let ctrlPressed = (event.state and ControlMask) != 0
-  var key = $keyval_name(event.keyval)
+  let keyNameCString = keyval_name(event.keyval)
+  let key = $keyNameCString
   case key.toLower()
   of "up", "down", "page_up", "page_down":
     if win.globalSettings.suggestFeature and win.suggest.shown:
@@ -572,7 +573,9 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): gboolean =
   result = true
-  var key = $keyval_name(event.keyval)
+  let keyNameCString = keyval_name(event.keyval)
+  if keyNameCString == nil: return
+  let key = $keyNameCString
   case key.toLower()
   of "period":
     if win.globalSettings.suggestFeature and win.getCurrentLanguage() == "nimrod":
