@@ -445,7 +445,7 @@ proc setTabTooltip(t: Tab) =
 
 proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   ## This signal is called when the modification state of ``buffer`` is changed.
-  # *Warning* we assume here that the currently selected tab was modified.
+  # <del>*Warning* we assume here that the currently selected tab was modified.</del>
   var ctab = cast[Tab](theTab)
   #assert ((current > 0) and (current < win.tabs.len))
   cTab.saved = not ctab.buffer.getModified()
@@ -466,6 +466,7 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
   updateStatusBar(buffer, "")
+  updateHighlightAll(buffer)
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): gboolean =
