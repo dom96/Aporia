@@ -466,6 +466,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
   result = false
   let ctrlPressed = (event.state and ControlMask) != 0
   let keyNameCString = keyval_name(event.keyval)
+  if keyNameCString == nil: return
   let key = $keyNameCString
   case key.toLower()
   of "up", "down", "page_up", "page_down":
