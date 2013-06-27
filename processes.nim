@@ -188,7 +188,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
     else:
       win.printProcOutput(event.line)
 
-proc peekProcOutput*(win: ptr MainWin): bool {.cdecl.} =
+proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
   result = True
   if win.tempStuff.currentExec != nil:
     var events = execThrEventChan.peek()
