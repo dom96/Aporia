@@ -25,8 +25,6 @@
 * When tab is closed, TFile is not closed.
 * Closing a tab, and then immediatelly switching to another one causes two close tab
   buttons to be shown.
-* Recently closed files get populated with the same filenames, instead of the
-  filename being moved to the top.
 * Refactor aporia.nim into smaller files like toolbar.nim, tabs.nim, sourceview.nim etc.
 * Consistent line endings -- auto detection and perhaps prompt if line endings are mixed.
 

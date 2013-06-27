@@ -300,13 +300,19 @@ proc cycleTab(win: var MainWin) =
   win.sourceViewTabs.setCurrentPage(current)
 
 proc closeTab(tab: int) =
+  proc recentlyOpenedAdd(filename: string) =
+    for i in 0 .. win.autoSettings.recentlyOpenedFiles.len-1:
+      if win.autoSettings.recentlyOpenedFiles[i] == filename:
+        system.delete(win.autoSettings.recentlyOpenedFiles, i)
+        break
+    win.autoSettings.recentlyOpenedFiles.add(filename)
+
   var close = askCloseTab(tab)
 
   if close:
     # Add to recently opened files.
-    # TODO: Save settings?
     if win.tabs[tab].filename != "":
-      win.autoSettings.recentlyOpenedFiles.add(win.Tabs[tab].filename)
+      recentlyOpenedAdd(win.Tabs[tab].filename)
     system.delete(win.Tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
 
