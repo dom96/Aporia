@@ -269,7 +269,7 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
                                            "background", "#F28A13",
                                            "foreground", "#ffffff", nil)
   
-  proc idleHighlightAll(param: ptr TIdleParam): bool {.cdecl.} =
+  proc idleHighlightAll(param: ptr TIdleParam): gboolean {.cdecl.} =
     result = true
     var (startMatch, endMatch) = param.findIter(param.buffer, param.term, param.mode)
     if param.findIter.finished: return false
