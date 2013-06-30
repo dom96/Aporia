@@ -1069,6 +1069,25 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     else:
       toggleMultiline()
 
+proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
+  ## Callback for the Delete Line menu point. Removes the current line
+  ## at the curser, or all marked lines in case text is selected
+  template textBuffer(): expr = win.Tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  var start, theEnd: TTextIter
+
+  textBuffer.beginUserAction()
+  discard textBuffer.getSelectionBounds(addr(start), addr(theEnd))
+  (addr start).setLineOffset(0) # Move to start of line
+  (addr theEnd).moveToEndLine() # Move to end of line
+
+  # Move cursor either to following or previous line if possible
+  if not (addr theEnd).forwardCursorPosition():
+    discard (addr start).backwardCursorPosition()
+
+  gtk2.delete(textBuffer, addr(start), addr(theEnd))
+  textBuffer.endUserAction()
+
 proc settings_Activate(menuitem: PMenuItem, user_data: pointer) =
   settings.showSettings(win)
 
@@ -1634,6 +1653,8 @@ proc initTopMenu(MainBox: PBox) =
   createSeparator(EditMenu)
   EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", KEY_slash, 
       CommentLines_Activate, ControlMask, "")
+  EditMenu.createAccelMenuItem(accGroup, "Delete Line", KEY_D,
+      DeleteLine_Activate, ControlMask, "")
   createSeparator(EditMenu)
   
   EditMenu.createMenuItem("Raw Preferences",
