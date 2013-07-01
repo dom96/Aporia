@@ -38,7 +38,13 @@ proc addSuggestItem*(win: var MainWin, name: string, markup: String,
 
 proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
   # TODO: Escape tooltip text for pango markup.
-  win.addSuggestItem(item.nmName, "<b>$1</b>" % [escapePango(item.nmName)], item.nimType)
+  var markup = "<b>$1</b>" % [escapePango(item.nmName)]
+  case item.nodeType
+  of "skProc", "skTemplate", "skIterator":
+    markup = "$1$2" % [escapePango(item.nmName), item.nimType.replaceWord("proc ","")]
+  of "skField":
+    markup = "<i>$1 - $2</i>" % [escapePango(item.nmName), item.nimType]
+  win.addSuggestItem(item.nmName, markup, item.nimType)
 
 proc getIterGlobalCoords(iter: PTextIter, tab: Tab):
     tuple[x, y: int32] =

@@ -558,6 +558,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         win.getCurrentLanguage() == "nimrod":
       if win.suggest.items.len() != 0: win.suggest.clear()
       doSuggest(win)
+      win.filterSuggest()
 
   of "backspace":
     if win.globalSettings.suggestFeature and win.suggest.shown:
@@ -816,7 +817,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
 
   win.tempStuff.recentFileMenuItems = @[]
   
-  const insertOffset = 6
+  const insertOffset = 8
 
   # Recently opened files
   # -- Show first ten in the File menu
@@ -893,6 +894,13 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
   if startpath == "":
     startpath = win.tempStuff.lastSaveDir
   discard saveTabAs(current, startpath)
+
+proc closeCurrentTab_Activate(menuItem: PMenuItem, user_data: pointer) =
+  closeTab(win.SourceViewTabs.getCurrentPage())
+
+proc closeAllTabs_Activate(menuItem: PMenuItem, user_data: pointer) =
+  while win.Tabs.len() > 0:
+    closeTab(win.SourceViewTabs.getCurrentPage())
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
@@ -1071,7 +1079,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
 
 proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Delete Line menu point. Removes the current line
-  ## at the curser, or all marked lines in case text is selected
+  ## at the cursor, or all marked lines in case text is selected
   template textBuffer(): expr = win.Tabs[currentPage].buffer
   var currentPage = win.sourceViewTabs.GetCurrentPage()
   var start, theEnd: TTextIter
@@ -1625,6 +1633,10 @@ proc initTopMenu(MainBox: PBox) =
                                    ControlMask, StockSave)
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
+  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_w, closeCurrentTab_Activate,
+                                   ControlMask, StockClose)
+  win.FileMenu.createAccelMenuItem(accGroup, "Close All", KEY_w, closeAllTabs_Activate,
+                                   ControlMask or gdk2.ShiftMask, "")
   createSeparator(win.FileMenu)
   
   createSeparator(win.FileMenu)
