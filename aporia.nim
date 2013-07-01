@@ -558,6 +558,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         win.getCurrentLanguage() == "nimrod":
       if win.suggest.items.len() != 0: win.suggest.clear()
       doSuggest(win)
+      win.filterSuggest()
 
   of "backspace":
     if win.globalSettings.suggestFeature and win.suggest.shown:
