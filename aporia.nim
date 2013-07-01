@@ -817,7 +817,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
 
   win.tempStuff.recentFileMenuItems = @[]
   
-  const insertOffset = 8
+  const insertOffset = 6
 
   # Recently opened files
   # -- Show first ten in the File menu
@@ -1633,11 +1633,15 @@ proc initTopMenu(MainBox: PBox) =
                                    ControlMask, StockSave)
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
+
+  createSeparator(win.FileMenu)
+  
+  createSeparator(win.FileMenu)
+  
   win.FileMenu.createAccelMenuItem(accGroup, "", KEY_w, closeCurrentTab_Activate,
                                    ControlMask, StockClose)
   win.FileMenu.createAccelMenuItem(accGroup, "Close All", KEY_w, closeAllTabs_Activate,
                                    ControlMask or gdk2.ShiftMask, "")
-  createSeparator(win.FileMenu)
   
   createSeparator(win.FileMenu)
   let quitAporia = 

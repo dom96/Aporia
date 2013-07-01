@@ -27,6 +27,15 @@
   buttons to be shown.
 * Refactor aporia.nim into smaller files like toolbar.nim, tabs.nim, sourceview.nim etc.
 * Consistent line endings -- auto detection and perhaps prompt if line endings are mixed.
+* When double clicking right arrow in GtkNotebook, new tab is opened.
+  * onTabsPressed:aporia.nim
+* Word wrap setting
+* Fix inefficiency in the GtkSourceView when syntax highlighting is on, and
+  we have a lot of text on the same line.
+* Allow scrolling past bottom.
+* Ability to automatically wrap code to 80 chars
+* Add \n at the end of files when saving.
+* Integrated documentation viewer.
 
 ## Other language features
 * Ability to change to hard tabs.
@@ -109,3 +118,4 @@
 * Fancy save icons? http://branch.com/b/redesigning-the-save-symbol-let-s-do-this#AbwZEhoVgHc (A broken up disc when unsaved, turns into a full disc when saved, resembles HDD disk)
   * In status bar during save operation?
 * When Ctrl is pressed I want info in the status bar about what is in my clipboard. For example: "3 lines in clipboard"
+* Render doc comments on the right, past the 80-char margin line on a white background. 
