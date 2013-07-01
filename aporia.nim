@@ -1071,7 +1071,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
 
 proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Delete Line menu point. Removes the current line
-  ## at the curser, or all marked lines in case text is selected
+  ## at the cursor, or all marked lines in case text is selected
   template textBuffer(): expr = win.Tabs[currentPage].buffer
   var currentPage = win.sourceViewTabs.GetCurrentPage()
   var start, theEnd: TTextIter
