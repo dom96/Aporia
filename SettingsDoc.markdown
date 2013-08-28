@@ -8,3 +8,11 @@ unsaved state. Otherwise the tab will transition into the saved state, but will
 be marked as temporary.
 
 **Default**: ``True``
+
+### wrapMode
+
+Determines the source view's wrapping mode.
+
+**Possible values**: ``none``, ``char``, ``word``
+
+**Default**: ``none``

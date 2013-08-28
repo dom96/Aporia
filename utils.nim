@@ -51,6 +51,7 @@ type
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
     nimrodPath*: string # Path to the nimrod compiler
+    wrapMode*: TWrapMode # source view wrap mode.
   
   MainWin* = object
     # Widgets

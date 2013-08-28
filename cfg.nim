@@ -8,7 +8,8 @@
 #
 
 import utils, times, streams, parsecfg, strutils, os
-from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter
+from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter,
+    WrapNone, WrapChar, WrapWord
 
 type
   ECFGParse* = object of E_Base
@@ -40,6 +41,7 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.showCloseOnAllTabs = false
   result.compileUnsavedSave = true
   result.nimrodPath = ""
+  result.wrapMode = WrapNone
 
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
@@ -138,6 +140,13 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
+    f.writeKeyVal("wrapMode",
+      case settings.wrapMode
+      of WrapNone: "none"
+      of WrapChar: "char"
+      of WrapWord: "word"
+      else: assert false; ""
+    )
 
     f.writeKeyVal("nimrodCmd", settings.nimrodCmd)
     f.writeKeyVal("customCmd1", settings.customCmd1)
@@ -306,6 +315,16 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
         result.compileUnsavedSave = isTrue(e.value)
       of "nimrodpath":
         result.nimrodPath = e.value
+      of "wrapmode":
+        case e.value.normalize
+        of "none":
+          result.wrapMode = WrapNone
+        of "char":
+          result.wrapMode = WrapChar
+        of "word":
+          result.wrapMode = WrapWord
+        else:
+          raise newException(ECFGParse, "WrapMode invalid, got: '" & e.value & "'")
       else:
         raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
     of cfgError:

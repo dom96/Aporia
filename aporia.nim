@@ -677,6 +677,7 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   SourceView.setShowRightMargin(win.globalSettings.rightMargin)
   SourceView.setAutoIndent(win.globalSettings.autoIndent)
   SourceView.setSmartHomeEnd(SmartHomeEndBefore)
+  SourceView.setWrapMode(win.globalSettings.wrapMode)
   discard signalConnect(SourceView, "button-press-event",
                         signalFunc(SourceViewMousePress), nil)
   discard gSignalConnect(sourceView, "populate-popup",
