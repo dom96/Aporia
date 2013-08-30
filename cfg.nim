@@ -145,7 +145,8 @@ proc save*(settings: TGlobalSettings) =
       of WrapNone: "none"
       of WrapChar: "char"
       of WrapWord: "word"
-      else: assert false; ""
+      else:
+        assert false; ""
     )
 
     f.writeKeyVal("nimrodCmd", settings.nimrodCmd)
