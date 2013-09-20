@@ -119,3 +119,5 @@
   * In status bar during save operation?
 * When Ctrl is pressed I want info in the status bar about what is in my clipboard. For example: "3 lines in clipboard"
 * Render doc comments on the right, past the 80-char margin line on a white background. 
+* Add directories with code in them. Aporia will scan those directories. Then implement a quick open dialog, so that you can type in the filename and aporia will quickly find the file.
+  If nothing is typed a little navigation could be shown, git repos should be detected and shown as single 'folders'. Projects can be detected by the presence of nimrod.cfg files, or nimcache files?

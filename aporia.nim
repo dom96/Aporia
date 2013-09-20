@@ -1,7 +1,7 @@
 #
 #
 #            Aporia - Nimrod IDE
-#        (c) Copyright 2011 Dominik Picheta
+#        (c) Copyright 2013 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
 #    distribution, for details about the copyright.
@@ -17,7 +17,7 @@ import settings, utils, cfg, search, suggest, AboutDialog, processes,
 {.push callConv:cdecl.}
 
 const
-  GTKVerReq = (2'i32, 18'i32, 0'i32) # Version of GTK required for Aporia to run.
+  GTKVerReq = (2'i32, 24'i32, 0'i32) # Version of GTK required for Aporia to run.
   aporiaVersion = "0.1.3"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
@@ -39,7 +39,7 @@ proc writeHelp() =
   quit(QuitSuccess)
 
 proc writeVersion() =
-  echo("Aporia v$1 compiled at $2 $3.\nCopyright (c) Dominik Picheta 2010-2012" % 
+  echo("Aporia v$1 compiled at $2 $3.\nCopyright (c) Dominik Picheta 2010-2013" % 
        [aporiaVersion, compileDate, compileTime])
   quit(QuitSuccess)
 
