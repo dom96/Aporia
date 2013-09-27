@@ -1665,8 +1665,10 @@ proc initTopMenu(MainBox: PBox) =
   var EditMenu = menuNew()
   
   # Undo/Redo
-  EditMenu.createImageMenuItem(STOCK_UNDO, aporia.undo)
-  EditMenu.createImageMenuItem(STOCK_Redo, aporia.redo)
+  EditMenu.createAccelMenuItem(accGroup, "Undo", KEY_Z, 
+      aporia.undo, ControlMask, STOCK_UNDO)
+  EditMenu.createAccelMenuItem(accGroup, "Redo", KEY_Y, 
+      aporia.redo, ControlMask, STOCK_REDO)
   createSeparator(EditMenu)
   EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", KEY_slash, 
       CommentLines_Activate, ControlMask, "")
