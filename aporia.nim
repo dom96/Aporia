@@ -2302,7 +2302,7 @@ proc checkAlreadyRunning(): bool =
   result = false
   var client = socket()
   try:
-    client.connect("localhost", TPort(win.globalSettings.singleInstancePort))
+    client.connect("localhost", TPort(win.globalSettings.singleInstancePort.toU16))
   except EOS:
     return false
   echo("An instance of aporia is already running.")
