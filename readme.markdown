@@ -12,7 +12,7 @@ which have not yet made it to a stable release.
 You can build it by running ``nimrod c aporia`` or by using babel ``babel build``.
 
 You can also quickly install it using babel without the need to clone this repo
-yourself, just execute ``babel install aporia``.
+yourself, just execute ``babel install aporia#head``.
 
 ### Compiling from C sources
 If you do not want to get the nimrod compiler you can still compile Aporia from
@@ -73,5 +73,6 @@ the macports libraries when invoking aporia:
 
 If running now ``aporia`` tells you about a missing dynamic library,
 dependencies might have changed and you could need to ``port install`` another
-package (tell us this is broken creating an issue and we will update the
+package (tell us this is broken [creating an
+issue](https://github.com/nimrod-code/Aporia/issues) and we will update the
 documentation).
