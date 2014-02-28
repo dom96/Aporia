@@ -167,7 +167,6 @@ type
     sourceView*: PSourceView
     label*: PLabel
     closeBtn*: PButton # This is so that the close btn is only shown on selected tabs.
-    saved*: bool
     filename*: string
     highlighted*: THighlightAll
     
@@ -407,6 +406,15 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
 proc isTemporary*(t: Tab): bool =
   ## Determines whether ``t`` is saved in /tmp
   return t.filename.startsWith(getTempDir())
+
+proc saved*(t: Tab): bool =
+  ## Determines Tab's saved state,
+  assert(not t.buffer.isNil)
+  return not t.buffer.getModified()
+
+proc `saved=`*(t: Tab, b: bool) =
+  assert(not t.buffer.isNil)
+  t.buffer.setModified(not b)
 
 # -- Programming Language handling
 proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =

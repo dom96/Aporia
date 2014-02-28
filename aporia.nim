@@ -91,9 +91,41 @@ proc plCheckUpdate(pageNum: int) =
   win.tempStuff.currentToggledLang = newLang
   win.tempStuff.stopPLToggle = false
 
+proc setTabTooltip(t: Tab) =
+  ## (Re)sets the tab tooltip text.
+  if t.filename != "":
+    var tooltip = "<b>Path: </b> " & t.filename & "\n" &
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
+    if t.filename.startsWith(getTempDir()):
+      tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
+    t.label.setTooltipMarkup(tooltip)
+  else:
+    var tooltip = "<i>Tab is not saved.</i>\n" &
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
+    t.label.setTooltipMarkup(tooltip)
+
+proc updateTabUI(t: Tab) =
+  ## Updates Tab's label and tooltip. Call this when the tab's filename or
+  ## language changes.
+  var name = ""
+  if t.filename == "":
+    name = "Untitled"
+  else:
+    name = extractFilename(t.filename)
+  if not t.saved:
+    name.add(" *")
+
+  if t.saved and t.isTemporary:
+    t.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+  else:
+    t.label.setText(name)
+  setTabTooltip(t)
+
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   ## If tab's filename is ``""`` and the user clicks "Cancel", the filename will
   ## remain ``""``.
+
+  # TODO: Refactor this function. It's a disgrace.
   if tabNr < 0: return
   if win.Tabs[tabNr].saved: return
   var path = ""
@@ -148,7 +180,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       win.Tabs[tabNr].filename = path
       
       if updateGUI:
-        win.Tabs[tabNr].buffer.setModified(false)
+        win.Tabs[tabNr].saved = true
         
         updateMainTitle(tabNr)
         if config:
@@ -429,39 +461,12 @@ proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box
   eventBox.add(box)
   return (eventBox, label, closeBtn)
 
-
-proc setTabTooltip(t: Tab) =
-  ## (Re)sets the tab tooltip text.
-  if t.filename != "":
-    var tooltip = "<b>Path: </b> " & t.filename & "\n" &
-                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
-    if t.filename.startsWith(getTempDir()):
-      tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
-    t.label.setTooltipMarkup(tooltip)
-  else:
-    var tooltip = "<i>Tab is not saved.</i>\n" &
-                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
-    t.label.setTooltipMarkup(tooltip)
-
 proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   ## This signal is called when the modification state of ``buffer`` is changed.
   # <del>*Warning* we assume here that the currently selected tab was modified.</del>
   var ctab = cast[Tab](theTab)
   #assert ((current > 0) and (current < win.tabs.len))
-  cTab.saved = not ctab.buffer.getModified()
-  var name = ""
-  if cTab.filename == "":
-    name = "Untitled"
-  else:
-    name = extractFilename(cTab.filename)
-  if not cTab.saved:
-    name.add(" *")
-
-  if cTab.saved and cTab.isTemporary:
-    cTab.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
-  else:
-    cTab.label.setText(name)
-  setTabTooltip(cTab)
+  updateTabUI(cTab)
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -800,7 +805,6 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   # use connect_after to connect "insert-text" signal, and then connect this signal
   # in the handler of "insert-text".
   discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), sourceView)
-  buffer.setModified(filename == "")
 
   if setCurrent:
     # Select the newly created tab
