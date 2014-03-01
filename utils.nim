@@ -52,6 +52,7 @@ type
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
     nimrodPath*: string # Path to the nimrod compiler
     wrapMode*: TWrapMode # source view wrap mode.
+    scrollPastBottom*: bool # Whether to scroll past bottom.
   
   MainWin* = object
     # Widgets
@@ -162,6 +163,8 @@ type
     stopPLToggle*: bool
     currentToggledLang*: string # ID of the currently active pl
 
+    spbInfo*: float # Scroll past bottom info
+
   Tab* = ref object
     buffer*: PSourceBuffer
     sourceView*: PSourceView
@@ -169,6 +172,7 @@ type
     closeBtn*: PButton # This is so that the close btn is only shown on selected tabs.
     filename*: string
     highlighted*: THighlightAll
+    spbInfo*: tuple[lastUpper, value: float] # Scroll past bottom info
     
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string

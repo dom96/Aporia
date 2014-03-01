@@ -656,10 +656,48 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
                     getLineOffset(addr cursor), onSugLine, onSugExit)
   if err != "":
     win.statusbar.setTemp(err, UrgError, 5000)
+
 proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
   if win.getCurrentLanguage() == "nimrod":
     createSeparator(menu)
     createMenuItem(menu, "Go to definition...", goToDef_Activate)
+
+proc SourceView_Adjustment_valueChanged(adjustment: PAdjustment,
+    spb: ptr tuple[lastUpper, value: float]) =
+  let value = adjustment.getValue
+  if adjustment.getUpper == spb[][0]:
+    spb[][1] = value
+
+proc SourceView_sizeAllocate(sourceView: PSourceView,
+    allocation: gdk2.PRectangle, spb: ptr tuple[lastUpper, value: float]) =
+  # TODO: This implementation has some issues: when we add a new line
+  # when at the very bottom of the TextView, the TextView jumps up and down.
+  # TODO: Go back to my old implementation. Where the adjustment's upper
+  # value only gets adjusted when scrolling past bottom. This will get rid of
+  # the scroll bar jumping.
+  
+  let adjustment = sourceView.get_vadjustment()
+  var upper = adjustment.get_upper()
+  let pagesize = adjustment.get_page_size()
+  # we have less lines than the viewport can hold
+  if upper == pagesize:
+    let buffer = sourceView.getBuffer()
+    var iter: TTextIter
+    getIterAtLine(buffer, addr iter, buffer.getLineCount)
+    var y, height: gint
+    sourceView.getLineYRange(addr iter, addr y, addr height)
+    upper = gdouble(y + height)
+    #echo("Changed upper to ", upper)
+  let lineheight = 14.0
+  let set_to = upper + pagesize - lineheight
+  adjustment.set_upper(set_to)
+  #echo("New upper: ", setTo)
+  # scroll back to our old position, unless we actually scroll downward,
+  # which means we just added a new line
+  if adjustment.get_value() < spb[][1]:
+    adjustment.set_value(spb[][1])
+    #echo("New Value: ", spb[][1])
+  spb[] = (set_to, adjustment.get_value())
 
 # Other(Helper) functions
 
@@ -805,6 +843,13 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   # use connect_after to connect "insert-text" signal, and then connect this signal
   # in the handler of "insert-text".
   discard gsignalConnect(buffer, "changed", GCallback(aporia.onChanged), sourceView)
+
+  # Adjustment signals for scrolling past bottom.
+  if win.globalSettings.scrollPastBottom:
+    discard SourceView.get_vadjustment().signalConnect("value_changed",
+        signalFunc(SourceView_Adjustment_valueChanged), addr nTab.spbInfo)
+    discard SourceView.signalConnect("size-allocate",
+        signalFunc(SourceView_sizeAllocate), addr nTab.spbInfo)
 
   if setCurrent:
     # Select the newly created tab

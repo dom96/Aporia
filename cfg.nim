@@ -42,6 +42,7 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.compileUnsavedSave = true
   result.nimrodPath = ""
   result.wrapMode = WrapNone
+  result.scrollPastBottom = false
 
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
@@ -148,6 +149,7 @@ proc save*(settings: TGlobalSettings) =
       else:
         assert false; ""
     )
+    f.writeKeyVal("scrollPastBottom", $settings.scrollPastBottom)
 
     f.writeKeyVal("nimrodCmd", settings.nimrodCmd)
     f.writeKeyVal("customCmd1", settings.customCmd1)
@@ -326,6 +328,8 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
           result.wrapMode = WrapWord
         else:
           raise newException(ECFGParse, "WrapMode invalid, got: '" & e.value & "'")
+      of "scrollpastbottom":
+        result.scrollPastBottom = isTrue(e.value)
       else:
         raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
     of cfgError:
