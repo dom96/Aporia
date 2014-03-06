@@ -156,7 +156,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     var endIter: TTextIter
     buffer.getEndIter(addr(endIter))
     
-    var text = buffer.getText(addr(startIter), addr(endIter), False)
+    var text = $buffer.getText(addr(startIter), addr(endIter), False)
     
     var config = false
     if path == os.getConfigDir() / "Aporia" / "config.global.ini":
@@ -169,11 +169,15 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         win.statusbar.setTemp("Error parsing config: " & getCurrentExceptionMsg(),
                               UrgError, 8000)
         return
+
+    # Handle text before saving
+    text = win.Tabs[tabNr].lineEnding.normalize(text)
+    win.Tabs[tabNr].lineEnding.addExtraNL(text)
     
     # Save it to a file
     var f: TFile
     if open(f, path, fmWrite):
-      f.write(win.Tabs[tabNr].lineEnding.normalize($text))
+      f.write(text)
       f.close()
       
       win.tempStuff.lastSaveDir = splitFile(path).dir

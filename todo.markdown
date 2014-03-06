@@ -36,7 +36,6 @@
 * </del>Allow scrolling past bottom.</del>
   * Less jerky scrolling past bottom...
 * Ability to automatically wrap code to 80 chars
-* Add \n at the end of files when saving.
 * Integrated documentation viewer.
 
 ## Other language features

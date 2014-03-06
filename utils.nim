@@ -435,31 +435,37 @@ proc detectLineEndings*(text: string): TLineEnding =
       if text[i] == '\0': return leAuto
     i.inc
 
-proc normalize*(le: TLineEnding, text: string): string =
-  proc srepr(le: TLineEnding): string =
-    case le
-    of leLF: "\L"
-    of leCR: "\C"
-    of leCRLF: "\c\L"
-    of leAuto: assert false; ""
+proc srepr(le: TLineEnding, auto: string): string =
+  case le
+  of leLF: "\L"
+  of leCR: "\C"
+  of leCRLF: "\c\L"
+  of leAuto: auto
 
+proc normalize*(le: TLineEnding, text: string): string =
   result = ""
   var i = 0
   while true:
     case text[i]
     of '\L':
-      result.add(if le == leAuto: "\L" else: le.srepr)
+      result.add(le.srepr("\L"))
     of '\C':
       if text[i + 1] == '\L':
-        result.add(if le == leAuto: "\c\L" else: le.srepr)
+        result.add(le.srepr("\c\L"))
         i.inc
       else:
-        result.add(if le == leAuto: "\c" else: le.srepr)
+        result.add(le.srepr("\c"))
     of '\0': return
     else:
       result.add text[i]
 
     i.inc
+
+proc addExtraNL*(le: TLineEnding, text: var string) =
+  const defaultLE = "\L"
+  let sle = srepr(le, defaultLE)
+  if not text.endswith(sle):
+    text.add(sle)
 
 # -- Programming Language handling
 proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
