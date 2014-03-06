@@ -26,13 +26,15 @@
 * Closing a tab, and then immediatelly switching to another one causes two close tab
   buttons to be shown.
 * Refactor aporia.nim into smaller files like toolbar.nim, tabs.nim, sourceview.nim etc.
-* Consistent line endings -- auto detection and perhaps prompt if line endings are mixed.
+* <del>Consistent line endings -- auto detection and perhaps prompt if line endings are mixed.</del>
+  * Should we scan the whole doc for line endings? May be inefficient on big docs.
 * When double clicking right arrow in GtkNotebook, new tab is opened.
   * onTabsPressed:aporia.nim
 * Word wrap setting
 * Fix inefficiency in the GtkSourceView when syntax highlighting is on, and
   we have a lot of text on the same line.
-* Allow scrolling past bottom.
+* </del>Allow scrolling past bottom.</del>
+  * Less jerky scrolling past bottom...
 * Ability to automatically wrap code to 80 chars
 * Add \n at the end of files when saving.
 * Integrated documentation viewer.

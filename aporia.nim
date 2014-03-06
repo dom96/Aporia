@@ -95,13 +95,15 @@ proc setTabTooltip(t: Tab) =
   ## (Re)sets the tab tooltip text.
   if t.filename != "":
     var tooltip = "<b>Path: </b> " & t.filename & "\n" &
-                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer) & "\n" &
+                  "<b>Line Ending: </b> " & $t.lineEnding
     if t.filename.startsWith(getTempDir()):
       tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
     t.label.setTooltipMarkup(tooltip)
   else:
     var tooltip = "<i>Tab is not saved.</i>\n" &
-                  "<b>Language: </b> " & getLanguageName(win, t.buffer)
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer) & "\n" &
+                  "<b>Line Ending: </b> " & $t.lineEnding
     t.label.setTooltipMarkup(tooltip)
 
 proc updateTabUI(t: Tab) =
@@ -171,7 +173,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     # Save it to a file
     var f: TFile
     if open(f, path, fmWrite):
-      f.write(text)
+      f.write(win.Tabs[tabNr].lineEnding.normalize($text))
       f.close()
       
       win.tempStuff.lastSaveDir = splitFile(path).dir
@@ -771,6 +773,9 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
       buffer.setLanguage(lang)
     else:
       buffer.setHighlightSyntax(False)
+
+  # Init tab
+  var nTab: Tab; new(nTab)
   
   # Init the sourceview
   var sourceView: PSourceView
@@ -797,6 +802,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
         return -1
       # Read in the file.
       buffer.set_text(fileTxt, len(fileTxt).int32)
+      nTab.lineEnding = detectLineEndings(fileTxt)
     except EIO: raise
     finally:
       # Enable the undo/redo manager.
@@ -808,8 +814,6 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow, filename)
   
   # Add a tab
-  var nTab: Tab
-  new(nTab)
   nTab.buffer = buffer
   nTab.sourceView = sourceView
   nTab.label = labelText

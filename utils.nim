@@ -163,8 +163,6 @@ type
     stopPLToggle*: bool
     currentToggledLang*: string # ID of the currently active pl
 
-    spbInfo*: float # Scroll past bottom info
-
   Tab* = ref object
     buffer*: PSourceBuffer
     sourceView*: PSourceView
@@ -173,7 +171,8 @@ type
     filename*: string
     highlighted*: THighlightAll
     spbInfo*: tuple[lastUpper, value: float] # Scroll past bottom info
-    
+    lineEnding*: TLineEnding
+
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string
     line*, col*: int32
@@ -195,6 +194,9 @@ type
   TEncodingsAvailable* = enum
     UTF8 = "UTF-8", ISO88591 = "ISO-8859-1", GB2312 = "GB2312",
     Windows1251 = "Windows-1251", UTF16BE = "UTF-16BE", UTF16LE = "UTF-16LE"
+
+  TLineEnding* = enum
+    leAuto = "Unknown", leLF = "LF", leCR = "CR", leCRLF = "CRLF"
 
   THighlightAll* = object
     isHighlighted*: bool
@@ -420,6 +422,45 @@ proc `saved=`*(t: Tab, b: bool) =
   assert(not t.buffer.isNil)
   t.buffer.setModified(not b)
 
+proc detectLineEndings*(text: string): TLineEnding =
+  var i = 0
+  while true:
+    case text[i]
+    of '\L':
+      return leLF
+    of '\c':
+      if text[i + 1] == '\L': return leCRLF
+      else: return leCR
+    else:
+      if text[i] == '\0': return leAuto
+    i.inc
+
+proc normalize*(le: TLineEnding, text: string): string =
+  proc srepr(le: TLineEnding): string =
+    case le
+    of leLF: "\L"
+    of leCR: "\C"
+    of leCRLF: "\c\L"
+    of leAuto: assert false; ""
+
+  result = ""
+  var i = 0
+  while true:
+    case text[i]
+    of '\L':
+      result.add(if le == leAuto: "\L" else: le.srepr)
+    of '\C':
+      if text[i + 1] == '\L':
+        result.add(if le == leAuto: "\c\L" else: le.srepr)
+        i.inc
+      else:
+        result.add(if le == leAuto: "\c" else: le.srepr)
+    of '\0': return
+    else:
+      result.add text[i]
+
+    i.inc
+
 # -- Programming Language handling
 proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   ## Returns the current language ID.
@@ -512,3 +553,9 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
     result = exe & " " & matches[1] % f
   else:
     result = cmd % f
+
+
+when isMainModule:
+  assert detectLineEndings("asfasfa\c\Lasfasf") == leCRLF
+  assert detectLineEndings("asfasfa\casas") == leCR
+  assert detectLineEndings("asfasfa\Lasas") == leLF
