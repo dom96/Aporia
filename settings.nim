@@ -9,6 +9,7 @@
 
 import gtk2, gdk2, glib2, pango, os
 import gtksourceview, utils
+import tables
 
 {.push callConv:cdecl.}
 
@@ -112,14 +113,45 @@ proc addTextEdit(parent: PVBox, labelText, value: string): PEntry =
   
   var entry = entryNew()
   entry.setEditable(True)
+  entry.setWidthChars(40)
   entry.setText(value)
   entryHBox.packStart(entry, false, false, 20)
   entry.show()
   result = entry
 
 var
+  # General:
+  singleInstanceCheckBox: PCheckButton
+  restoreTabsCheckBox: PCheckButton
+  showCloseOnAllTabsCheckBox: PCheckButton
+  # Shortcuts:
+  keyCommentLinesEdit: PEntry
+  keyDeleteLineEdit: PEntry
+  keyQuitEdit: PEntry
+  keyNewFileEdit: PEntry
+  keyOpenFileEdit: PEntry
+  keySaveFileEdit: PEntry
+  keySaveFileAsEdit: PEntry
+  keyCloseCurrentTabEdit: PEntry
+  keyCloseAllTabsEdit: PEntry
+  keyFindEdit: PEntry
+  keyReplaceEdit: PEntry
+  keyGoToLineEdit: PEntry
+  keyGoToDefEdit: PEntry
+  keyToggleBottomPanelEdit: PEntry
+  keyCompileCurrentEdit: PEntry
+  keyCompileRunCurrentEdit: PEntry
+  keyCompileProjectEdit: PEntry
+  keyCompileRunProjectEdit: PEntry
+  keyStopProcessEdit: PEntry
+  keyRunCustomCommand1Edit: PEntry
+  keyRunCustomCommand2Edit: PEntry
+  keyRunCustomCommand3Edit: PEntry
+  keyRunCheckEdit: PEntry 
+  
+  # Tools:
   nimrodEdit, custom1Edit, custom2Edit, custom3Edit: PEntry
-
+  
 proc initTools(settingsTabs: PNotebook) =
   var t = vboxNew(false, 5)
   discard settingsTabs.appendPage(t, labelNew("Tools"))
@@ -354,39 +386,159 @@ proc initEditor(settingsTabs: PNotebook) =
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, False, False, 20)
   suggestFeatureCheckBox.show()
 
-  # show close button on all tabs - checkbox
-  var showCloseOnAllTabsHBox = hboxNew(False, 0)
-  editorVBox.packStart(showCloseOnAllTabsHBox, False, False, 0)
-  showCloseOnAllTabsHBox.show()
-  
-  var showCloseOnAllTabsCheckBox = checkButtonNew("Show close button on all tabs")
-  showCloseOnAllTabsCheckBox.setActive(win.globalSettings.showCloseOnAllTabs)
-  discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
-    G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
-  showCloseOnAllTabsHBox.packStart(showCloseOnAllTabsCheckBox, False, False, 20)
-  showCloseOnAllTabsCheckBox.show()
-
 var
   dialog: gtk2.PWindow
-
+  
 proc closeDialog(widget: pWidget, user_data: pgpointer) =
+  # General:
+  win.globalSettings.restoreTabs = restoreTabsCheckBox.getActive()
+  win.globalSettings.singleInstance = singleInstanceCheckBox.getActive()
+  
+  # Shortcuts:
+  win.globalSettings.keyQuit = StrToKey($keyQuitEdit.getText())
+  win.globalSettings.keyCommentLines = StrToKey($keyCommentLinesEdit.getText())
+  win.globalSettings.keyDeleteLine = StrToKey($keyDeleteLineEdit.getText())
+  win.globalSettings.keyNewFile = StrToKey($keyNewFileEdit.getText())
+  win.globalSettings.keyOpenFile = StrToKey($keyOpenFileEdit.getText())
+  win.globalSettings.keySaveFile = StrToKey($keySaveFileEdit.getText())
+  win.globalSettings.keySaveFileAs = StrToKey($keySaveFileAsEdit.getText())
+  win.globalSettings.keyCloseCurrentTab = StrToKey($keyCloseCurrentTabEdit.getText())
+  win.globalSettings.keyCloseAllTabs = StrToKey($keyCloseAllTabsEdit.getText())
+  win.globalSettings.keyFind = StrToKey($keyFindEdit.getText())
+  win.globalSettings.keyReplace = StrToKey($keyReplaceEdit.getText())
+  win.globalSettings.keyGoToLine = StrToKey($keyGoToLineEdit.getText())
+  win.globalSettings.keyGoToDef = StrToKey($keyGoToDefEdit.getText())
+  win.globalSettings.keyToggleBottomPanel = StrToKey($keyToggleBottomPanelEdit.getText())
+
+  win.globalSettings.keyCompileCurrent = StrToKey($keyCompileCurrentEdit.getText())
+  win.globalSettings.keyCompileRunCurrent = StrToKey($keyCompileRunCurrentEdit.getText())
+  win.globalSettings.keyCompileProject = StrToKey($keyCompileProjectEdit.getText())
+  win.globalSettings.keyCompileRunProject = StrToKey($keyCompileRunProjectEdit.getText())
+  win.globalSettings.keyStopProcess = StrToKey($keyStopProcessEdit.getText())
+  win.globalSettings.keyRunCustomCommand1 = StrToKey($keyRunCustomCommand1Edit.getText())
+  win.globalSettings.keyRunCustomCommand2 = StrToKey($keyRunCustomCommand2Edit.getText())
+  win.globalSettings.keyRunCustomCommand3 = StrToKey($keyRunCustomCommand3Edit.getText())
+  win.globalSettings.keyRunCheck = StrToKey($keyRunCheckEdit.getText())
+    
+  # Tools:
   win.globalSettings.nimrodCmd = $nimrodEdit.getText()
   win.globalSettings.customCmd1 = $custom1Edit.getText()
   win.globalSettings.customCmd2 = $custom2Edit.getText()
   win.globalSettings.customCmd3 = $custom3Edit.getText()
-
+  
   gtk2.PObject(dialog).destroy()
+  
+proc addCheckBox(parent: PVBox, labelText: string, value: bool): PCheckButton = 
+  var Box = hboxNew(false, 0)
+  parent.packStart(Box, false, false, 0)
+  Box.show()
+  var CheckBox = checkButtonNew(labelText)
+  CheckBox.setActive(value)
+  Box.packStart(CheckBox, false, false, 20)
+  CheckBox.show()
+  Result = CheckBox
+  
+proc initGeneral(settingsTabs: PNotebook) =
+  var box = vboxNew(false, 5)
+  discard settingsTabs.appendPage(box, labelNew("General"))
+  box.show()
+  
+  singleInstanceCheckBox = addCheckBox(box, "Single instance", win.globalSettings.singleInstance)
+  
+  restoreTabsCheckBox = addCheckBox(box, "Restore tabs on load", win.globalSettings.restoreTabs)
+  
+  showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
+  discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
+      
+proc addKeyEdit(parent: PVBox, labelText: string, label2Text: string, value: gint): PEntry = 
+  var HBox = hboxNew(false, 0)
+  parent.packStart(HBox, false, false, 0)
+  HBox.show()
+ 
+  var Label = labelNew(labelText)
+  Label.setWidthChars(27)
+  Label.setAlignment(0, 0.5) 
+  HBox.packStart(Label, false, false, 5)
+  Label.show()
 
+  var text = ""
+  if label2Text != "":
+    text = label2Text & " +"
+  var Label2 = labelNew(text)
+  Label2.setWidthChars(11)
+  Label2.setAlignment(0, 0.5) 
+  HBox.packStart(Label2, false, false, 5)
+  Label2.show()
+    
+  var entry = entryNew()
+  entry.setEditable(True)
+  entry.setWidthChars(3)
+  entry.setMaxLength(2)
+  entry.setText(KeyToStr(value))
+  HBox.packStart(entry, false, false, 5)
+  entry.show()
+  result = entry
+  
+proc initShortcuts(settingsTabs: PNotebook) =
+  var VBox = vboxNew(false, 5)
+  discard settingsTabs.appendPage(VBox, labelNew("Shortcuts"))
+  VBox.show()
+  
+  var HBox = hboxNew(false, 30)
+  VBox.packStart(HBox, false, false, 5)
+  HBox.show()
+
+  var hint = labelNew("Changes will be active after restart")
+  hint.setAlignment(0, 0.5) 
+  hint.show()
+  var Box2 = hboxNew(false, 0)
+  VBox.packStart(Box2, false, false, 0)
+  Box2.show()
+  Box2.packStart(hint, false, false, 10)
+    
+  VBox = vboxNew(false, 5)
+  HBox.packStart(VBox, false, false, 5)
+  VBox.show()
+  
+  keyCommentLinesEdit = addKeyEdit(VBox, "Comment lines", "Ctrl", win.globalSettings.keyCommentLines)
+  keyDeleteLineEdit = addKeyEdit(VBox, "Delete line", "Ctrl", win.globalSettings.keyDeleteLine)
+  keyNewFileEdit = addKeyEdit(VBox, "New file", "Ctrl", win.globalSettings.keyNewFile)
+  keyOpenFileEdit = addKeyEdit(VBox, "Open file", "Ctrl", win.globalSettings.keyOpenFile)
+  keySaveFileEdit = addKeyEdit(VBox, "Save file", "Ctrl", win.globalSettings.keySaveFile)
+  keySaveFileAsEdit = addKeyEdit(VBox, "Save file as", "Ctrl + Shift", win.globalSettings.keySaveFileAs)
+  keyCloseCurrentTabEdit = addKeyEdit(VBox, "Close current tab", "Ctrl", win.globalSettings.keyCloseCurrentTab)
+  keyCloseAllTabsEdit = addKeyEdit(VBox, "Close all tabs", "Ctrl + Shift", win.globalSettings.keyCloseAllTabs)
+  keyFindEdit = addKeyEdit(VBox, "Find", "Ctrl", win.globalSettings.keyFind)
+  keyReplaceEdit = addKeyEdit(VBox, "Find and replace", "Ctrl", win.globalSettings.keyReplace)
+  keyGoToLineEdit = addKeyEdit(VBox, "Go to line", "Ctrl", win.globalSettings.keyGoToLine)
+  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", "Ctrl + Shift", win.globalSettings.keyGoToDef)
+ 
+  VBox = vboxNew(false, 5)
+  HBox.packStart(VBox, false, false, 5)
+  VBox.show()
+   
+  keyQuitEdit = addKeyEdit(VBox, "Quit", "Ctrl", win.globalSettings.keyQuit)
+  keyToggleBottomPanelEdit = addKeyEdit(VBox, "Show/hide bottom panel", "Ctrl + Shift", win.globalSettings.keyToggleBottomPanel)
+  keyCompileCurrentEdit = addKeyEdit(VBox, "Compile current file", "", win.globalSettings.keyCompileCurrent)
+  keyCompileRunCurrentEdit = addKeyEdit(VBox, "Compile & run current file", "", win.globalSettings.keyCompileRunCurrent)
+  keyCompileProjectEdit = addKeyEdit(VBox, "Compile project", "", win.globalSettings.keyCompileProject)
+  keyCompileRunProjectEdit = addKeyEdit(VBox, "Compile & run project", "", win.globalSettings.keyCompileRunProject)
+  keyStopProcessEdit = addKeyEdit(VBox, "Terminate running process", "", win.globalSettings.keyStopProcess)
+  keyRunCustomCommand1Edit = addKeyEdit(VBox, "Run custom command 1", "", win.globalSettings.keyRunCustomCommand1)
+  keyRunCustomCommand2Edit = addKeyEdit(VBox, "Run custom command 2", "", win.globalSettings.keyRunCustomCommand2)
+  keyRunCustomCommand3Edit = addKeyEdit(VBox, "Run custom command 3", "", win.globalSettings.keyRunCustomCommand3)
+  keyRunCheckEdit = addKeyEdit(VBox, "Check", "Ctrl", win.globalSettings.keyRunCheck)
+          
 proc showSettings*(aWin: var utils.MainWin) =
   win = addr(aWin)  # This has to be a pointer
                     # Because i need the settings to be changed
                     # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
-  dialog.setDefaultSize(330, 400)
-  dialog.setSizeRequest(330, 400)
+  dialog.setDefaultSize(740, 500)
+  dialog.setSizeRequest(740, 500)
   dialog.setTransientFor(win.w)
-  dialog.setResizable(False)
   dialog.setTitle("Settings")
   dialog.setTypeHint(WINDOW_TYPE_HINT_DIALOG)
 
@@ -425,8 +577,10 @@ proc showSettings*(aWin: var utils.MainWin) =
   closeBtn.set_size_request(rq1.width + 10, rq1.height + 4)
   closeBtn.show()
   
+  initGeneral(settingsTabs)
   initEditor(settingsTabs)
   initFontsColors(settingsTabs)
+  initShortcuts(settingsTabs)
   initTools(settingsTabs)
   
   dialog.show()

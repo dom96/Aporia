@@ -10,6 +10,8 @@
 import utils, times, streams, parsecfg, strutils, os
 from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter,
     WrapNone, WrapChar, WrapWord
+import gdk2
+
 
 type
   ECFGParse* = object of E_Base
@@ -43,7 +45,32 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.nimrodPath = ""
   result.wrapMode = WrapNone
   result.scrollPastBottom = false
-
+  result.singleInstance = true
+  result.restoreTabs = true
+  result.keyCommentLines      = KEY_slash
+  result.keyDeleteLine        = KEY_d
+  result.keyQuit              = KEY_q
+  result.keyNewFile           = KEY_n
+  result.keyOpenFile          = KEY_o
+  result.keySaveFile          = KEY_s
+  result.keySaveFileAs        = KEY_s
+  result.keyCloseCurrentTab   = KEY_w
+  result.keyCloseAllTabs      = KEY_w
+  result.keyFind              = KEY_f
+  result.keyReplace           = KEY_h
+  result.keyGoToLine          = KEY_g
+  result.keyGoToDef           = KEY_r
+  result.keyToggleBottomPanel = KEY_d
+  result.keyCompileCurrent    = KEY_F4
+  result.keyCompileRunCurrent = KEY_F5
+  result.keyCompileProject    = KEY_F8
+  result.keyCompileRunProject = KEY_F9
+  result.keyStopProcess       = KEY_F7
+  result.keyRunCustomCommand1 = KEY_F1
+  result.keyRunCustomCommand2 = KEY_F2
+  result.keyRunCustomCommand3 = KEY_F3
+  result.keyRunCheck          = KEY_F5
+      
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
   f.write(sectionName)
@@ -137,7 +164,9 @@ proc save*(settings: TGlobalSettings) =
 
     f.writeKeyVal("selectHighlightAll", $settings.selectHighlightAll)
     f.writeKeyVal("searchHighlightAll", $settings.searchHighlightAll)
+    f.writeKeyVal("singleInstance", $settings.singleInstance)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
+    f.writeKeyVal("restoreTabs", $settings.restoreTabs)
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
@@ -155,7 +184,29 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("customCmd1", settings.customCmd1)
     f.writeKeyVal("customCmd2", settings.customCmd2)
     f.writeKeyVal("customCmd3", settings.customCmd3)
-    
+    f.writeKeyVal("keyQuit", KeyToStr(settings.keyQuit))
+    f.writeKeyVal("keyCommentLines", KeyToStr(settings.keyCommentLines))
+    f.writeKeyVal("keydeleteline", KeyToStr(settings.keyDeleteLine))
+    f.writeKeyVal("keyNewFile", KeyToStr(settings.keyNewFile))
+    f.writeKeyVal("keyOpenFile", KeyToStr(settings.keyOpenFile))
+    f.writeKeyVal("keySaveFile", KeyToStr(settings.keySaveFile))
+    f.writeKeyVal("keyCloseCurrentTab", KeyToStr(settings.keyCloseCurrentTab))
+    f.writeKeyVal("keyCloseAllTabs", KeyToStr(settings.keyCloseAllTabs))
+    f.writeKeyVal("keyFind", KeyToStr(settings.keyFind))
+    f.writeKeyVal("keyReplace", KeyToStr(settings.keyReplace))
+    f.writeKeyVal("keyGoToLine", KeyToStr(settings.keyGoToLine))
+    f.writeKeyVal("keyGoToDef", KeyToStr(settings.keyGoToDef))
+    f.writeKeyVal("keyToggleBottomPanel", KeyToStr(settings.keyToggleBottomPanel))
+    f.writeKeyVal("keyCompileCurrent", KeyToStr(settings.keyCompileCurrent))
+    f.writeKeyVal("keyCompileRunCurrent", KeyToStr(settings.keyCompileRunCurrent))
+    f.writeKeyVal("keyCompileProject", KeyToStr(settings.keyCompileProject))
+    f.writeKeyVal("keyCompileRunProject", KeyToStr(settings.keyCompileRunProject))
+    f.writeKeyVal("keyStopProcess", KeyToStr(settings.keyStopProcess))
+    f.writeKeyVal("keyRunCustomCommand1", KeyToStr(settings.keyRunCustomCommand1))
+    f.writeKeyVal("keyRunCustomCommand2", KeyToStr(settings.keyRunCustomCommand2))
+    f.writeKeyVal("keyRunCustomCommand3", KeyToStr(settings.keyRunCustomCommand3))
+    f.writeKeyVal("keyRunCheck", KeyToStr(settings.keyRunCheck))
+      
     f.close()
 
 proc save*(win: var MainWin) =
@@ -307,13 +358,39 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
       of "showcloseonalltabs": result.showCloseOnAllTabs = isTrue(e.value)
       of "selecthighlightall": result.selectHighlightAll = isTrue(e.value)
       of "searchhighlightall": result.searchHighlightAll = isTrue(e.value)
+      of "singleinstance": result.singleInstance = isTrue(e.value)
       of "singleinstanceport":
         result.singleInstancePort = int32(e.value.parseInt())
+      of "restoretabs": result.restoreTabs = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
       of "nimrodcmd": result.nimrodCmd = e.value
       of "customcmd1": result.customCmd1 = e.value
       of "customcmd2": result.customCmd2 = e.value
       of "customcmd3": result.customCmd3 = e.value
+      of "keyquit": result.keyQuit = StrToKey(e.value)
+      of "keycommentlines": result.keyCommentLines = StrToKey(e.value)
+      of "keydeleteline": result.keyDeleteLine = StrToKey(e.value)
+      of "keynewfile": result.keyNewFile = StrToKey(e.value)
+      of "keyopenfile": result.keyOpenFile = StrToKey(e.value)
+      of "keysavefile": result.keySaveFile = StrToKey(e.value)
+      of "keysavefileas": result.keySaveFileAs = StrToKey(e.value)
+      of "keyclosecurrenttab": result.keyCloseCurrentTab = StrToKey(e.value)
+      of "keyclosealltabs": result.keyCloseAllTabs = StrToKey(e.value)
+      of "keyfind": result.keyFind = StrToKey(e.value)
+      of "keyreplace": result.keyReplace = StrToKey(e.value)
+      of "keygotoline": result.keyGoToLine = StrToKey(e.value)
+      of "keygotodef": result.keyGoToDef = StrToKey(e.value)
+      of "keytogglebottompanel": result.keyToggleBottomPanel = StrToKey(e.value)
+      of "keycompilecurrent": result.keyCompileCurrent = StrToKey(e.value)
+      of "keycompileruncurrent": result.keyCompileRunCurrent = StrToKey(e.value)
+      of "keycompileproject": result.keyCompileProject = StrToKey(e.value)
+      of "keycompilerunproject": result.keyCompileRunProject = StrToKey(e.value)
+      of "keystopprocess": result.keyStopProcess = StrToKey(e.value)
+      of "keyruncustomcommand1": result.keyRunCustomCommand1 = StrToKey(e.value)
+      of "keyruncustomcommand2": result.keyRunCustomCommand2 = StrToKey(e.value)
+      of "keyruncustomcommand3": result.keyRunCustomCommand3 = StrToKey(e.value)
+      of "keyruncheck": result.keyRunCheck = StrToKey(e.value)
+            
       of "compileunsavedsave":
         result.compileUnsavedSave = isTrue(e.value)
       of "nimrodpath":

@@ -53,6 +53,32 @@ type
     nimrodPath*: string # Path to the nimrod compiler
     wrapMode*: TWrapMode # source view wrap mode.
     scrollPastBottom*: bool # Whether to scroll past bottom.
+    singleInstance*: bool # Whether the program runs as single instance.
+    restoreTabs*: bool    # Whether the program loads the tabs from the last session
+    keyCommentLines*:      gint
+    keyDeleteLine*:        gint 
+    keyQuit*:              gint 
+    keyNewFile*:           gint 
+    keyOpenFile*:          gint 
+    keySaveFile*:          gint 
+    keySaveFileAs*:        gint 
+    keyCloseCurrentTab*:   gint 
+    keyCloseAllTabs*:      gint
+    keyFind*:              gint
+    keyReplace*:           gint
+    keyGoToLine*:          gint
+    keyGoToDef*:           gint
+    keyToggleBottomPanel*: gint
+    keyCompileCurrent*:    gint
+    keyCompileRunCurrent*: gint
+    keyCompileProject*:    gint
+    keyCompileRunProject*: gint
+    keyStopProcess*:       gint
+    keyRunCustomCommand1*: gint
+    keyRunCustomCommand2*: gint
+    keyRunCustomCommand3*: gint
+    keyRunCheck*:          gint
+    
   
   MainWin* = object
     # Widgets
@@ -560,6 +586,32 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
   else:
     result = cmd % f
 
+proc StrToKey*(str: string): gint =
+  # Convert a string (e.g. "F1") to the Gtk key code
+  var t = initTable[string, gint]() 
+  for i in 97..122:
+    t[$chr(i)] = gint(i) 
+  for i in 33..64:
+    t[$chr(i)] = gint(i)   
+  for i in 1..12:
+    t["f" & $i] = gint(65469 + i)
+  if t.hasKey(normalize(str)):
+    return t[normalize(str)]
+  return 0
+
+proc KeyToStr*(value: gint): string =
+  # Convert a Gtk key code to a string (e.g. "F1")
+  var t = initTable[gint, string]() 
+  for i in 97..122:
+    t[gint(i)] = $chr(i)
+  for i in 33..64:
+    t[gint(i)] = $chr(i)
+  for i in 1..12:
+    t[gint(65469 + i)] = "F" & $i
+  if t.hasKey(value):
+    return t[value]
+  return ""
+  
 
 when isMainModule:
   assert detectLineEndings("asfasfa\c\Lasfasf") == leCRLF

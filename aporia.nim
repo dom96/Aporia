@@ -1682,23 +1682,23 @@ proc initTopMenu(MainBox: PBox) =
   win.FileMenu = menuNew()
   
   # New
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_n, newFile, ControlMask,
+  win.FileMenu.createAccelMenuItem(accGroup, "", gint(win.globalSettings.keyNewFile), newFile, ControlMask,
                                    StockNew)
   createSeparator(win.FileMenu)
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_o, openFile, ControlMask,
+  win.FileMenu.createAccelMenuItem(accGroup, "", gint(win.globalSettings.keyOpenFile), openFile, ControlMask,
                                    StockOpen)
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFile_activate, 
+  win.FileMenu.createAccelMenuItem(accGroup, "", gint(win.globalSettings.keySaveFile), saveFile_activate, 
                                    ControlMask, StockSave)
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
+  win.FileMenu.createAccelMenuItem(accGroup, "", gint(win.globalSettings.keySaveFileAs), saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
 
   createSeparator(win.FileMenu)
   
   createSeparator(win.FileMenu)
   
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_w, closeCurrentTab_Activate,
+  win.FileMenu.createAccelMenuItem(accGroup, "", gint(win.globalSettings.keyCloseCurrentTab), closeCurrentTab_Activate,
                                    ControlMask, StockClose)
-  win.FileMenu.createAccelMenuItem(accGroup, "Close All", KEY_w, closeAllTabs_Activate,
+  win.FileMenu.createAccelMenuItem(accGroup, "Close All", gint(win.globalSettings.keyCloseAllTabs), closeAllTabs_Activate,
                                    ControlMask or gdk2.ShiftMask, "")
   
   createSeparator(win.FileMenu)
@@ -1706,9 +1706,8 @@ proc initTopMenu(MainBox: PBox) =
     proc (menuItem: PMenuItem, user_data: pointer) =
       if not deleteEvent(menuItem, nil, nil):
         aporia.Exit()
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitAporia,
-                                   ControlMask,
-                                   StockQuit)
+  win.FileMenu.createAccelMenuItem(accGroup, "", gint(win.globalSettings.keyQuit), 
+    quitAporia, ControlMask,  StockQuit)
   
   var FileMenuItem = menuItemNewWithMnemonic("_File")
   discard signalConnect(FileMenuItem, "activate",
@@ -1725,9 +1724,9 @@ proc initTopMenu(MainBox: PBox) =
   EditMenu.createImageMenuItem(STOCK_UNDO, aporia.undo)
   EditMenu.createImageMenuItem(STOCK_Redo, aporia.redo)
   createSeparator(EditMenu)
-  EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", KEY_slash, 
+  EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", win.globalSettings.keyCommentLines, 
       CommentLines_Activate, ControlMask, "")
-  EditMenu.createAccelMenuItem(accGroup, "Delete Line", KEY_D,
+  EditMenu.createAccelMenuItem(accGroup, "Delete Line", win.globalSettings.keyDeleteLine,
       DeleteLine_Activate, ControlMask, "")
   createSeparator(EditMenu)
   
@@ -1750,14 +1749,14 @@ proc initTopMenu(MainBox: PBox) =
   # Search menu
   var SearchMenu = menuNew()
   # Find/Find & Replace
-  SearchMenu.createAccelMenuItem(accGroup, "", KEY_f, aporia.find_Activate,
+  SearchMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyFind, aporia.find_Activate,
       ControlMask, StockFind)
-  SearchMenu.createAccelMenuItem(accGroup, "", KEY_h, aporia.replace_Activate,
+  SearchMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyReplace, aporia.replace_Activate,
       ControlMask, StockFindAndReplace)
   createSeparator(SearchMenu)
-  SearchMenu.createAccelMenuItem(accGroup, "Go to line...", KEY_g, 
+  SearchMenu.createAccelMenuItem(accGroup, "Go to line...", win.globalSettings.keyGoToLine, 
       GoLine_Activate, ControlMask, "")
-  SearchMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", Key_r,
+  SearchMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", win.globalSettings.keyGoToDef,
       goToDef_Activate, ControlMask or gdk2.ShiftMask)
   var SearchMenuItem = menuItemNewWithMnemonic("_Search")
   SearchMenuItem.setSubMenu(SearchMenu)
@@ -1779,7 +1778,7 @@ proc initTopMenu(MainBox: PBox) =
   PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(
          win.autoSettings.bottomPanelVisible)
   win.viewBottomPanelMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_b, CONTROL_MASK or SHIFT_MASK, ACCEL_VISIBLE) 
+         win.globalSettings.keyToggleBottomPanel, CONTROL_MASK or SHIFT_MASK, ACCEL_VISIBLE) 
   ViewMenu.append(win.viewBottomPanelMenuItem)
   show(win.viewBottomPanelMenuItem)
   discard signal_connect(win.viewBottomPanelMenuItem, "toggled", 
@@ -1830,26 +1829,26 @@ proc initTopMenu(MainBox: PBox) =
   var ToolsMenu = menuNew()
 
   createAccelMenuItem(ToolsMenu, accGroup, "Compile current file", 
-                      KEY_F4, aporia.CompileCurrent_Activate)
+                      win.globalSettings.keyCompileCurrent, aporia.CompileCurrent_Activate)
   createAccelMenuItem(ToolsMenu, accGroup, "Compile & run current file", 
-                      KEY_F5, aporia.CompileRunCurrent_Activate)
+                      win.globalSettings.keyCompileRunCurrent, aporia.CompileRunCurrent_Activate)
   createSeparator(ToolsMenu)
   createAccelMenuItem(ToolsMenu, accGroup, "Compile project", 
-                      KEY_F8, aporia.CompileProject_Activate)
+                      win.globalSettings.keyCompileProject, aporia.CompileProject_Activate)
   createAccelMenuItem(ToolsMenu, accGroup, "Compile & run project", 
-                      KEY_F9, aporia.CompileRunProject_Activate)
+                      win.globalSettings.keyCompileRunProject, aporia.CompileRunProject_Activate)
   createAccelMenuItem(ToolsMenu, accGroup, "Terminate running process", 
-                      KEY_F7, aporia.StopProcess_Activate)
+                      win.globalSettings.keyStopProcess, aporia.StopProcess_Activate)
   createSeparator(ToolsMenu)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 1", 
-                      KEY_F1, aporia.RunCustomCommand1)
+                      win.globalSettings.keyRunCustomCommand1, aporia.RunCustomCommand1)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 2", 
-                      KEY_F2, aporia.RunCustomCommand2)
+                      win.globalSettings.keyRunCustomCommand2, aporia.RunCustomCommand2)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 3", 
-                      KEY_F3, aporia.RunCustomCommand3)
+                      win.globalSettings.keyRunCustomCommand3, aporia.RunCustomCommand3)
   createSeparator(ToolsMenu)
   createAccelMenuItem(ToolsMenu, accGroup, "Check", 
-                      KEY_F5, aporia.RunCheck, CONTROL_MASK)
+                      win.globalSettings.keyRunCheck, aporia.RunCheck, CONTROL_MASK)
   
   
   var ToolsMenuItem = menuItemNewWithMnemonic("_Tools")
@@ -1970,13 +1969,16 @@ proc initSourceViewTabs() =
           SIGNAL_FUNC(onTabsPressed), nil)
   
   win.SourceViewTabs.show()
-  if lastSession.len != 0 or loadFiles.len != 0:
-    var count = 0
+
+  var count = 0
+  
+  if win.globalSettings.restoreTabs and lastSession.len > 0:
     for i in 0 .. lastSession.len-1:
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
         let newTab = addTab("", filename, win.autoSettings.lastSelectedTab == filename)
+        inc(count)
         if newTab == -1: continue # Error adding tab, ``addTab`` will update the status bar with more info        
         var iter: TTextIter
         # TODO: Save last cursor position as line and column offset combo.
@@ -1986,20 +1988,21 @@ proc initSourceViewTabs() =
         win.Tabs[newTab].buffer.placeCursor(addr(iter))
         
         win.forceScrollToInsert(int32(newTab))
-        inc(count)
+        
       else: dialogs.error(win.w, "Could not restore file from session, file not found: " & filename)
+  
+  for f in loadFiles:
+    if existsFile(f):
+      var absPath = f
+      if not isAbsolute(absPath):
+        absPath = getCurrentDir() / f
+      discard addTab("", absPath)
+      inc(count)
+    else:
+      dialogs.error(win.w, "Could not open " & f)
+      quit(QuitFailure)
     
-    for f in loadFiles:
-      if existsFile(f):
-        var absPath = f
-        if not isAbsolute(absPath):
-          absPath = getCurrentDir() / f
-        discard addTab("", absPath)
-      else:
-        dialogs.error(win.w, "Could not open " & f)
-        quit(QuitFailure)
-    
-  else:
+  if count == 0:
     discard addTab("", "", False)
 
 proc initBottomTabs() =
@@ -2344,16 +2347,17 @@ proc initControls() =
   win.w.show()
 
   when not defined(noSingleInstance):
-    try:
-      initSocket()
-    except:
-      echo getStackTrace()
-      dialogs.warning(win.w, 
-        "Unable to bind socket. Aporia will not " &
-        "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
-    discard gTimeoutAddFull(glib2.GPriorityDefault, 500, 
-      proc (dummy: pointer): bool =
-        result = win.IODispatcher.poll(5), nil, nil)
+    if win.globalSettings.singleInstance:
+      try:
+        initSocket()
+      except:
+        echo getStackTrace()
+        dialogs.warning(win.w, 
+          "Unable to bind socket. Aporia will not " &
+          "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
+      discard gTimeoutAddFull(glib2.GPriorityDefault, 500, 
+        proc (dummy: pointer): bool =
+          result = win.IODispatcher.poll(5), nil, nil)
 
 proc checkAlreadyRunning(): bool =
   result = false
@@ -2383,8 +2387,9 @@ if versionReply != nil:
        [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
 
 when not defined(noSingleInstance):
-  if checkAlreadyRunning():
-    quit(QuitSuccess)
+  if win.globalSettings.singleInstance:
+    if checkAlreadyRunning():
+      quit(QuitSuccess)
 
 createProcessThreads(win)
 nimrod_init()
