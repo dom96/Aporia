@@ -43,7 +43,7 @@ type
     autoIndent*: bool # Whether to automatically indent
     toolBarVisible*: bool # Whether the top panel is shown
     suggestFeature*: bool # Whether the suggest feature is enabled
-    compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
+    compileSaveAll*: bool # Whether compiling will save all opened unsaved files
     nimrodCmd*: string  # command template to use to exec the Nimrod compiler
     customCmd1*: string # command template to use to exec a custom command
     customCmd2*: string # command template to use to exec a custom command
@@ -57,15 +57,19 @@ type
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
     keyCommentLines*:      gint
     keyDeleteLine*:        gint 
+    keyDuplicateLines*:    gint 
     keyQuit*:              gint 
     keyNewFile*:           gint 
     keyOpenFile*:          gint 
     keySaveFile*:          gint 
     keySaveFileAs*:        gint 
+    keySaveAll*:           gint
     keyCloseCurrentTab*:   gint 
     keyCloseAllTabs*:      gint
     keyFind*:              gint
     keyReplace*:           gint
+    keyFindNext*:          gint
+    keyFindPrevious*:      gint
     keyGoToLine*:          gint
     keyGoToDef*:           gint
     keyToggleBottomPanel*: gint

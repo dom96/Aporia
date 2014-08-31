@@ -31,17 +31,17 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.outputFont = "Monospace 10"
   result.colorSchemeID = "piekno"
   result.indentWidth = 2
-  result.showLineNumbers = True
-  result.highlightMatchingBrackets = True
+  result.showLineNumbers = true
+  result.highlightMatchingBrackets = true
   result.toolBarVisible = true
-  result.autoIndent = True
+  result.autoIndent = true
+  result.compileSaveAll = false
   result.nimrodCmd = "$findExe(nimrod) c --listFullPaths $#"
   result.customCmd1 = ""
   result.customCmd2 = ""
   result.customCmd3 = ""
   result.singleInstancePort = 55679
   result.showCloseOnAllTabs = false
-  result.compileUnsavedSave = true
   result.nimrodPath = ""
   result.wrapMode = WrapNone
   result.scrollPastBottom = false
@@ -49,15 +49,19 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.restoreTabs = true
   result.keyCommentLines      = KEY_slash
   result.keyDeleteLine        = KEY_d
+  result.keyDuplicateLines    = 0
   result.keyQuit              = KEY_q
   result.keyNewFile           = KEY_n
   result.keyOpenFile          = KEY_o
   result.keySaveFile          = KEY_s
   result.keySaveFileAs        = KEY_s
+  result.keySaveAll           = 0
   result.keyCloseCurrentTab   = KEY_w
   result.keyCloseAllTabs      = KEY_w
   result.keyFind              = KEY_f
   result.keyReplace           = KEY_h
+  result.keyFindNext          = 0
+  result.keyFindPrevious      = 0
   result.keyGoToLine          = KEY_g
   result.keyGoToDef           = KEY_r
   result.keyToggleBottomPanel = KEY_d
@@ -167,7 +171,6 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("singleInstance", $settings.singleInstance)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     f.writeKeyVal("restoreTabs", $settings.restoreTabs)
-    f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
     f.writeKeyVal("wrapMode",
@@ -179,7 +182,8 @@ proc save*(settings: TGlobalSettings) =
         assert false; ""
     )
     f.writeKeyVal("scrollPastBottom", $settings.scrollPastBottom)
-
+    f.writeKeyVal("compileSaveAll", $settings.compileSaveAll)
+    
     f.writeKeyVal("nimrodCmd", settings.nimrodCmd)
     f.writeKeyVal("customCmd1", settings.customCmd1)
     f.writeKeyVal("customCmd2", settings.customCmd2)
@@ -187,13 +191,18 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("keyQuit", KeyToStr(settings.keyQuit))
     f.writeKeyVal("keyCommentLines", KeyToStr(settings.keyCommentLines))
     f.writeKeyVal("keydeleteline", KeyToStr(settings.keyDeleteLine))
+    f.writeKeyVal("keyduplicatelines", KeyToStr(settings.keyDuplicateLines))
     f.writeKeyVal("keyNewFile", KeyToStr(settings.keyNewFile))
     f.writeKeyVal("keyOpenFile", KeyToStr(settings.keyOpenFile))
     f.writeKeyVal("keySaveFile", KeyToStr(settings.keySaveFile))
+    f.writeKeyVal("keySaveFileAs", KeyToStr(settings.keySaveFileAs))
+    f.writeKeyVal("keySaveAll", KeyToStr(settings.keySaveAll))
     f.writeKeyVal("keyCloseCurrentTab", KeyToStr(settings.keyCloseCurrentTab))
     f.writeKeyVal("keyCloseAllTabs", KeyToStr(settings.keyCloseAllTabs))
     f.writeKeyVal("keyFind", KeyToStr(settings.keyFind))
     f.writeKeyVal("keyReplace", KeyToStr(settings.keyReplace))
+    f.writeKeyVal("keyFindNext", KeyToStr(settings.keyFindNext))
+    f.writeKeyVal("keyFindPrevious", KeyToStr(settings.keyFindPrevious))
     f.writeKeyVal("keyGoToLine", KeyToStr(settings.keyGoToLine))
     f.writeKeyVal("keyGoToDef", KeyToStr(settings.keyGoToDef))
     f.writeKeyVal("keyToggleBottomPanel", KeyToStr(settings.keyToggleBottomPanel))
@@ -270,18 +279,20 @@ proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSe
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: raise newException(ECFGParse, "Too many recent files")
+            if count > 19: 
+              #raise newException(ECFGParse, "Too many recent files")
+              discard # silently discard error and continue reading
             result.a.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.a.lastSelectedTab = e.value
-      of "compileunsavedsave":
-        result.g.compileUnsavedSave = isTrue(e.value)
       of "nimrodpath":
         result.g.nimrodPath = e.value
       else:
-        raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        discard # silently discard error and continue reading
     of cfgError:
-      raise newException(ECFGParse, e.msg)
+      #raise newException(ECFGParse, e.msg)
+      discard # silently discard error and continue reading
     of cfgSectionStart, cfgOption:
       nil
   input.close()
@@ -318,14 +329,18 @@ proc loadAuto(lastSession: var seq[string]): TAutoSettings =
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: raise newException(ECFGParse, "Too many recent files")
+            if count > 19: 
+              #raise newException(ECFGParse, "Too many recent files")
+              discard # silently discard error and continue reading
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.lastSelectedTab = e.value
       else:
-        raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        discard # silently discard error and continue reading
     of cfgError:
-      raise newException(ECFGParse, e.msg)
+      #raise newException(ECFGParse, e.msg)
+      discard # silently discard error and continue reading
     of cfgSectionStart, cfgOption:
       nil
 
@@ -363,6 +378,7 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
         result.singleInstancePort = int32(e.value.parseInt())
       of "restoretabs": result.restoreTabs = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
+      of "compilesaveall": result.compileSaveAll = isTrue(e.value)
       of "nimrodcmd": result.nimrodCmd = e.value
       of "customcmd1": result.customCmd1 = e.value
       of "customcmd2": result.customCmd2 = e.value
@@ -370,14 +386,18 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
       of "keyquit": result.keyQuit = StrToKey(e.value)
       of "keycommentlines": result.keyCommentLines = StrToKey(e.value)
       of "keydeleteline": result.keyDeleteLine = StrToKey(e.value)
+      of "keyduplicatelines": result.keyDuplicateLines = StrToKey(e.value)
       of "keynewfile": result.keyNewFile = StrToKey(e.value)
       of "keyopenfile": result.keyOpenFile = StrToKey(e.value)
       of "keysavefile": result.keySaveFile = StrToKey(e.value)
       of "keysavefileas": result.keySaveFileAs = StrToKey(e.value)
+      of "keysaveall": result.keySaveAll = StrToKey(e.value)
       of "keyclosecurrenttab": result.keyCloseCurrentTab = StrToKey(e.value)
       of "keyclosealltabs": result.keyCloseAllTabs = StrToKey(e.value)
       of "keyfind": result.keyFind = StrToKey(e.value)
       of "keyreplace": result.keyReplace = StrToKey(e.value)
+      of "keyfindnext": result.keyFindNext = StrToKey(e.value)
+      of "keyfindprevious": result.keyFindPrevious = StrToKey(e.value)
       of "keygotoline": result.keyGoToLine = StrToKey(e.value)
       of "keygotodef": result.keyGoToDef = StrToKey(e.value)
       of "keytogglebottompanel": result.keyToggleBottomPanel = StrToKey(e.value)
@@ -391,8 +411,6 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
       of "keyruncustomcommand3": result.keyRunCustomCommand3 = StrToKey(e.value)
       of "keyruncheck": result.keyRunCheck = StrToKey(e.value)
             
-      of "compileunsavedsave":
-        result.compileUnsavedSave = isTrue(e.value)
       of "nimrodpath":
         result.nimrodPath = e.value
       of "wrapmode":
@@ -404,13 +422,16 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
         of "word":
           result.wrapMode = WrapWord
         else:
-          raise newException(ECFGParse, "WrapMode invalid, got: '" & e.value & "'")
+          #raise newException(ECFGParse, "WrapMode invalid, got: '" & e.value & "'")
+          discard # silently discard error and continue reading
       of "scrollpastbottom":
         result.scrollPastBottom = isTrue(e.value)
       else:
-        raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        discard # silently discard error and continue reading
     of cfgError:
-      raise newException(ECFGParse, e.msg)
+      #raise newException(ECFGParse, e.msg)
+      discard # silently discard error and continue reading
     of cfgSectionStart, cfgOption:
       nil
   close(pGlobal)
@@ -424,4 +445,3 @@ proc load*(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSett
     result.g = loadGlobal(globalStream)
     if globalStream != nil:
       globalStream.close()
-

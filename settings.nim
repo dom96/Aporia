@@ -123,19 +123,24 @@ var
   # General:
   singleInstanceCheckBox: PCheckButton
   restoreTabsCheckBox: PCheckButton
+  compileSaveAllCheckBox: PCheckButton
   showCloseOnAllTabsCheckBox: PCheckButton
   # Shortcuts:
   keyCommentLinesEdit: PEntry
   keyDeleteLineEdit: PEntry
+  keyDuplicateLinesEdit: PEntry
   keyQuitEdit: PEntry
   keyNewFileEdit: PEntry
   keyOpenFileEdit: PEntry
   keySaveFileEdit: PEntry
   keySaveFileAsEdit: PEntry
+  keySaveAllEdit: PEntry
   keyCloseCurrentTabEdit: PEntry
   keyCloseAllTabsEdit: PEntry
   keyFindEdit: PEntry
   keyReplaceEdit: PEntry
+  keyFindNextEdit: PEntry
+  keyFindPreviousEdit: PEntry
   keyGoToLineEdit: PEntry
   keyGoToDefEdit: PEntry
   keyToggleBottomPanelEdit: PEntry
@@ -393,23 +398,27 @@ proc closeDialog(widget: pWidget, user_data: pgpointer) =
   # General:
   win.globalSettings.restoreTabs = restoreTabsCheckBox.getActive()
   win.globalSettings.singleInstance = singleInstanceCheckBox.getActive()
+  win.globalSettings.compileSaveAll = compileSaveAllCheckBox.getActive()
   
   # Shortcuts:
   win.globalSettings.keyQuit = StrToKey($keyQuitEdit.getText())
   win.globalSettings.keyCommentLines = StrToKey($keyCommentLinesEdit.getText())
   win.globalSettings.keyDeleteLine = StrToKey($keyDeleteLineEdit.getText())
+  win.globalSettings.keyDuplicateLines = StrToKey($keyDuplicateLinesEdit.getText())
   win.globalSettings.keyNewFile = StrToKey($keyNewFileEdit.getText())
   win.globalSettings.keyOpenFile = StrToKey($keyOpenFileEdit.getText())
   win.globalSettings.keySaveFile = StrToKey($keySaveFileEdit.getText())
   win.globalSettings.keySaveFileAs = StrToKey($keySaveFileAsEdit.getText())
+  win.globalSettings.keySaveAll = StrToKey($keySaveAllEdit.getText())
   win.globalSettings.keyCloseCurrentTab = StrToKey($keyCloseCurrentTabEdit.getText())
   win.globalSettings.keyCloseAllTabs = StrToKey($keyCloseAllTabsEdit.getText())
   win.globalSettings.keyFind = StrToKey($keyFindEdit.getText())
   win.globalSettings.keyReplace = StrToKey($keyReplaceEdit.getText())
+  win.globalSettings.keyFindNext = StrToKey($keyFindNextEdit.getText())
+  win.globalSettings.keyFindPrevious = StrToKey($keyFindPreviousEdit.getText())
   win.globalSettings.keyGoToLine = StrToKey($keyGoToLineEdit.getText())
   win.globalSettings.keyGoToDef = StrToKey($keyGoToDefEdit.getText())
   win.globalSettings.keyToggleBottomPanel = StrToKey($keyToggleBottomPanelEdit.getText())
-
   win.globalSettings.keyCompileCurrent = StrToKey($keyCompileCurrentEdit.getText())
   win.globalSettings.keyCompileRunCurrent = StrToKey($keyCompileRunCurrentEdit.getText())
   win.globalSettings.keyCompileProject = StrToKey($keyCompileProjectEdit.getText())
@@ -444,6 +453,8 @@ proc initGeneral(settingsTabs: PNotebook) =
   box.show()
   
   singleInstanceCheckBox = addCheckBox(box, "Single instance", win.globalSettings.singleInstance)
+  
+  compileSaveAllCheckBox = addCheckBox(box, "Save all on compile", win.globalSettings.compileSaveAll)
   
   restoreTabsCheckBox = addCheckBox(box, "Restore tabs on load", win.globalSettings.restoreTabs)
   
@@ -503,21 +514,25 @@ proc initShortcuts(settingsTabs: PNotebook) =
   
   keyCommentLinesEdit = addKeyEdit(VBox, "Comment lines", "Ctrl", win.globalSettings.keyCommentLines)
   keyDeleteLineEdit = addKeyEdit(VBox, "Delete line", "Ctrl", win.globalSettings.keyDeleteLine)
+  keyDuplicateLinesEdit = addKeyEdit(VBox, "Duplicate lines", "Ctrl", win.globalSettings.keyDuplicateLines)
   keyNewFileEdit = addKeyEdit(VBox, "New file", "Ctrl", win.globalSettings.keyNewFile)
   keyOpenFileEdit = addKeyEdit(VBox, "Open file", "Ctrl", win.globalSettings.keyOpenFile)
   keySaveFileEdit = addKeyEdit(VBox, "Save file", "Ctrl", win.globalSettings.keySaveFile)
   keySaveFileAsEdit = addKeyEdit(VBox, "Save file as", "Ctrl + Shift", win.globalSettings.keySaveFileAs)
+  keySaveAllEdit = addKeyEdit(VBox, "Save all", "Ctrl + Shift", win.globalSettings.keySaveAll)
   keyCloseCurrentTabEdit = addKeyEdit(VBox, "Close current tab", "Ctrl", win.globalSettings.keyCloseCurrentTab)
   keyCloseAllTabsEdit = addKeyEdit(VBox, "Close all tabs", "Ctrl + Shift", win.globalSettings.keyCloseAllTabs)
   keyFindEdit = addKeyEdit(VBox, "Find", "Ctrl", win.globalSettings.keyFind)
   keyReplaceEdit = addKeyEdit(VBox, "Find and replace", "Ctrl", win.globalSettings.keyReplace)
-  keyGoToLineEdit = addKeyEdit(VBox, "Go to line", "Ctrl", win.globalSettings.keyGoToLine)
-  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", "Ctrl + Shift", win.globalSettings.keyGoToDef)
+  keyFindNextEdit = addKeyEdit(VBox, "Find next", "", win.globalSettings.keyFindNext)
+  keyFindPreviousEdit = addKeyEdit(VBox, "Find previous", "", win.globalSettings.keyFindPrevious)
  
   VBox = vboxNew(false, 5)
   HBox.packStart(VBox, false, false, 5)
   VBox.show()
-   
+
+  keyGoToLineEdit = addKeyEdit(VBox, "Go to line", "Ctrl", win.globalSettings.keyGoToLine)
+  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", "Ctrl + Shift", win.globalSettings.keyGoToDef)   
   keyQuitEdit = addKeyEdit(VBox, "Quit", "Ctrl", win.globalSettings.keyQuit)
   keyToggleBottomPanelEdit = addKeyEdit(VBox, "Show/hide bottom panel", "Ctrl + Shift", win.globalSettings.keyToggleBottomPanel)
   keyCompileCurrentEdit = addKeyEdit(VBox, "Compile current file", "", win.globalSettings.keyCompileCurrent)
@@ -536,8 +551,8 @@ proc showSettings*(aWin: var utils.MainWin) =
                     # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
-  dialog.setDefaultSize(740, 500)
-  dialog.setSizeRequest(740, 500)
+  dialog.setDefaultSize(740, 530)
+  dialog.setSizeRequest(740, 530)
   dialog.setTransientFor(win.w)
   dialog.setTitle("Settings")
   dialog.setTypeHint(WINDOW_TYPE_HINT_DIALOG)

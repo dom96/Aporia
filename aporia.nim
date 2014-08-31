@@ -31,9 +31,6 @@ search.win = addr(win) # TODO: Stop doing this.
 
 var lastSession: seq[string] = @[]
 
-var confParseFail = False # This gets set to true
-                          # When there is an error parsing the config
-
 proc writeHelp() =
   echo(helpText)
   quit(QuitSuccess)
@@ -56,27 +53,23 @@ proc parseArgs(): seq[string] =
     of cmdEnd: assert(false) # cannot happen
 
 var loadFiles = parseArgs()
-
+ 
 # Load the settings
-try:
-  let (auto, global) = cfg.load(lastSession)
-  win.autoSettings = auto
-  win.globalSettings = global
-except ECFGParse, EInvalidValue:
-  # TODO: Make the dialog show the exception
-  confParseFail = True
-  win.autoSettings = cfg.defaultAutoSettings()
-  win.globalSettings = cfg.defaultGlobalSettings()
-except EIO:
-  win.autoSettings = cfg.defaultAutoSettings()
-  win.globalSettings = cfg.defaultGlobalSettings()
+let (auto, global) = cfg.load(lastSession)
+win.autoSettings = auto
+win.globalSettings = global
 
 proc updateMainTitle(pageNum: int) =
   if win.Tabs.len()-1 >= pageNum:
-    var name = ""
-    if win.Tabs[pageNum].filename == "": name = "Untitled" 
-    else: name = win.Tabs[pageNum].filename.extractFilename
-    win.w.setTitle("Aporia - " & name)
+    var title = ""
+    if win.Tabs[pageNum].filename == "": 
+      title = "Untitled" 
+    else: 
+      title = win.Tabs[pageNum].filename.extractFilename
+    if not win.Tabs[pageNum].saved:
+      title.add("*")
+    title.add(" - Aporia")
+    win.w.setTitle(title)
 
 proc plCheckUpdate(pageNum: int) =
   ## Updates the 'check state' of the syntax highlighting CheckMenuItems,
@@ -194,7 +187,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         else:
           win.statusbar.setTemp("File saved successfully.", UrgSuccess)
     else:
-      error(win.w, "Unable to write to file: " & OSErrorMsg())
+      error(win.w, "Unable to write to file: " & OSErrorMsg(osLastError()))
 
 proc saveTabAs(tab: int, startPath: string): bool =
   ## Returns whether we saved to a different filename.
@@ -370,7 +363,8 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
       # Ctrl + W
       closeTab(win.SourceViewTabs.getCurrentPage())
       return True
-    else: nil
+    else:
+      discard
 
   if event.keyval == KeyEscape:
     # Esc pressed
@@ -473,6 +467,7 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   var ctab = cast[Tab](theTab)
   #assert ((current > 0) and (current < win.tabs.len))
   updateTabUI(cTab)
+  updateMainTitle(win.SourceViewTabs.getCurrentPage())
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -588,7 +583,8 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           win.suggest.hide()
         else:
           # handled in ...KeyRelease
-  else: nil
+  else:
+    discard
 
 proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): gboolean =
@@ -953,6 +949,9 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
     startpath = win.tempStuff.lastSaveDir
   discard saveTabAs(current, startpath)
 
+proc saveAll_Activate(menuItem: PMenuItem, user_data: pointer) =
+  saveAllTabs()
+  
 proc closeCurrentTab_Activate(menuItem: PMenuItem, user_data: pointer) =
   closeTab(win.SourceViewTabs.getCurrentPage())
 
@@ -1020,6 +1019,10 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.replaceLabel.show()
   win.replaceBtn.show()
   win.replaceAllBtn.show()
+
+proc findNext_Activate(menuitem: PMenuItem, user_data: pointer) = findText(true)
+
+proc findPrevious_Activate(menuitem: PMenuItem, user_data: pointer) = findText(false)
   
 proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.goLineBar.bar.show()
@@ -1151,7 +1154,22 @@ proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not (addr theEnd).forwardCursorPosition():
     discard (addr start).backwardCursorPosition()
 
-  gtk2.delete(textBuffer, addr(start), addr(theEnd))
+  textBuffer.delete(addr(start), addr(theEnd))
+  textBuffer.endUserAction()
+  
+proc DuplicateLines_Activate(menuitem: PMenuItem, user_data: pointer) =
+  ## Callback for the Duplicate Lines menu point. Duplicates the current/selected line(s)
+  template textBuffer(): expr = win.Tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  var start, theEnd: TTextIter
+
+  textBuffer.beginUserAction()
+  discard textBuffer.getSelectionBounds(addr(start), addr(theEnd))
+  (addr start).setLineOffset(0) # Move to start of line
+  (addr theEnd).moveToEndLine() # Move to end of line
+
+  var text: string = "\n" & $textBuffer.getText(addr(start), addr(theEnd), false)
+  textBuffer.insert(addr(theEnd), text, text.len.gint)
   textBuffer.endUserAction()
 
 proc settings_Activate(menuitem: PMenuItem, user_data: pointer) =
@@ -1206,15 +1224,17 @@ proc saveForCompile(currentTab: int): string =
     if not existsDir(getTempDir() / "aporia"): createDir(getTempDir() / "aporia")
     result = getTempDir() / "aporia" / "a" & ($currentTab).addFileExt("nim")
     win.Tabs[currentTab].filename = result
-    if win.globalSettings.compileUnsavedSave:
-      saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, true)
-    else:
-      saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
-      win.Tabs[currentTab].filename = ""
-      win.Tabs[currentTab].saved = false
+    saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
+    win.Tabs[currentTab].filename = ""
+    win.Tabs[currentTab].saved = false
   else:
     saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir)
     result = win.tabs[currentTab].filename
+  # Save all tabs which have a filename
+  if win.globalSettings.compileSaveAll:
+    for i in 0..high(win.tabs): 
+      if win.tabs[i].filename != "":
+        saveTab(i, os.splitFile(win.tabs[i].filename).dir)
 
 proc supportedLang(): bool =
   result = false
@@ -1664,8 +1684,8 @@ proc loadLanguageSections():
     v.sort do (x, y: PSourceLanguage) -> int {.closure.}:
       return cmp(toLower($x.getName()), toLower($y.getName()))
   
-  let cmpB = proc (x, y: tuple[key: string, val: seq[PSourceLanguage]]): int {.closure.} =
-    return cmp(x.key, y.key)
+  #let cmpB = proc (x, y: tuple[key: string, val: seq[PSourceLanguage]]): int {.closure.} =
+  #  return cmp(x.key, y.key)
   
   #result.sort cmpB
 
@@ -1692,6 +1712,9 @@ proc initTopMenu(MainBox: PBox) =
   win.FileMenu.createAccelMenuItem(accGroup, "", gint(win.globalSettings.keySaveFileAs), saveFileAs_Activate,
                                    ControlMask or gdk2.ShiftMask, StockSaveAs)
 
+  win.FileMenu.createAccelMenuItem(accGroup, "Save All", gint(win.globalSettings.keySaveAll), saveAll_Activate,
+                                   ControlMask or gdk2.ShiftMask, "")
+                                   
   createSeparator(win.FileMenu)
   
   createSeparator(win.FileMenu)
@@ -1724,10 +1747,12 @@ proc initTopMenu(MainBox: PBox) =
   EditMenu.createImageMenuItem(STOCK_UNDO, aporia.undo)
   EditMenu.createImageMenuItem(STOCK_Redo, aporia.redo)
   createSeparator(EditMenu)
-  EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", win.globalSettings.keyCommentLines, 
+  EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment Line(s)", win.globalSettings.keyCommentLines, 
       CommentLines_Activate, ControlMask, "")
   EditMenu.createAccelMenuItem(accGroup, "Delete Line", win.globalSettings.keyDeleteLine,
       DeleteLine_Activate, ControlMask, "")
+  EditMenu.createAccelMenuItem(accGroup, "Duplicate Line(s)", win.globalSettings.keyDuplicateLines,
+      DuplicateLines_Activate, ControlMask, "")
   createSeparator(EditMenu)
   
   EditMenu.createMenuItem("Raw Preferences",
@@ -1753,6 +1778,11 @@ proc initTopMenu(MainBox: PBox) =
       ControlMask, StockFind)
   SearchMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyReplace, aporia.replace_Activate,
       ControlMask, StockFindAndReplace)
+  SearchMenu.createAccelMenuItem(accGroup, "Next", win.globalSettings.keyFindNext, aporia.findNext_Activate,
+      0, "")      
+  SearchMenu.createAccelMenuItem(accGroup, "Previous", win.globalSettings.keyFindPrevious, aporia.findPrevious_Activate,
+      0, "")       
+      
   createSeparator(SearchMenu)
   SearchMenu.createAccelMenuItem(accGroup, "Go to line...", win.globalSettings.keyGoToLine, 
       GoLine_Activate, ControlMask, "")
@@ -1882,20 +1912,20 @@ proc initToolBar(MainBox: PBox) =
   win.toolBar = toolbarNew()
   win.toolBar.setStyle(TOOLBAR_ICONS)
   
-  var NewFileItem = win.toolBar.insertStock(STOCK_NEW, "New File",
+  discard win.toolBar.insertStock(STOCK_NEW, "New File",
                       "New File", SIGNAL_FUNC(aporia.newFile), nil, 0)
   win.toolBar.appendSpace()
-  var OpenItem = win.toolBar.insertStock(STOCK_OPEN, "Open",
+  discard win.toolBar.insertStock(STOCK_OPEN, "Open",
                       "Open", SIGNAL_FUNC(aporia.openFile), nil, -1)
-  var SaveItem = win.toolBar.insertStock(STOCK_SAVE, "Save",
+  discard win.toolBar.insertStock(STOCK_SAVE, "Save",
                       "Save", SIGNAL_FUNC(saveFile_Activate), nil, -1)
   win.toolBar.appendSpace()
-  var UndoItem = win.toolBar.insertStock(STOCK_UNDO, "Undo", 
+  discard win.toolBar.insertStock(STOCK_UNDO, "Undo", 
                       "Undo", SIGNAL_FUNC(aporia.undo), nil, -1)
-  var RedoItem = win.toolBar.insertStock(STOCK_REDO, "Redo",
+  discard win.toolBar.insertStock(STOCK_REDO, "Redo",
                       "Redo", SIGNAL_FUNC(aporia.redo), nil, -1)
   win.toolBar.appendSpace()
-  var SearchItem = win.toolBar.insertStock(STOCK_FIND, "Find",
+  discard win.toolBar.insertStock(STOCK_FIND, "Find",
                       "Find", SIGNAL_FUNC(aporia.find_Activate), nil, -1)
   
   MainBox.packStart(win.toolBar, False, False, 0)
@@ -2206,6 +2236,9 @@ proc initGoLineBar(MainBox: PBox) =
   win.goLineBar.bar.packStart(win.goLineBar.entry, False, False, 0)
   discard win.goLineBar.entry.signalConnect("changed", SIGNAL_FUNC(
                                       goLine_changed), nil)
+  # Go to line also when Return key is pressed:                                    
+  discard win.goLineBar.entry.signalConnect("activate", SIGNAL_FUNC(
+                                      goLine_changed), nil)
   win.goLineBar.entry.show()
   
   # Right side ...
@@ -2267,7 +2300,7 @@ proc initSocket() =
                 win.w.error("File not found: " & filepath)
                 win.w.present()
           else:
-            win.w.error("One instance socket error on recvLine operation: " & OSErrorMsg())
+            win.w.error("One instance socket error on recvLine operation: " & OSErrorMsg(osLastError()))
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)
@@ -2336,8 +2369,6 @@ proc initControls() =
   win.statusbar = initCustomStatusBar(mainBox)
   
   MainBox.show()
-  if confParseFail:
-    dialogs.warning(win.w, "Error parsing config file, using default settings.")
 
   # TODO: The fact that this call was above all initializations was because of
   # the VPaned position. I had to move it here because showing the Window
@@ -2345,6 +2376,9 @@ proc initControls() =
   # (maybe the ScrolledView) means that the stupid thing won't scroll on startup.
   # This took me a VERY long time to find.
   win.w.show()
+  
+  # Set focus to text input:
+  win.Tabs[win.SourceViewTabs.getCurrentPage()].sourceview.grabFocus()
 
   when not defined(noSingleInstance):
     if win.globalSettings.singleInstance:
