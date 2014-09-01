@@ -1154,7 +1154,9 @@ proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not (addr theEnd).forwardCursorPosition():
     discard (addr start).backwardCursorPosition()
 
-  textBuffer.delete(addr(start), addr(theEnd))
+  #textBuffer.delete(addr(start), addr(theEnd)) # does not compile on windows
+  gtk2.delete(textBuffer, addr(start), addr(theEnd))
+  
   textBuffer.endUserAction()
   
 proc DuplicateLines_Activate(menuitem: PMenuItem, user_data: pointer) =
