@@ -461,8 +461,45 @@ proc initGeneral(settingsTabs: PNotebook) =
   showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
   discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
-      
-proc addKeyEdit(parent: PVBox, labelText: string, label2Text: string, value: gint): PEntry = 
+
+proc removeDuplicateShortcut(entrySender: PEntry, entryToCheck: PEntry) = 
+  if entrySender != entryToCheck and $entrySender.getText() == $entryToCheck.getText():
+    entryToCheck.setText("")
+    
+proc entryKeyRelease(entry: PEntry, EventKey: PEventKey) {.cdecl.} =
+  if EventKey.keyval == KEY_Delete:
+    entry.setText("")
+  elif EventKey.keyval < 65505:
+    entry.setText(KeyToStr(TShortcutKey(keyval: EventKey.keyval, state: EventKey.state)))
+    removeDuplicateShortcut(entry, keyCommentLinesEdit)
+    removeDuplicateShortcut(entry, keyDeleteLineEdit)
+    removeDuplicateShortcut(entry, keyDuplicateLinesEdit)
+    removeDuplicateShortcut(entry, keyQuitEdit)
+    removeDuplicateShortcut(entry, keyNewFileEdit)
+    removeDuplicateShortcut(entry, keyOpenFileEdit)
+    removeDuplicateShortcut(entry, keySaveFileEdit)
+    removeDuplicateShortcut(entry, keySaveFileAsEdit)
+    removeDuplicateShortcut(entry, keySaveAllEdit)
+    removeDuplicateShortcut(entry, keyCloseCurrentTabEdit)
+    removeDuplicateShortcut(entry, keyCloseAllTabsEdit)
+    removeDuplicateShortcut(entry, keyFindEdit)
+    removeDuplicateShortcut(entry, keyReplaceEdit)
+    removeDuplicateShortcut(entry, keyFindNextEdit)
+    removeDuplicateShortcut(entry, keyFindPreviousEdit)
+    removeDuplicateShortcut(entry, keyGoToLineEdit)
+    removeDuplicateShortcut(entry, keyGoToDefEdit)
+    removeDuplicateShortcut(entry, keyToggleBottomPanelEdit)
+    removeDuplicateShortcut(entry, keyCompileCurrentEdit)
+    removeDuplicateShortcut(entry, keyCompileRunCurrentEdit)
+    removeDuplicateShortcut(entry, keyCompileProjectEdit)
+    removeDuplicateShortcut(entry, keyCompileRunProjectEdit)
+    removeDuplicateShortcut(entry, keyStopProcessEdit)
+    removeDuplicateShortcut(entry, keyRunCustomCommand1Edit)
+    removeDuplicateShortcut(entry, keyRunCustomCommand2Edit)
+    removeDuplicateShortcut(entry, keyRunCustomCommand3Edit)
+    removeDuplicateShortcut(entry, keyRunCheckEdit)
+        
+proc addKeyEdit(parent: PVBox, labelText: string, key: TShortcutKey): PEntry = 
   var HBox = hboxNew(false, 0)
   parent.packStart(HBox, false, false, 0)
   HBox.show()
@@ -472,21 +509,12 @@ proc addKeyEdit(parent: PVBox, labelText: string, label2Text: string, value: gin
   Label.setAlignment(0, 0.5) 
   HBox.packStart(Label, false, false, 5)
   Label.show()
-
-  var text = ""
-  if label2Text != "":
-    text = label2Text & " +"
-  var Label2 = labelNew(text)
-  Label2.setWidthChars(11)
-  Label2.setAlignment(0, 0.5) 
-  HBox.packStart(Label2, false, false, 5)
-  Label2.show()
     
   var entry = entryNew()
-  entry.setEditable(True)
-  entry.setWidthChars(3)
-  entry.setMaxLength(2)
-  entry.setText(KeyToStr(value))
+  entry.setEditable(false)
+  entry.setWidthChars(16)
+  entry.setText(KeyToStr(key))
+  discard entry.signalConnect("key-release-event", SIGNAL_FUNC(entryKeyRelease), nil)
   HBox.packStart(entry, false, false, 5)
   entry.show()
   result = entry
@@ -500,7 +528,7 @@ proc initShortcuts(settingsTabs: PNotebook) =
   VBox.packStart(HBox, false, false, 5)
   HBox.show()
 
-  var hint = labelNew("Changes will be active after restart")
+  var hint = labelNew("Use the Delete button to clear a shortbut. Changes will be active after restart")
   hint.setAlignment(0, 0.5) 
   hint.show()
   var Box2 = hboxNew(false, 0)
@@ -512,38 +540,38 @@ proc initShortcuts(settingsTabs: PNotebook) =
   HBox.packStart(VBox, false, false, 5)
   VBox.show()
   
-  keyCommentLinesEdit = addKeyEdit(VBox, "Comment lines", "Ctrl", win.globalSettings.keyCommentLines)
-  keyDeleteLineEdit = addKeyEdit(VBox, "Delete line", "Ctrl", win.globalSettings.keyDeleteLine)
-  keyDuplicateLinesEdit = addKeyEdit(VBox, "Duplicate lines", "Ctrl", win.globalSettings.keyDuplicateLines)
-  keyNewFileEdit = addKeyEdit(VBox, "New file", "Ctrl", win.globalSettings.keyNewFile)
-  keyOpenFileEdit = addKeyEdit(VBox, "Open file", "Ctrl", win.globalSettings.keyOpenFile)
-  keySaveFileEdit = addKeyEdit(VBox, "Save file", "Ctrl", win.globalSettings.keySaveFile)
-  keySaveFileAsEdit = addKeyEdit(VBox, "Save file as", "Ctrl + Shift", win.globalSettings.keySaveFileAs)
-  keySaveAllEdit = addKeyEdit(VBox, "Save all", "Ctrl + Shift", win.globalSettings.keySaveAll)
-  keyCloseCurrentTabEdit = addKeyEdit(VBox, "Close current tab", "Ctrl", win.globalSettings.keyCloseCurrentTab)
-  keyCloseAllTabsEdit = addKeyEdit(VBox, "Close all tabs", "Ctrl + Shift", win.globalSettings.keyCloseAllTabs)
-  keyFindEdit = addKeyEdit(VBox, "Find", "Ctrl", win.globalSettings.keyFind)
-  keyReplaceEdit = addKeyEdit(VBox, "Find and replace", "Ctrl", win.globalSettings.keyReplace)
-  keyFindNextEdit = addKeyEdit(VBox, "Find next", "", win.globalSettings.keyFindNext)
-  keyFindPreviousEdit = addKeyEdit(VBox, "Find previous", "", win.globalSettings.keyFindPrevious)
+  keyCommentLinesEdit = addKeyEdit(VBox, "Comment lines", win.globalSettings.keyCommentLines)
+  keyDeleteLineEdit = addKeyEdit(VBox, "Delete line", win.globalSettings.keyDeleteLine)
+  keyDuplicateLinesEdit = addKeyEdit(VBox, "Duplicate lines", win.globalSettings.keyDuplicateLines)
+  keyNewFileEdit = addKeyEdit(VBox, "New file", win.globalSettings.keyNewFile)
+  keyOpenFileEdit = addKeyEdit(VBox, "Open file", win.globalSettings.keyOpenFile)
+  keySaveFileEdit = addKeyEdit(VBox, "Save file", win.globalSettings.keySaveFile)
+  keySaveFileAsEdit = addKeyEdit(VBox, "Save file as", win.globalSettings.keySaveFileAs)
+  keySaveAllEdit = addKeyEdit(VBox, "Save all", win.globalSettings.keySaveAll)
+  keyCloseCurrentTabEdit = addKeyEdit(VBox, "Close current tab", win.globalSettings.keyCloseCurrentTab)
+  keyCloseAllTabsEdit = addKeyEdit(VBox, "Close all tabs", win.globalSettings.keyCloseAllTabs)
+  keyFindEdit = addKeyEdit(VBox, "Find", win.globalSettings.keyFind)
+  keyReplaceEdit = addKeyEdit(VBox, "Find and replace", win.globalSettings.keyReplace)
+  keyFindNextEdit = addKeyEdit(VBox, "Find next", win.globalSettings.keyFindNext)
+  keyFindPreviousEdit = addKeyEdit(VBox, "Find previous", win.globalSettings.keyFindPrevious)
  
   VBox = vboxNew(false, 5)
   HBox.packStart(VBox, false, false, 5)
   VBox.show()
 
-  keyGoToLineEdit = addKeyEdit(VBox, "Go to line", "Ctrl", win.globalSettings.keyGoToLine)
-  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", "Ctrl + Shift", win.globalSettings.keyGoToDef)   
-  keyQuitEdit = addKeyEdit(VBox, "Quit", "Ctrl", win.globalSettings.keyQuit)
-  keyToggleBottomPanelEdit = addKeyEdit(VBox, "Show/hide bottom panel", "Ctrl + Shift", win.globalSettings.keyToggleBottomPanel)
-  keyCompileCurrentEdit = addKeyEdit(VBox, "Compile current file", "", win.globalSettings.keyCompileCurrent)
-  keyCompileRunCurrentEdit = addKeyEdit(VBox, "Compile & run current file", "", win.globalSettings.keyCompileRunCurrent)
-  keyCompileProjectEdit = addKeyEdit(VBox, "Compile project", "", win.globalSettings.keyCompileProject)
-  keyCompileRunProjectEdit = addKeyEdit(VBox, "Compile & run project", "", win.globalSettings.keyCompileRunProject)
-  keyStopProcessEdit = addKeyEdit(VBox, "Terminate running process", "", win.globalSettings.keyStopProcess)
-  keyRunCustomCommand1Edit = addKeyEdit(VBox, "Run custom command 1", "", win.globalSettings.keyRunCustomCommand1)
-  keyRunCustomCommand2Edit = addKeyEdit(VBox, "Run custom command 2", "", win.globalSettings.keyRunCustomCommand2)
-  keyRunCustomCommand3Edit = addKeyEdit(VBox, "Run custom command 3", "", win.globalSettings.keyRunCustomCommand3)
-  keyRunCheckEdit = addKeyEdit(VBox, "Check", "Ctrl", win.globalSettings.keyRunCheck)
+  keyGoToLineEdit = addKeyEdit(VBox, "Go to line", win.globalSettings.keyGoToLine)
+  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", win.globalSettings.keyGoToDef)   
+  keyQuitEdit = addKeyEdit(VBox, "Quit", win.globalSettings.keyQuit)
+  keyToggleBottomPanelEdit = addKeyEdit(VBox, "Show/hide bottom panel", win.globalSettings.keyToggleBottomPanel)
+  keyCompileCurrentEdit = addKeyEdit(VBox, "Compile current file", win.globalSettings.keyCompileCurrent)
+  keyCompileRunCurrentEdit = addKeyEdit(VBox, "Compile & run current file", win.globalSettings.keyCompileRunCurrent)
+  keyCompileProjectEdit = addKeyEdit(VBox, "Compile project", win.globalSettings.keyCompileProject)
+  keyCompileRunProjectEdit = addKeyEdit(VBox, "Compile & run project", win.globalSettings.keyCompileRunProject)
+  keyStopProcessEdit = addKeyEdit(VBox, "Terminate running process", win.globalSettings.keyStopProcess)
+  keyRunCustomCommand1Edit = addKeyEdit(VBox, "Run custom command 1", win.globalSettings.keyRunCustomCommand1)
+  keyRunCustomCommand2Edit = addKeyEdit(VBox, "Run custom command 2", win.globalSettings.keyRunCustomCommand2)
+  keyRunCustomCommand3Edit = addKeyEdit(VBox, "Run custom command 3", win.globalSettings.keyRunCustomCommand3)
+  keyRunCheckEdit = addKeyEdit(VBox, "Check", win.globalSettings.keyRunCheck)
           
 proc showSettings*(aWin: var utils.MainWin) =
   win = addr(aWin)  # This has to be a pointer

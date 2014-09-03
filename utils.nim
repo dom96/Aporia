@@ -11,7 +11,8 @@ import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, struti
 import tables, os, dialogs, pegs
 
 from CustomStatusBar import PCustomStatusBar, TStatusID
-from gdk2 import TRectangle, intersect
+from gdk2 import TRectangle, intersect, TColor, colorParse
+import pango
 
 type
   TAutoSettings* = object # Settings which should not be set by the user manually
@@ -43,6 +44,7 @@ type
     autoIndent*: bool # Whether to automatically indent
     toolBarVisible*: bool # Whether the top panel is shown
     suggestFeature*: bool # Whether the suggest feature is enabled
+    compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
     compileSaveAll*: bool # Whether compiling will save all opened unsaved files
     nimrodCmd*: string  # command template to use to exec the Nimrod compiler
     customCmd1*: string # command template to use to exec a custom command
@@ -51,37 +53,37 @@ type
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
     nimrodPath*: string # Path to the nimrod compiler
-    wrapMode*: TWrapMode # source view wrap mode.
+    wrapMode*: gtk2.TWrapMode # source view wrap mode.
     scrollPastBottom*: bool # Whether to scroll past bottom.
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
-    keyCommentLines*:      gint
-    keyDeleteLine*:        gint 
-    keyDuplicateLines*:    gint 
-    keyQuit*:              gint 
-    keyNewFile*:           gint 
-    keyOpenFile*:          gint 
-    keySaveFile*:          gint 
-    keySaveFileAs*:        gint 
-    keySaveAll*:           gint
-    keyCloseCurrentTab*:   gint 
-    keyCloseAllTabs*:      gint
-    keyFind*:              gint
-    keyReplace*:           gint
-    keyFindNext*:          gint
-    keyFindPrevious*:      gint
-    keyGoToLine*:          gint
-    keyGoToDef*:           gint
-    keyToggleBottomPanel*: gint
-    keyCompileCurrent*:    gint
-    keyCompileRunCurrent*: gint
-    keyCompileProject*:    gint
-    keyCompileRunProject*: gint
-    keyStopProcess*:       gint
-    keyRunCustomCommand1*: gint
-    keyRunCustomCommand2*: gint
-    keyRunCustomCommand3*: gint
-    keyRunCheck*:          gint
+    keyCommentLines*:      TShortcutKey
+    keyDeleteLine*:        TShortcutKey 
+    keyDuplicateLines*:    TShortcutKey 
+    keyQuit*:              TShortcutKey 
+    keyNewFile*:           TShortcutKey 
+    keyOpenFile*:          TShortcutKey 
+    keySaveFile*:          TShortcutKey 
+    keySaveFileAs*:        TShortcutKey 
+    keySaveAll*:           TShortcutKey
+    keyCloseCurrentTab*:   TShortcutKey 
+    keyCloseAllTabs*:      TShortcutKey
+    keyFind*:              TShortcutKey
+    keyReplace*:           TShortcutKey
+    keyFindNext*:          TShortcutKey
+    keyFindPrevious*:      TShortcutKey
+    keyGoToLine*:          TShortcutKey
+    keyGoToDef*:           TShortcutKey
+    keyToggleBottomPanel*: TShortcutKey
+    keyCompileCurrent*:    TShortcutKey
+    keyCompileRunCurrent*: TShortcutKey
+    keyCompileProject*:    TShortcutKey
+    keyCompileRunProject*: TShortcutKey
+    keyStopProcess*:       TShortcutKey
+    keyRunCustomCommand1*: TShortcutKey
+    keyRunCustomCommand2*: TShortcutKey
+    keyRunCustomCommand3*: TShortcutKey
+    keyRunCheck*:          TShortcutKey
     
   
   MainWin* = object
@@ -132,7 +134,7 @@ type
     shown*: bool
     gotAll*: bool # Whether all suggest items have been read.
     currentFilter*: string
-    tooltip*: PWindow
+    tooltip*: gtk2.PWindow
     tooltipLabel*: PLabel
   
   TExecMode* = enum
@@ -233,6 +235,10 @@ type
     text*: string # What is currently being highlighted in this tab
     forSearch*: bool # Whether highlightedText is done as a result of a search.
     idleID*: int32
+    
+  TShortcutKey* = object
+    keyval*: guint  
+    state*: guint  
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
@@ -300,10 +306,10 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
     var insertMark = buff.getInsert()
     var insertIter: TTextIter
     buff.getIterAtMark(addr(insertIter), insertMark)
-    var insertLoc: TRectangle
+    var insertLoc: gdk2.TRectangle
     sv.getIterLocation(addr(insertIter), addr(insertLoc))
     
-    var rect: TRectangle
+    var rect: gdk2.TRectangle
     sv.getVisibleRect(addr(rect))
     
     # Now check whether insert iter is inside the visible rect.
@@ -352,15 +358,20 @@ proc moveToEndLine*(iter: PTextIter) =
 
 # -- Useful TreeView function
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
-                      expand = false, resizable = true) =
+                      expand = false, foregroundColorColumn: gint = -1, visible = true) =
   ## Creates a new Text column.
   var c = TreeViewColumnNew()
   var renderer = cellRendererTextNew()
+  
   c.columnSetTitle(title)
   c.columnPackStart(renderer, expand)
   c.columnSetExpand(expand)
-  c.columnSetResizable(resizable)
-  c.columnSetAttributes(renderer, "text", column, nil)
+  c.columnSetResizable(true)
+  c.columnSetVisible(visible)
+
+  c.column_add_attribute(renderer, "text", column.gint) 
+  c.column_add_attribute(renderer, "foreground", foregroundColorColumn)
+   
   doAssert tv.appendColumn(c) == column+1
 
 # -- Useful ListStore functions
@@ -590,32 +601,83 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
   else:
     result = cmd % f
 
-proc StrToKey*(str: string): gint =
-  # Convert a string (e.g. "F1") to the Gtk key code
-  var t = initTable[string, gint]() 
-  for i in 97..122:
-    t[$chr(i)] = gint(i) 
-  for i in 33..64:
-    t[$chr(i)] = gint(i)   
+proc GetKeyToStrTable*(): tables.TTable[guint, string] =
+  # Return a table with all keys which are possible for shortcuts
+  var t = initTable[guint, string]() 
+  # Basic characters
+  for i in 33..255:
+    t[guint(i)] = toUpper($chr(i))
+  # Special keys
+  t[32] = "Space"
+  t[65105] = "Acute"
+  t[65106] = "^"
+  t[65288] = "Backspace"
+  t[65289] = "Tab"
+  t[65293] = "Return"
+  t[65299] = "Pause"
+  t[65300] = "Scroll lock"
+  t[65307] = "Escape"
+  t[65360] = "Home"
+  t[65365] = "Page up"
+  t[65366] = "Page down"
+  t[65367] = "End"
+  t[65407] = "Num lock"
+  t[65421] = "Enter (Numpad)"
+  t[65452] = ". (Numpad)"
+  t[65451] = "+ (Numpad)"
+  t[65450] = "* (Numpad)"
+  t[65453] = "- (Numpad)"
+  t[65455] = "/ (Numpad)"
+  t[65535] = "Delete"
+  # Numbers on numpad
+  for i in 0..9:
+    t[guint(65456 + i)] = $i & " (Numpad)"
+  # F1..F12
   for i in 1..12:
-    t["f" & $i] = gint(65469 + i)
-  if t.hasKey(normalize(str)):
-    return t[normalize(str)]
-  return 0
+    t[guint(65469 + i)] = "F" & $i
+  return t
 
-proc KeyToStr*(value: gint): string =
-  # Convert a Gtk key code to a string (e.g. "F1")
-  var t = initTable[gint, string]() 
-  for i in 97..122:
-    t[gint(i)] = $chr(i)
-  for i in 33..64:
-    t[gint(i)] = $chr(i)
-  for i in 1..12:
-    t[gint(65469 + i)] = "F" & $i
-  if t.hasKey(value):
-    return t[value]
+proc GetKeyStateToStrTable*(): tables.TTable[guint, string] =
+  # Return a table with all modifier key masks which are possible for shortcuts
+  var t = initTable[guint, string]() 
+  t[1] = "Shift"
+  t[4] = "Ctrl"
+  t[8] = "Alt"
+  return t
+    
+proc StrToKey*(str: string): TShortcutKey =
+  # Convert a string (e.g. "F1") to TShortcutKey
+  Result.keyval = 0
+  Result.state = 0
+  var states = GetKeyStateToStrTable()
+  var keys = GetKeyToStrTable()
+  var norm = normalize(str)
+  var tokens = split(normalize(str), " + ")
+  for token in tokens:
+    var found = false
+    for key, val in states:
+      if token == normalize(val):
+        Result.state = Result.state + key
+        found = true
+        break
+    if not found:   
+      for key, val in keys:
+        if token == normalize(val):
+          Result.keyval = key
+          break
+
+proc KeyToStr*(key: TShortcutKey): string =
+  # Convert a TShortcutKey to a string (e.g. "F1")
+  var states = GetKeyStateToStrTable()
+  var maskStr = ""
+  for mask, stateStr in states:
+    if (key.state and mask) == mask:
+      maskStr.add(stateStr)
+      maskStr.add(" + ")
+  var keys = GetKeyToStrTable() 
+  if keys.hasKey(key.keyval):
+    return maskStr & keys[key.keyval]
   return ""
-  
 
 when isMainModule:
   assert detectLineEndings("asfasfa\c\Lasfasf") == leCRLF

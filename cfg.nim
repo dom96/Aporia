@@ -11,6 +11,7 @@ import utils, times, streams, parsecfg, strutils, os
 from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter,
     WrapNone, WrapChar, WrapWord
 import gdk2
+from processes import addError
 
 
 type
@@ -42,38 +43,39 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.customCmd3 = ""
   result.singleInstancePort = 55679
   result.showCloseOnAllTabs = false
+  result.compileUnsavedSave = true
   result.nimrodPath = ""
   result.wrapMode = WrapNone
   result.scrollPastBottom = false
   result.singleInstance = true
   result.restoreTabs = true
-  result.keyCommentLines      = KEY_slash
-  result.keyDeleteLine        = KEY_d
-  result.keyDuplicateLines    = 0
-  result.keyQuit              = KEY_q
-  result.keyNewFile           = KEY_n
-  result.keyOpenFile          = KEY_o
-  result.keySaveFile          = KEY_s
-  result.keySaveFileAs        = KEY_s
-  result.keySaveAll           = 0
-  result.keyCloseCurrentTab   = KEY_w
-  result.keyCloseAllTabs      = KEY_w
-  result.keyFind              = KEY_f
-  result.keyReplace           = KEY_h
-  result.keyFindNext          = 0
-  result.keyFindPrevious      = 0
-  result.keyGoToLine          = KEY_g
-  result.keyGoToDef           = KEY_r
-  result.keyToggleBottomPanel = KEY_d
-  result.keyCompileCurrent    = KEY_F4
-  result.keyCompileRunCurrent = KEY_F5
-  result.keyCompileProject    = KEY_F8
-  result.keyCompileRunProject = KEY_F9
-  result.keyStopProcess       = KEY_F7
-  result.keyRunCustomCommand1 = KEY_F1
-  result.keyRunCustomCommand2 = KEY_F2
-  result.keyRunCustomCommand3 = KEY_F3
-  result.keyRunCheck          = KEY_F5
+  result.keyCommentLines      = TShortcutKey(keyval: KEY_slash, state: ControlMask)
+  result.keyDeleteLine        = TShortcutKey(keyval: KEY_d, state: ControlMask)
+  result.keyDuplicateLines    = TShortcutKey(keyval: 0, state: 0)
+  result.keyQuit              = TShortcutKey(keyval: KEY_q, state: ControlMask)
+  result.keyNewFile           = TShortcutKey(keyval: KEY_n, state: ControlMask)
+  result.keyOpenFile          = TShortcutKey(keyval: KEY_o, state: ControlMask)
+  result.keySaveFile          = TShortcutKey(keyval: KEY_s, state: ControlMask)
+  result.keySaveFileAs        = TShortcutKey(keyval: KEY_s, state: ControlMask or ShiftMask)
+  result.keySaveAll           = TShortcutKey(keyval: 0, state: ControlMask or ShiftMask)
+  result.keyCloseCurrentTab   = TShortcutKey(keyval: KEY_w, state: ControlMask)
+  result.keyCloseAllTabs      = TShortcutKey(keyval: KEY_w, state: ControlMask or ShiftMask)
+  result.keyFind              = TShortcutKey(keyval: KEY_f, state: ControlMask)
+  result.keyReplace           = TShortcutKey(keyval: KEY_h, state: ControlMask)
+  result.keyFindNext          = TShortcutKey(keyval: 0, state: 0)
+  result.keyFindPrevious      = TShortcutKey(keyval: 0, state: 0)
+  result.keyGoToLine          = TShortcutKey(keyval: KEY_g, state: ControlMask)
+  result.keyGoToDef           = TShortcutKey(keyval: KEY_r, state: ControlMask or ShiftMask)
+  result.keyToggleBottomPanel = TShortcutKey(keyval: KEY_d, state: ControlMask or ShiftMask)
+  result.keyCompileCurrent    = TShortcutKey(keyval: KEY_F4, state: 0)
+  result.keyCompileRunCurrent = TShortcutKey(keyval: KEY_F5, state: 0)
+  result.keyCompileProject    = TShortcutKey(keyval: KEY_F8, state: 0)
+  result.keyCompileRunProject = TShortcutKey(keyval: KEY_F9, state: 0)
+  result.keyStopProcess       = TShortcutKey(keyval: KEY_F7, state: 0)
+  result.keyRunCustomCommand1 = TShortcutKey(keyval: KEY_F1, state: 0)
+  result.keyRunCustomCommand2 = TShortcutKey(keyval: KEY_F2, state: 0)
+  result.keyRunCustomCommand3 = TShortcutKey(keyval: KEY_F3, state: 0)
+  result.keyRunCheck          = TShortcutKey(keyval: KEY_F5, state: ControlMask)
       
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
@@ -170,6 +172,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("searchHighlightAll", $settings.searchHighlightAll)
     f.writeKeyVal("singleInstance", $settings.singleInstance)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
+    f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyVal("restoreTabs", $settings.restoreTabs)
     f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
@@ -229,9 +232,10 @@ proc save*(win: var MainWin) =
 proc isTrue(s: string): bool = 
   result = cmpIgnoreStyle(s, "true") == 0
 
-proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
+proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
   var p: TCfgParser
-  var input = newFileStream(os.getConfigDir() / "Aporia" / "config.ini", fmRead)
+  var filename = os.getConfigDir() / "Aporia" / "config.ini"
+  var input = newFileStream(filename, fmRead)
   open(p, input, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
@@ -285,26 +289,30 @@ proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSe
             result.a.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.a.lastSelectedTab = e.value
+      of "compileunsavedsave":
+        result.g.compileUnsavedSave = isTrue(e.value)
       of "nimrodpath":
         result.g.nimrodPath = e.value
       else:
         #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
-        discard # silently discard error and continue reading
+        #discard # silently discard error and continue reading
+        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
       #raise newException(ECFGParse, e.msg)
-      discard # silently discard error and continue reading
+      #discard # silently discard error and continue reading
+      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
   input.close()
   p.close()
 
-proc loadAuto(lastSession: var seq[string]): TAutoSettings =
+proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSettings =
   result = defaultAutoSettings()
-  let autoPath = os.getConfigDir() / "Aporia" / "config.auto.ini"
-  if not existsFile(autoPath): return
+  let filename = os.getConfigDir() / "Aporia" / "config.auto.ini"
+  if not existsFile(filename): return
   var pAuto: TCfgParser
-  var AutoStream = newFileStream(autoPath, fmRead)
-  open(pAuto, autoStream, autoPath)
+  var AutoStream = newFileStream(filename, fmRead)
+  open(pAuto, autoStream, filename)
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
   while True:
@@ -337,21 +345,24 @@ proc loadAuto(lastSession: var seq[string]): TAutoSettings =
         result.lastSelectedTab = e.value
       else:
         #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
-        discard # silently discard error and continue reading
+        #discard # silently discard error and continue reading
+        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
       #raise newException(ECFGParse, e.msg)
-      discard # silently discard error and continue reading
+      #discard # silently discard error and continue reading
+      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
 
   autoStream.close()
   pAuto.close()
 
-proc loadGlobal*(input: PStream): TGlobalSettings =
+proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
   result = defaultGlobalSettings()
   if input == nil: return
   var pGlobal: TCfgParser
-  open(pGlobal, input, os.getConfigDir() / "Aporia" / "config.global.ini")
+  var filename = os.getConfigDir() / "Aporia" / "config.global.ini"
+  open(pGlobal, input, filename)
   while True:
     var e = next(pGlobal)
     case e.kind
@@ -383,6 +394,8 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
       of "customcmd1": result.customCmd1 = e.value
       of "customcmd2": result.customCmd2 = e.value
       of "customcmd3": result.customCmd3 = e.value
+      of "compileunsavedsave":
+        result.compileUnsavedSave = isTrue(e.value)
       of "keyquit": result.keyQuit = StrToKey(e.value)
       of "keycommentlines": result.keyCommentLines = StrToKey(e.value)
       of "keydeleteline": result.keyDeleteLine = StrToKey(e.value)
@@ -428,20 +441,22 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
         result.scrollPastBottom = isTrue(e.value)
       else:
         #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
-        discard # silently discard error and continue reading
+        #discard # silently discard error and continue reading
+        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
       #raise newException(ECFGParse, e.msg)
-      discard # silently discard error and continue reading
+      #discard # silently discard error and continue reading
+      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
   close(pGlobal)
 
-proc load*(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] = 
+proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] = 
   if existsFile(os.getConfigDir() / "Aporia" / "config.ini"):
-    return loadOld(lastSession)
+    return loadOld(cfgErrors, lastSession)
   else:
-    result.a = loadAuto(lastSession)
+    result.a = loadAuto(cfgErrors, lastSession)
     var globalStream = newFileStream(os.getConfigDir() / "Aporia" / "config.global.ini", fmRead)
-    result.g = loadGlobal(globalStream)
+    result.g = loadGlobal(cfgErrors, globalStream)
     if globalStream != nil:
       globalStream.close()
