@@ -8,8 +8,8 @@
 #
 
 # Stdlib imports:
-import glib2, gtk2, gtksourceview, gdk2, dialogs, os, pango, osproc, strutils
-# Hint: gdk2 has to be imported before gtksourceview to avoid an "ambiguous identifier" error on Windows for procedues like delete()
+import glib2, gtk2, gtksourceview, dialogs, os, pango, osproc, strutils
+import gdk2 except `delete` # avoid "ambiguous identifier" error under Windows
 import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
 import tables, algorithm
 # Local imports:
