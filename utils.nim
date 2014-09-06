@@ -7,12 +7,13 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
+# Stdlib imports:
+import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
 import tables, os, dialogs, pegs
-
-from CustomStatusBar import PCustomStatusBar, TStatusID
 from gdk2 import TRectangle, intersect, TColor, colorParse
-import pango
+# Local imports:
+from CustomStatusBar import PCustomStatusBar, TStatusID
+import AboutDialog, ShortcutUtils
 
 type
   TAutoSettings* = object # Settings which should not be set by the user manually
@@ -57,6 +58,7 @@ type
     scrollPastBottom*: bool # Whether to scroll past bottom.
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
+    activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
     keyCommentLines*:      TShortcutKey
     keyDeleteLine*:        TShortcutKey 
     keyDuplicateLines*:    TShortcutKey 
@@ -235,10 +237,6 @@ type
     text*: string # What is currently being highlighted in this tab
     forSearch*: bool # Whether highlightedText is done as a result of a search.
     idleID*: int32
-    
-  TShortcutKey* = object
-    keyval*: guint  
-    state*: guint  
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
@@ -600,84 +598,6 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
     result = exe & " " & matches[1] % f
   else:
     result = cmd % f
-
-proc GetKeyToStrTable*(): tables.TTable[guint, string] =
-  # Return a table with all keys which are possible for shortcuts
-  var t = initTable[guint, string]() 
-  # Basic characters
-  for i in 33..255:
-    t[guint(i)] = toUpper($chr(i))
-  # Special keys
-  t[32] = "Space"
-  t[65105] = "Acute"
-  t[65106] = "^"
-  t[65288] = "Backspace"
-  t[65289] = "Tab"
-  t[65293] = "Return"
-  t[65299] = "Pause"
-  t[65300] = "Scroll lock"
-  t[65307] = "Escape"
-  t[65360] = "Home"
-  t[65365] = "Page up"
-  t[65366] = "Page down"
-  t[65367] = "End"
-  t[65407] = "Num lock"
-  t[65421] = "Enter (Numpad)"
-  t[65452] = ". (Numpad)"
-  t[65451] = "+ (Numpad)"
-  t[65450] = "* (Numpad)"
-  t[65453] = "- (Numpad)"
-  t[65455] = "/ (Numpad)"
-  t[65535] = "Delete"
-  # Numbers on numpad
-  for i in 0..9:
-    t[guint(65456 + i)] = $i & " (Numpad)"
-  # F1..F12
-  for i in 1..12:
-    t[guint(65469 + i)] = "F" & $i
-  return t
-
-proc GetKeyStateToStrTable*(): tables.TTable[guint, string] =
-  # Return a table with all modifier key masks which are possible for shortcuts
-  var t = initTable[guint, string]() 
-  t[1] = "Shift"
-  t[4] = "Ctrl"
-  t[8] = "Alt"
-  return t
-    
-proc StrToKey*(str: string): TShortcutKey =
-  # Convert a string (e.g. "F1") to TShortcutKey
-  Result.keyval = 0
-  Result.state = 0
-  var states = GetKeyStateToStrTable()
-  var keys = GetKeyToStrTable()
-  var norm = normalize(str)
-  var tokens = split(normalize(str), " + ")
-  for token in tokens:
-    var found = false
-    for key, val in states:
-      if token == normalize(val):
-        Result.state = Result.state + key
-        found = true
-        break
-    if not found:   
-      for key, val in keys:
-        if token == normalize(val):
-          Result.keyval = key
-          break
-
-proc KeyToStr*(key: TShortcutKey): string =
-  # Convert a TShortcutKey to a string (e.g. "F1")
-  var states = GetKeyStateToStrTable()
-  var maskStr = ""
-  for mask, stateStr in states:
-    if (key.state and mask) == mask:
-      maskStr.add(stateStr)
-      maskStr.add(" + ")
-  var keys = GetKeyToStrTable() 
-  if keys.hasKey(key.keyval):
-    return maskStr & keys[key.keyval]
-  return ""
 
 when isMainModule:
   assert detectLineEndings("asfasfa\c\Lasfasf") == leCRLF

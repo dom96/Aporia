@@ -7,9 +7,8 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gdk2, glib2, pango, os
-import gtksourceview, utils
-import tables
+import gtk2, gdk2, glib2, pango, os, tables
+import gtksourceview, utils, ShortcutUtils
 
 {.push callConv:cdecl.}
 
@@ -125,6 +124,7 @@ var
   restoreTabsCheckBox: PCheckButton
   compileSaveAllCheckBox: PCheckButton
   showCloseOnAllTabsCheckBox: PCheckButton
+  activateErrorTabOnErrorsCheckBox: PCheckButton
   # Shortcuts:
   keyCommentLinesEdit: PEntry
   keyDeleteLineEdit: PEntry
@@ -399,6 +399,7 @@ proc closeDialog(widget: pWidget, user_data: pgpointer) =
   win.globalSettings.restoreTabs = restoreTabsCheckBox.getActive()
   win.globalSettings.singleInstance = singleInstanceCheckBox.getActive()
   win.globalSettings.compileSaveAll = compileSaveAllCheckBox.getActive()
+  win.globalSettings.activateErrorTabOnErrors = activateErrorTabOnErrorsCheckBox.getActive()
   
   # Shortcuts:
   win.globalSettings.keyQuit = StrToKey($keyQuitEdit.getText())
@@ -454,9 +455,11 @@ proc initGeneral(settingsTabs: PNotebook) =
   
   singleInstanceCheckBox = addCheckBox(box, "Single instance", win.globalSettings.singleInstance)
   
+  restoreTabsCheckBox = addCheckBox(box, "Restore tabs on load", win.globalSettings.restoreTabs)
+  
   compileSaveAllCheckBox = addCheckBox(box, "Save all on compile", win.globalSettings.compileSaveAll)
   
-  restoreTabsCheckBox = addCheckBox(box, "Restore tabs on load", win.globalSettings.restoreTabs)
+  activateErrorTabOnErrorsCheckBox = addCheckBox(box, "Activate Error list tab on errors", win.globalSettings.activateErrorTabOnErrors)
   
   showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
   discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 

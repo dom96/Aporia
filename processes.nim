@@ -56,8 +56,10 @@ proc addError*(win: var MainWin, error: TError) =
   # Scroll to last error
   var treepath = win.errorListWidget.GetModel().get_path(addr(iter));
   win.errorListWidget.scrollToCell(treepath, nil, false, 0, 0)
+  
   # Activate "Error list" tab
-  win.bottomPanelTabs.SetCurrentPage(1)
+  if win.globalSettings.activateErrorTabOnErrors:
+    win.bottomPanelTabs.SetCurrentPage(1)
   
   win.tempStuff.errorList.add(error)
 
@@ -258,6 +260,10 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
             if runAfterSuccess and (not win.tempStuff.compileSuccess):
               return
             echod("Exec Run-after.")
+ 
+            # Activate "Output" tab
+            win.bottomPanelTabs.SetCurrentPage(0)    
+             
             win[].execProcAsync(runAfter)
   else:
     echod("idle proc exiting")

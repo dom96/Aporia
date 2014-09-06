@@ -12,7 +12,7 @@ from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter,
     WrapNone, WrapChar, WrapWord
 import gdk2
 from processes import addError
-
+import ShortcutUtils
 
 type
   ECFGParse* = object of E_Base
@@ -49,6 +49,7 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.scrollPastBottom = false
   result.singleInstance = true
   result.restoreTabs = true
+  result.activateErrorTabOnErrors = false
   result.keyCommentLines      = TShortcutKey(keyval: KEY_slash, state: ControlMask)
   result.keyDeleteLine        = TShortcutKey(keyval: KEY_d, state: ControlMask)
   result.keyDuplicateLines    = TShortcutKey(keyval: 0, state: 0)
@@ -174,6 +175,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyVal("restoreTabs", $settings.restoreTabs)
+    f.writeKeyVal("activateErrorTabOnErrors", $settings.activateErrorTabOnErrors)
     f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
     f.writeKeyVal("wrapMode",
@@ -294,12 +296,8 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "nimrodpath":
         result.g.nimrodPath = e.value
       else:
-        #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
-        #discard # silently discard error and continue reading
         cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      #raise newException(ECFGParse, e.msg)
-      #discard # silently discard error and continue reading
       cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
@@ -344,12 +342,8 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
       of "lastselectedtab":
         result.lastSelectedTab = e.value
       else:
-        #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
-        #discard # silently discard error and continue reading
         cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      #raise newException(ECFGParse, e.msg)
-      #discard # silently discard error and continue reading
       cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
@@ -388,6 +382,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "singleinstanceport":
         result.singleInstancePort = int32(e.value.parseInt())
       of "restoretabs": result.restoreTabs = isTrue(e.value)
+      of "activateerrortabonerrors": result.activateErrorTabOnErrors = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
       of "compilesaveall": result.compileSaveAll = isTrue(e.value)
       of "nimrodcmd": result.nimrodCmd = e.value
@@ -435,17 +430,12 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
         of "word":
           result.wrapMode = WrapWord
         else:
-          #raise newException(ECFGParse, "WrapMode invalid, got: '" & e.value & "'")
-          discard # silently discard error and continue reading
+          cfgErrors.add(Terror(kind: TETError, desc: "WrapMode invalid, got: '" & e.value & "'", file: filename, line: "", column: ""))
       of "scrollpastbottom":
         result.scrollPastBottom = isTrue(e.value)
       else:
-        #raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
-        #discard # silently discard error and continue reading
         cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      #raise newException(ECFGParse, e.msg)
-      #discard # silently discard error and continue reading
       cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
