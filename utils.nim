@@ -7,11 +7,13 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
+# Stdlib imports:
+import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
 import tables, os, dialogs, pegs
-
+from gdk2 import TRectangle, intersect, TColor, colorParse
+# Local imports:
 from CustomStatusBar import PCustomStatusBar, TStatusID
-from gdk2 import TRectangle, intersect
+import AboutDialog, ShortcutUtils
 
 type
   TAutoSettings* = object # Settings which should not be set by the user manually
@@ -44,6 +46,7 @@ type
     toolBarVisible*: bool # Whether the top panel is shown
     suggestFeature*: bool # Whether the suggest feature is enabled
     compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
+    compileSaveAll*: bool # Whether compiling will save all opened unsaved files
     nimrodCmd*: string  # command template to use to exec the Nimrod compiler
     customCmd1*: string # command template to use to exec a custom command
     customCmd2*: string # command template to use to exec a custom command
@@ -51,8 +54,39 @@ type
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
     nimrodPath*: string # Path to the nimrod compiler
-    wrapMode*: TWrapMode # source view wrap mode.
+    wrapMode*: gtk2.TWrapMode # source view wrap mode.
     scrollPastBottom*: bool # Whether to scroll past bottom.
+    singleInstance*: bool # Whether the program runs as single instance.
+    restoreTabs*: bool    # Whether the program loads the tabs from the last session
+    activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
+    keyCommentLines*:      TShortcutKey
+    keyDeleteLine*:        TShortcutKey 
+    keyDuplicateLines*:    TShortcutKey 
+    keyQuit*:              TShortcutKey 
+    keyNewFile*:           TShortcutKey 
+    keyOpenFile*:          TShortcutKey 
+    keySaveFile*:          TShortcutKey 
+    keySaveFileAs*:        TShortcutKey 
+    keySaveAll*:           TShortcutKey
+    keyCloseCurrentTab*:   TShortcutKey 
+    keyCloseAllTabs*:      TShortcutKey
+    keyFind*:              TShortcutKey
+    keyReplace*:           TShortcutKey
+    keyFindNext*:          TShortcutKey
+    keyFindPrevious*:      TShortcutKey
+    keyGoToLine*:          TShortcutKey
+    keyGoToDef*:           TShortcutKey
+    keyToggleBottomPanel*: TShortcutKey
+    keyCompileCurrent*:    TShortcutKey
+    keyCompileRunCurrent*: TShortcutKey
+    keyCompileProject*:    TShortcutKey
+    keyCompileRunProject*: TShortcutKey
+    keyStopProcess*:       TShortcutKey
+    keyRunCustomCommand1*: TShortcutKey
+    keyRunCustomCommand2*: TShortcutKey
+    keyRunCustomCommand3*: TShortcutKey
+    keyRunCheck*:          TShortcutKey
+    
   
   MainWin* = object
     # Widgets
@@ -102,7 +136,7 @@ type
     shown*: bool
     gotAll*: bool # Whether all suggest items have been read.
     currentFilter*: string
-    tooltip*: PWindow
+    tooltip*: gtk2.PWindow
     tooltipLabel*: PLabel
   
   TExecMode* = enum
@@ -270,10 +304,10 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
     var insertMark = buff.getInsert()
     var insertIter: TTextIter
     buff.getIterAtMark(addr(insertIter), insertMark)
-    var insertLoc: TRectangle
+    var insertLoc: gdk2.TRectangle
     sv.getIterLocation(addr(insertIter), addr(insertLoc))
     
-    var rect: TRectangle
+    var rect: gdk2.TRectangle
     sv.getVisibleRect(addr(rect))
     
     # Now check whether insert iter is inside the visible rect.
@@ -322,15 +356,20 @@ proc moveToEndLine*(iter: PTextIter) =
 
 # -- Useful TreeView function
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
-                      expand = false, resizable = true) =
+                      expand = false, foregroundColorColumn: gint = -1, visible = true) =
   ## Creates a new Text column.
   var c = TreeViewColumnNew()
   var renderer = cellRendererTextNew()
+  
   c.columnSetTitle(title)
   c.columnPackStart(renderer, expand)
   c.columnSetExpand(expand)
-  c.columnSetResizable(resizable)
-  c.columnSetAttributes(renderer, "text", column, nil)
+  c.columnSetResizable(true)
+  c.columnSetVisible(visible)
+
+  c.column_add_attribute(renderer, "text", column.gint) 
+  c.column_add_attribute(renderer, "foreground", foregroundColorColumn)
+   
   doAssert tv.appendColumn(c) == column+1
 
 # -- Useful ListStore functions
@@ -559,7 +598,6 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
     result = exe & " " & matches[1] % f
   else:
     result = cmd % f
-
 
 when isMainModule:
   assert detectLineEndings("asfasfa\c\Lasfasf") == leCRLF

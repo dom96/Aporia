@@ -5,7 +5,7 @@
 ## This module contains functions which deal with running processes, such as the Nimrod process.
 ## There are also some functions for gathering errors as given by the nimrod compiler and putting them into the error list.
 
-import pegs, times, osproc, streams, parseutils, strutils, re
+import pegs, times, osproc, streams, parseutils, strutils, re, os
 import gtk2, glib2
 import utils, CustomStatusBar
 
@@ -36,23 +36,35 @@ proc clearErrors*(win: var MainWin) =
   cast[PListStore](TreeModel).clear()
   win.tempStuff.errorList = @[]
 
-proc addError*(win: var MainWin, theType: TErrorType, desc,
-               file, line, col: string) =
+proc addError*(win: var MainWin, error: TError) =
+  # Make the file path a bit shorter, so it's more readable
+  var fileShort = error.file
+  var mainDir = win.Tabs[win.SourceViewTabs.getCurrentPage()].filename
+  var i = mainDir.rfind($os.DirSep)
+  if i > 0 and error.file.startsWith(mainDir.substr(0, i)):
+     fileShort = "..." & fileShort.substr(i) 
+               
   var ls = cast[PListStore](win.errorListWidget.getModel())
   var iter: TTreeIter
   ls.append(addr(iter))
-  ls.set(addr(iter), 0, $theType, 1, desc, 2, file, 3, line, 4, col, -1)
   
-  var newErr: TError
-  newErr.kind = theType
-  newErr.desc = desc
-  newErr.file = file
-  newErr.line = line
-  newErr.column = col
-  win.tempStuff.errorList.add(newErr)
+  if error.kind == TETError: 
+    ls.set(addr(iter), 0, fileShort, 1, error.line, 2, error.column, 3, $error.kind, 4, error.desc, 5, "red", -1)
+  else:
+    ls.set(addr(iter), 0, fileShort, 1, error.line, 2, error.column, 3, $error.kind, 4, error.desc, 5, nil, -1)
+  
+  # Scroll to last error
+  var treepath = win.errorListWidget.GetModel().get_path(addr(iter));
+  win.errorListWidget.scrollToCell(treepath, nil, false, 0, 0)
+  
+  # Activate "Error list" tab
+  if win.globalSettings.activateErrorTabOnErrors:
+    win.bottomPanelTabs.SetCurrentPage(1)
+  
+  win.tempStuff.errorList.add(error)
 
 proc parseError(err: string, 
-            res: var tuple[theType: TErrorType, desc, file, line, col: string]) =
+            res: var TError) =
   ## Parses a line like:
   ##   ``a12.nim(1, 3) Error: undeclared identifier: 'asd'``
   ##
@@ -84,11 +96,11 @@ proc parseError(err: string,
   ## Error: execution of an external program failed
   var i = 0
   if err.startsWith("Error: "):
-    res.theType = TETError
+    res.kind = TETError
     res.desc = err[7 .. -1]
     res.file = ""
     res.line = ""
-    res.col = ""
+    res.column = ""
     return
     
   res.file = ""
@@ -100,19 +112,19 @@ proc parseError(err: string,
   res.line = $lineInt
   inc(i) # Skip ,
   i += skipWhitespace(err, i)
-  res.col = ""
+  res.column = ""
   var colInt = -1
   i += parseInt(err, colInt, i)
-  res.col = $colInt
+  res.column = $colInt
   inc(i) # Skip )
   i += skipWhitespace(err, i)
   var theType = ""
   i += parseUntil(err, theType, ':', i)
   case normalize(theType)
   of "error", "info":
-    res.theType = TETError
+    res.kind = TETError
   of "hint", "warning":
-    res.theType = TETWarning
+    res.kind = TETWarning
   else:
     echod(theType)
     assert(false)
@@ -127,10 +139,10 @@ proc printProcOutput(win: var MainWin, line: string) =
   ## should be received as one continuous message.
   echod("Printing: ", line.repr)
   template paErr(): stmt =
-    var parseRes: tuple[theType: TErrorType, desc, file, line, col: string]
+    var parseRes: TError
     parseError(line, parseRes)
-    win.addError(parseRes.theType, parseRes.desc,
-             parseRes.file, parseRes.line, parseRes.col)
+       
+    win.addError(parseRes)
 
   # Colors
   var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
@@ -229,6 +241,8 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
             if event.exitCode == QuitSuccess:
               win.outputTextView.addText("> Process terminated with exit code " & 
                                                $event.exitCode & "\n", successTag)
+              # Activate "Output" tab, after successful compilation
+              win.bottomPanelTabs.SetCurrentPage(0)    
             else:
               win.outputTextView.addText("> Process terminated with exit code " & 
                                                $event.exitCode & "\n", errorTag)

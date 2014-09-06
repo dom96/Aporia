@@ -10,6 +10,9 @@
 import utils, times, streams, parsecfg, strutils, os
 from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter,
     WrapNone, WrapChar, WrapWord
+import gdk2
+from processes import addError
+import ShortcutUtils
 
 type
   ECFGParse* = object of E_Base
@@ -29,10 +32,11 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.outputFont = "Monospace 10"
   result.colorSchemeID = "piekno"
   result.indentWidth = 2
-  result.showLineNumbers = True
-  result.highlightMatchingBrackets = True
+  result.showLineNumbers = true
+  result.highlightMatchingBrackets = true
   result.toolBarVisible = true
-  result.autoIndent = True
+  result.autoIndent = true
+  result.compileSaveAll = false
   result.nimrodCmd = "$findExe(nimrod) c --listFullPaths $#"
   result.customCmd1 = ""
   result.customCmd2 = ""
@@ -43,7 +47,37 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.nimrodPath = ""
   result.wrapMode = WrapNone
   result.scrollPastBottom = false
-
+  result.singleInstance = true
+  result.restoreTabs = true
+  result.activateErrorTabOnErrors = false
+  result.keyCommentLines      = TShortcutKey(keyval: KEY_slash, state: ControlMask)
+  result.keyDeleteLine        = TShortcutKey(keyval: KEY_d, state: ControlMask)
+  result.keyDuplicateLines    = TShortcutKey(keyval: 0, state: 0)
+  result.keyQuit              = TShortcutKey(keyval: KEY_q, state: ControlMask)
+  result.keyNewFile           = TShortcutKey(keyval: KEY_n, state: ControlMask)
+  result.keyOpenFile          = TShortcutKey(keyval: KEY_o, state: ControlMask)
+  result.keySaveFile          = TShortcutKey(keyval: KEY_s, state: ControlMask)
+  result.keySaveFileAs        = TShortcutKey(keyval: KEY_s, state: ControlMask or ShiftMask)
+  result.keySaveAll           = TShortcutKey(keyval: 0, state: ControlMask or ShiftMask)
+  result.keyCloseCurrentTab   = TShortcutKey(keyval: KEY_w, state: ControlMask)
+  result.keyCloseAllTabs      = TShortcutKey(keyval: KEY_w, state: ControlMask or ShiftMask)
+  result.keyFind              = TShortcutKey(keyval: KEY_f, state: ControlMask)
+  result.keyReplace           = TShortcutKey(keyval: KEY_h, state: ControlMask)
+  result.keyFindNext          = TShortcutKey(keyval: 0, state: 0)
+  result.keyFindPrevious      = TShortcutKey(keyval: 0, state: 0)
+  result.keyGoToLine          = TShortcutKey(keyval: KEY_g, state: ControlMask)
+  result.keyGoToDef           = TShortcutKey(keyval: KEY_r, state: ControlMask or ShiftMask)
+  result.keyToggleBottomPanel = TShortcutKey(keyval: KEY_d, state: ControlMask or ShiftMask)
+  result.keyCompileCurrent    = TShortcutKey(keyval: KEY_F4, state: 0)
+  result.keyCompileRunCurrent = TShortcutKey(keyval: KEY_F5, state: 0)
+  result.keyCompileProject    = TShortcutKey(keyval: KEY_F8, state: 0)
+  result.keyCompileRunProject = TShortcutKey(keyval: KEY_F9, state: 0)
+  result.keyStopProcess       = TShortcutKey(keyval: KEY_F7, state: 0)
+  result.keyRunCustomCommand1 = TShortcutKey(keyval: KEY_F1, state: 0)
+  result.keyRunCustomCommand2 = TShortcutKey(keyval: KEY_F2, state: 0)
+  result.keyRunCustomCommand3 = TShortcutKey(keyval: KEY_F3, state: 0)
+  result.keyRunCheck          = TShortcutKey(keyval: KEY_F5, state: ControlMask)
+      
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
   f.write(sectionName)
@@ -137,8 +171,11 @@ proc save*(settings: TGlobalSettings) =
 
     f.writeKeyVal("selectHighlightAll", $settings.selectHighlightAll)
     f.writeKeyVal("searchHighlightAll", $settings.searchHighlightAll)
+    f.writeKeyVal("singleInstance", $settings.singleInstance)
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
+    f.writeKeyVal("restoreTabs", $settings.restoreTabs)
+    f.writeKeyVal("activateErrorTabOnErrors", $settings.activateErrorTabOnErrors)
     f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
     f.writeKeyVal("wrapMode",
@@ -150,12 +187,43 @@ proc save*(settings: TGlobalSettings) =
         assert false; ""
     )
     f.writeKeyVal("scrollPastBottom", $settings.scrollPastBottom)
-
+    f.writeKeyVal("compileSaveAll", $settings.compileSaveAll)
+    
     f.writeKeyVal("nimrodCmd", settings.nimrodCmd)
     f.writeKeyVal("customCmd1", settings.customCmd1)
     f.writeKeyVal("customCmd2", settings.customCmd2)
     f.writeKeyVal("customCmd3", settings.customCmd3)
     
+    f.writeSection("ShortcutKeys")
+    
+    f.writeKeyVal("keyQuit", KeyToStr(settings.keyQuit))
+    f.writeKeyVal("keyCommentLines", KeyToStr(settings.keyCommentLines))
+    f.writeKeyVal("keydeleteline", KeyToStr(settings.keyDeleteLine))
+    f.writeKeyVal("keyduplicatelines", KeyToStr(settings.keyDuplicateLines))
+    f.writeKeyVal("keyNewFile", KeyToStr(settings.keyNewFile))
+    f.writeKeyVal("keyOpenFile", KeyToStr(settings.keyOpenFile))
+    f.writeKeyVal("keySaveFile", KeyToStr(settings.keySaveFile))
+    f.writeKeyVal("keySaveFileAs", KeyToStr(settings.keySaveFileAs))
+    f.writeKeyVal("keySaveAll", KeyToStr(settings.keySaveAll))
+    f.writeKeyVal("keyCloseCurrentTab", KeyToStr(settings.keyCloseCurrentTab))
+    f.writeKeyVal("keyCloseAllTabs", KeyToStr(settings.keyCloseAllTabs))
+    f.writeKeyVal("keyFind", KeyToStr(settings.keyFind))
+    f.writeKeyVal("keyReplace", KeyToStr(settings.keyReplace))
+    f.writeKeyVal("keyFindNext", KeyToStr(settings.keyFindNext))
+    f.writeKeyVal("keyFindPrevious", KeyToStr(settings.keyFindPrevious))
+    f.writeKeyVal("keyGoToLine", KeyToStr(settings.keyGoToLine))
+    f.writeKeyVal("keyGoToDef", KeyToStr(settings.keyGoToDef))
+    f.writeKeyVal("keyToggleBottomPanel", KeyToStr(settings.keyToggleBottomPanel))
+    f.writeKeyVal("keyCompileCurrent", KeyToStr(settings.keyCompileCurrent))
+    f.writeKeyVal("keyCompileRunCurrent", KeyToStr(settings.keyCompileRunCurrent))
+    f.writeKeyVal("keyCompileProject", KeyToStr(settings.keyCompileProject))
+    f.writeKeyVal("keyCompileRunProject", KeyToStr(settings.keyCompileRunProject))
+    f.writeKeyVal("keyStopProcess", KeyToStr(settings.keyStopProcess))
+    f.writeKeyVal("keyRunCustomCommand1", KeyToStr(settings.keyRunCustomCommand1))
+    f.writeKeyVal("keyRunCustomCommand2", KeyToStr(settings.keyRunCustomCommand2))
+    f.writeKeyVal("keyRunCustomCommand3", KeyToStr(settings.keyRunCustomCommand3))
+    f.writeKeyVal("keyRunCheck", KeyToStr(settings.keyRunCheck))
+      
     f.close()
 
 proc save*(win: var MainWin) =
@@ -169,9 +237,10 @@ proc save*(win: var MainWin) =
 proc isTrue(s: string): bool = 
   result = cmpIgnoreStyle(s, "true") == 0
 
-proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
+proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
   var p: TCfgParser
-  var input = newFileStream(os.getConfigDir() / "Aporia" / "config.ini", fmRead)
+  var filename = os.getConfigDir() / "Aporia" / "config.ini"
+  var input = newFileStream(filename, fmRead)
   open(p, input, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
@@ -219,7 +288,8 @@ proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSe
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: raise newException(ECFGParse, "Too many recent files")
+            if count > 19: 
+              cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.a.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.a.lastSelectedTab = e.value
@@ -228,21 +298,21 @@ proc loadOld(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSe
       of "nimrodpath":
         result.g.nimrodPath = e.value
       else:
-        raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      raise newException(ECFGParse, e.msg)
+      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
   input.close()
   p.close()
 
-proc loadAuto(lastSession: var seq[string]): TAutoSettings =
+proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSettings =
   result = defaultAutoSettings()
-  let autoPath = os.getConfigDir() / "Aporia" / "config.auto.ini"
-  if not existsFile(autoPath): return
+  let filename = os.getConfigDir() / "Aporia" / "config.auto.ini"
+  if not existsFile(filename): return
   var pAuto: TCfgParser
-  var AutoStream = newFileStream(autoPath, fmRead)
-  open(pAuto, autoStream, autoPath)
+  var AutoStream = newFileStream(filename, fmRead)
+  open(pAuto, autoStream, filename)
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
   while True:
@@ -267,25 +337,27 @@ proc loadAuto(lastSession: var seq[string]): TAutoSettings =
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: raise newException(ECFGParse, "Too many recent files")
+            if count > 19: 
+              cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.lastSelectedTab = e.value
       else:
-        raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      raise newException(ECFGParse, e.msg)
+      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
 
   autoStream.close()
   pAuto.close()
 
-proc loadGlobal*(input: PStream): TGlobalSettings =
+proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
   result = defaultGlobalSettings()
   if input == nil: return
   var pGlobal: TCfgParser
-  open(pGlobal, input, os.getConfigDir() / "Aporia" / "config.global.ini")
+  var filename = os.getConfigDir() / "Aporia" / "config.global.ini"
+  open(pGlobal, input, filename)
   while True:
     var e = next(pGlobal)
     case e.kind
@@ -307,15 +379,47 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
       of "showcloseonalltabs": result.showCloseOnAllTabs = isTrue(e.value)
       of "selecthighlightall": result.selectHighlightAll = isTrue(e.value)
       of "searchhighlightall": result.searchHighlightAll = isTrue(e.value)
+      of "singleinstance": result.singleInstance = isTrue(e.value)
       of "singleinstanceport":
         result.singleInstancePort = int32(e.value.parseInt())
+      of "restoretabs": result.restoreTabs = isTrue(e.value)
+      of "activateerrortabonerrors": result.activateErrorTabOnErrors = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
+      of "compilesaveall": result.compileSaveAll = isTrue(e.value)
       of "nimrodcmd": result.nimrodCmd = e.value
       of "customcmd1": result.customCmd1 = e.value
       of "customcmd2": result.customCmd2 = e.value
       of "customcmd3": result.customCmd3 = e.value
       of "compileunsavedsave":
         result.compileUnsavedSave = isTrue(e.value)
+      of "keyquit": result.keyQuit = StrToKey(e.value)
+      of "keycommentlines": result.keyCommentLines = StrToKey(e.value)
+      of "keydeleteline": result.keyDeleteLine = StrToKey(e.value)
+      of "keyduplicatelines": result.keyDuplicateLines = StrToKey(e.value)
+      of "keynewfile": result.keyNewFile = StrToKey(e.value)
+      of "keyopenfile": result.keyOpenFile = StrToKey(e.value)
+      of "keysavefile": result.keySaveFile = StrToKey(e.value)
+      of "keysavefileas": result.keySaveFileAs = StrToKey(e.value)
+      of "keysaveall": result.keySaveAll = StrToKey(e.value)
+      of "keyclosecurrenttab": result.keyCloseCurrentTab = StrToKey(e.value)
+      of "keyclosealltabs": result.keyCloseAllTabs = StrToKey(e.value)
+      of "keyfind": result.keyFind = StrToKey(e.value)
+      of "keyreplace": result.keyReplace = StrToKey(e.value)
+      of "keyfindnext": result.keyFindNext = StrToKey(e.value)
+      of "keyfindprevious": result.keyFindPrevious = StrToKey(e.value)
+      of "keygotoline": result.keyGoToLine = StrToKey(e.value)
+      of "keygotodef": result.keyGoToDef = StrToKey(e.value)
+      of "keytogglebottompanel": result.keyToggleBottomPanel = StrToKey(e.value)
+      of "keycompilecurrent": result.keyCompileCurrent = StrToKey(e.value)
+      of "keycompileruncurrent": result.keyCompileRunCurrent = StrToKey(e.value)
+      of "keycompileproject": result.keyCompileProject = StrToKey(e.value)
+      of "keycompilerunproject": result.keyCompileRunProject = StrToKey(e.value)
+      of "keystopprocess": result.keyStopProcess = StrToKey(e.value)
+      of "keyruncustomcommand1": result.keyRunCustomCommand1 = StrToKey(e.value)
+      of "keyruncustomcommand2": result.keyRunCustomCommand2 = StrToKey(e.value)
+      of "keyruncustomcommand3": result.keyRunCustomCommand3 = StrToKey(e.value)
+      of "keyruncheck": result.keyRunCheck = StrToKey(e.value)
+            
       of "nimrodpath":
         result.nimrodPath = e.value
       of "wrapmode":
@@ -327,24 +431,23 @@ proc loadGlobal*(input: PStream): TGlobalSettings =
         of "word":
           result.wrapMode = WrapWord
         else:
-          raise newException(ECFGParse, "WrapMode invalid, got: '" & e.value & "'")
+          cfgErrors.add(Terror(kind: TETError, desc: "WrapMode invalid, got: '" & e.value & "'", file: filename, line: "", column: ""))
       of "scrollpastbottom":
         result.scrollPastBottom = isTrue(e.value)
       else:
-        raise newException(ECFGParse, "Key \"" & e.key & "\" is invalid.")
+        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      raise newException(ECFGParse, e.msg)
+      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       nil
   close(pGlobal)
 
-proc load*(lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] = 
+proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] = 
   if existsFile(os.getConfigDir() / "Aporia" / "config.ini"):
-    return loadOld(lastSession)
+    return loadOld(cfgErrors, lastSession)
   else:
-    result.a = loadAuto(lastSession)
+    result.a = loadAuto(cfgErrors, lastSession)
     var globalStream = newFileStream(os.getConfigDir() / "Aporia" / "config.global.ini", fmRead)
-    result.g = loadGlobal(globalStream)
+    result.g = loadGlobal(cfgErrors, globalStream)
     if globalStream != nil:
       globalStream.close()
-

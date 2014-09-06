@@ -7,8 +7,8 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gdk2, glib2, pango, os
-import gtksourceview, utils
+import gtk2, gdk2, glib2, pango, os, tables
+import gtksourceview, utils, ShortcutUtils
 
 {.push callConv:cdecl.}
 
@@ -112,14 +112,51 @@ proc addTextEdit(parent: PVBox, labelText, value: string): PEntry =
   
   var entry = entryNew()
   entry.setEditable(True)
+  entry.setWidthChars(40)
   entry.setText(value)
   entryHBox.packStart(entry, false, false, 20)
   entry.show()
   result = entry
 
 var
+  # General:
+  singleInstanceCheckBox: PCheckButton
+  restoreTabsCheckBox: PCheckButton
+  compileSaveAllCheckBox: PCheckButton
+  showCloseOnAllTabsCheckBox: PCheckButton
+  activateErrorTabOnErrorsCheckBox: PCheckButton
+  # Shortcuts:
+  keyCommentLinesEdit: PEntry
+  keyDeleteLineEdit: PEntry
+  keyDuplicateLinesEdit: PEntry
+  keyQuitEdit: PEntry
+  keyNewFileEdit: PEntry
+  keyOpenFileEdit: PEntry
+  keySaveFileEdit: PEntry
+  keySaveFileAsEdit: PEntry
+  keySaveAllEdit: PEntry
+  keyCloseCurrentTabEdit: PEntry
+  keyCloseAllTabsEdit: PEntry
+  keyFindEdit: PEntry
+  keyReplaceEdit: PEntry
+  keyFindNextEdit: PEntry
+  keyFindPreviousEdit: PEntry
+  keyGoToLineEdit: PEntry
+  keyGoToDefEdit: PEntry
+  keyToggleBottomPanelEdit: PEntry
+  keyCompileCurrentEdit: PEntry
+  keyCompileRunCurrentEdit: PEntry
+  keyCompileProjectEdit: PEntry
+  keyCompileRunProjectEdit: PEntry
+  keyStopProcessEdit: PEntry
+  keyRunCustomCommand1Edit: PEntry
+  keyRunCustomCommand2Edit: PEntry
+  keyRunCustomCommand3Edit: PEntry
+  keyRunCheckEdit: PEntry 
+  
+  # Tools:
   nimrodEdit, custom1Edit, custom2Edit, custom3Edit: PEntry
-
+  
 proc initTools(settingsTabs: PNotebook) =
   var t = vboxNew(false, 5)
   discard settingsTabs.appendPage(t, labelNew("Tools"))
@@ -354,39 +391,200 @@ proc initEditor(settingsTabs: PNotebook) =
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, False, False, 20)
   suggestFeatureCheckBox.show()
 
-  # show close button on all tabs - checkbox
-  var showCloseOnAllTabsHBox = hboxNew(False, 0)
-  editorVBox.packStart(showCloseOnAllTabsHBox, False, False, 0)
-  showCloseOnAllTabsHBox.show()
-  
-  var showCloseOnAllTabsCheckBox = checkButtonNew("Show close button on all tabs")
-  showCloseOnAllTabsCheckBox.setActive(win.globalSettings.showCloseOnAllTabs)
-  discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
-    G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
-  showCloseOnAllTabsHBox.packStart(showCloseOnAllTabsCheckBox, False, False, 20)
-  showCloseOnAllTabsCheckBox.show()
-
 var
   dialog: gtk2.PWindow
-
+  
 proc closeDialog(widget: pWidget, user_data: pgpointer) =
+  # General:
+  win.globalSettings.restoreTabs = restoreTabsCheckBox.getActive()
+  win.globalSettings.singleInstance = singleInstanceCheckBox.getActive()
+  win.globalSettings.compileSaveAll = compileSaveAllCheckBox.getActive()
+  win.globalSettings.activateErrorTabOnErrors = activateErrorTabOnErrorsCheckBox.getActive()
+  
+  # Shortcuts:
+  win.globalSettings.keyQuit = StrToKey($keyQuitEdit.getText())
+  win.globalSettings.keyCommentLines = StrToKey($keyCommentLinesEdit.getText())
+  win.globalSettings.keyDeleteLine = StrToKey($keyDeleteLineEdit.getText())
+  win.globalSettings.keyDuplicateLines = StrToKey($keyDuplicateLinesEdit.getText())
+  win.globalSettings.keyNewFile = StrToKey($keyNewFileEdit.getText())
+  win.globalSettings.keyOpenFile = StrToKey($keyOpenFileEdit.getText())
+  win.globalSettings.keySaveFile = StrToKey($keySaveFileEdit.getText())
+  win.globalSettings.keySaveFileAs = StrToKey($keySaveFileAsEdit.getText())
+  win.globalSettings.keySaveAll = StrToKey($keySaveAllEdit.getText())
+  win.globalSettings.keyCloseCurrentTab = StrToKey($keyCloseCurrentTabEdit.getText())
+  win.globalSettings.keyCloseAllTabs = StrToKey($keyCloseAllTabsEdit.getText())
+  win.globalSettings.keyFind = StrToKey($keyFindEdit.getText())
+  win.globalSettings.keyReplace = StrToKey($keyReplaceEdit.getText())
+  win.globalSettings.keyFindNext = StrToKey($keyFindNextEdit.getText())
+  win.globalSettings.keyFindPrevious = StrToKey($keyFindPreviousEdit.getText())
+  win.globalSettings.keyGoToLine = StrToKey($keyGoToLineEdit.getText())
+  win.globalSettings.keyGoToDef = StrToKey($keyGoToDefEdit.getText())
+  win.globalSettings.keyToggleBottomPanel = StrToKey($keyToggleBottomPanelEdit.getText())
+  win.globalSettings.keyCompileCurrent = StrToKey($keyCompileCurrentEdit.getText())
+  win.globalSettings.keyCompileRunCurrent = StrToKey($keyCompileRunCurrentEdit.getText())
+  win.globalSettings.keyCompileProject = StrToKey($keyCompileProjectEdit.getText())
+  win.globalSettings.keyCompileRunProject = StrToKey($keyCompileRunProjectEdit.getText())
+  win.globalSettings.keyStopProcess = StrToKey($keyStopProcessEdit.getText())
+  win.globalSettings.keyRunCustomCommand1 = StrToKey($keyRunCustomCommand1Edit.getText())
+  win.globalSettings.keyRunCustomCommand2 = StrToKey($keyRunCustomCommand2Edit.getText())
+  win.globalSettings.keyRunCustomCommand3 = StrToKey($keyRunCustomCommand3Edit.getText())
+  win.globalSettings.keyRunCheck = StrToKey($keyRunCheckEdit.getText())
+    
+  # Tools:
   win.globalSettings.nimrodCmd = $nimrodEdit.getText()
   win.globalSettings.customCmd1 = $custom1Edit.getText()
   win.globalSettings.customCmd2 = $custom2Edit.getText()
   win.globalSettings.customCmd3 = $custom3Edit.getText()
-
+  
   gtk2.PObject(dialog).destroy()
+  
+proc addCheckBox(parent: PVBox, labelText: string, value: bool): PCheckButton = 
+  var Box = hboxNew(false, 0)
+  parent.packStart(Box, false, false, 0)
+  Box.show()
+  var CheckBox = checkButtonNew(labelText)
+  CheckBox.setActive(value)
+  Box.packStart(CheckBox, false, false, 20)
+  CheckBox.show()
+  Result = CheckBox
+  
+proc initGeneral(settingsTabs: PNotebook) =
+  var box = vboxNew(false, 5)
+  discard settingsTabs.appendPage(box, labelNew("General"))
+  box.show()
+  
+  singleInstanceCheckBox = addCheckBox(box, "Single instance", win.globalSettings.singleInstance)
+  
+  restoreTabsCheckBox = addCheckBox(box, "Restore tabs on load", win.globalSettings.restoreTabs)
+  
+  compileSaveAllCheckBox = addCheckBox(box, "Save all on compile", win.globalSettings.compileSaveAll)
+  
+  activateErrorTabOnErrorsCheckBox = addCheckBox(box, "Activate Error list tab on errors", win.globalSettings.activateErrorTabOnErrors)
+  
+  showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
+  discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
+    G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
 
+proc removeDuplicateShortcut(entrySender: PEntry, entryToCheck: PEntry) = 
+  if entrySender != entryToCheck and $entrySender.getText() == $entryToCheck.getText():
+    entryToCheck.setText("")
+    
+proc entryKeyRelease(entry: PEntry, EventKey: PEventKey) {.cdecl.} =
+  if EventKey.keyval == KEY_Delete:
+    entry.setText("")
+  elif EventKey.keyval < 65505:
+    entry.setText(KeyToStr(TShortcutKey(keyval: EventKey.keyval, state: EventKey.state)))
+    removeDuplicateShortcut(entry, keyCommentLinesEdit)
+    removeDuplicateShortcut(entry, keyDeleteLineEdit)
+    removeDuplicateShortcut(entry, keyDuplicateLinesEdit)
+    removeDuplicateShortcut(entry, keyQuitEdit)
+    removeDuplicateShortcut(entry, keyNewFileEdit)
+    removeDuplicateShortcut(entry, keyOpenFileEdit)
+    removeDuplicateShortcut(entry, keySaveFileEdit)
+    removeDuplicateShortcut(entry, keySaveFileAsEdit)
+    removeDuplicateShortcut(entry, keySaveAllEdit)
+    removeDuplicateShortcut(entry, keyCloseCurrentTabEdit)
+    removeDuplicateShortcut(entry, keyCloseAllTabsEdit)
+    removeDuplicateShortcut(entry, keyFindEdit)
+    removeDuplicateShortcut(entry, keyReplaceEdit)
+    removeDuplicateShortcut(entry, keyFindNextEdit)
+    removeDuplicateShortcut(entry, keyFindPreviousEdit)
+    removeDuplicateShortcut(entry, keyGoToLineEdit)
+    removeDuplicateShortcut(entry, keyGoToDefEdit)
+    removeDuplicateShortcut(entry, keyToggleBottomPanelEdit)
+    removeDuplicateShortcut(entry, keyCompileCurrentEdit)
+    removeDuplicateShortcut(entry, keyCompileRunCurrentEdit)
+    removeDuplicateShortcut(entry, keyCompileProjectEdit)
+    removeDuplicateShortcut(entry, keyCompileRunProjectEdit)
+    removeDuplicateShortcut(entry, keyStopProcessEdit)
+    removeDuplicateShortcut(entry, keyRunCustomCommand1Edit)
+    removeDuplicateShortcut(entry, keyRunCustomCommand2Edit)
+    removeDuplicateShortcut(entry, keyRunCustomCommand3Edit)
+    removeDuplicateShortcut(entry, keyRunCheckEdit)
+        
+proc addKeyEdit(parent: PVBox, labelText: string, key: TShortcutKey): PEntry = 
+  var HBox = hboxNew(false, 0)
+  parent.packStart(HBox, false, false, 0)
+  HBox.show()
+ 
+  var Label = labelNew(labelText)
+  Label.setWidthChars(27)
+  Label.setAlignment(0, 0.5) 
+  HBox.packStart(Label, false, false, 5)
+  Label.show()
+    
+  var entry = entryNew()
+  entry.setEditable(false)
+  entry.setWidthChars(16)
+  entry.setText(KeyToStr(key))
+  discard entry.signalConnect("key-release-event", SIGNAL_FUNC(entryKeyRelease), nil)
+  HBox.packStart(entry, false, false, 5)
+  entry.show()
+  result = entry
+  
+proc initShortcuts(settingsTabs: PNotebook) =
+  var VBox = vboxNew(false, 5)
+  discard settingsTabs.appendPage(VBox, labelNew("Shortcuts"))
+  VBox.show()
+  
+  var HBox = hboxNew(false, 30)
+  VBox.packStart(HBox, false, false, 5)
+  HBox.show()
+
+  var hint = labelNew("Use the Delete button to clear a shortcut. Changes will be active after restart")
+  hint.setAlignment(0, 0.5) 
+  hint.show()
+  var Box2 = hboxNew(false, 0)
+  VBox.packStart(Box2, false, false, 0)
+  Box2.show()
+  Box2.packStart(hint, false, false, 10)
+    
+  VBox = vboxNew(false, 5)
+  HBox.packStart(VBox, false, false, 5)
+  VBox.show()
+  
+  keyCommentLinesEdit = addKeyEdit(VBox, "Comment lines", win.globalSettings.keyCommentLines)
+  keyDeleteLineEdit = addKeyEdit(VBox, "Delete line", win.globalSettings.keyDeleteLine)
+  keyDuplicateLinesEdit = addKeyEdit(VBox, "Duplicate lines", win.globalSettings.keyDuplicateLines)
+  keyNewFileEdit = addKeyEdit(VBox, "New file", win.globalSettings.keyNewFile)
+  keyOpenFileEdit = addKeyEdit(VBox, "Open file", win.globalSettings.keyOpenFile)
+  keySaveFileEdit = addKeyEdit(VBox, "Save file", win.globalSettings.keySaveFile)
+  keySaveFileAsEdit = addKeyEdit(VBox, "Save file as", win.globalSettings.keySaveFileAs)
+  keySaveAllEdit = addKeyEdit(VBox, "Save all", win.globalSettings.keySaveAll)
+  keyCloseCurrentTabEdit = addKeyEdit(VBox, "Close current tab", win.globalSettings.keyCloseCurrentTab)
+  keyCloseAllTabsEdit = addKeyEdit(VBox, "Close all tabs", win.globalSettings.keyCloseAllTabs)
+  keyFindEdit = addKeyEdit(VBox, "Find", win.globalSettings.keyFind)
+  keyReplaceEdit = addKeyEdit(VBox, "Find and replace", win.globalSettings.keyReplace)
+  keyFindNextEdit = addKeyEdit(VBox, "Find next", win.globalSettings.keyFindNext)
+  keyFindPreviousEdit = addKeyEdit(VBox, "Find previous", win.globalSettings.keyFindPrevious)
+ 
+  VBox = vboxNew(false, 5)
+  HBox.packStart(VBox, false, false, 5)
+  VBox.show()
+
+  keyGoToLineEdit = addKeyEdit(VBox, "Go to line", win.globalSettings.keyGoToLine)
+  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", win.globalSettings.keyGoToDef)   
+  keyQuitEdit = addKeyEdit(VBox, "Quit", win.globalSettings.keyQuit)
+  keyToggleBottomPanelEdit = addKeyEdit(VBox, "Show/hide bottom panel", win.globalSettings.keyToggleBottomPanel)
+  keyCompileCurrentEdit = addKeyEdit(VBox, "Compile current file", win.globalSettings.keyCompileCurrent)
+  keyCompileRunCurrentEdit = addKeyEdit(VBox, "Compile & run current file", win.globalSettings.keyCompileRunCurrent)
+  keyCompileProjectEdit = addKeyEdit(VBox, "Compile project", win.globalSettings.keyCompileProject)
+  keyCompileRunProjectEdit = addKeyEdit(VBox, "Compile & run project", win.globalSettings.keyCompileRunProject)
+  keyStopProcessEdit = addKeyEdit(VBox, "Terminate running process", win.globalSettings.keyStopProcess)
+  keyRunCustomCommand1Edit = addKeyEdit(VBox, "Run custom command 1", win.globalSettings.keyRunCustomCommand1)
+  keyRunCustomCommand2Edit = addKeyEdit(VBox, "Run custom command 2", win.globalSettings.keyRunCustomCommand2)
+  keyRunCustomCommand3Edit = addKeyEdit(VBox, "Run custom command 3", win.globalSettings.keyRunCustomCommand3)
+  keyRunCheckEdit = addKeyEdit(VBox, "Check", win.globalSettings.keyRunCheck)
+          
 proc showSettings*(aWin: var utils.MainWin) =
   win = addr(aWin)  # This has to be a pointer
                     # Because i need the settings to be changed
                     # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
-  dialog.setDefaultSize(330, 400)
-  dialog.setSizeRequest(330, 400)
+  dialog.setDefaultSize(740, 530)
+  dialog.setSizeRequest(740, 530)
   dialog.setTransientFor(win.w)
-  dialog.setResizable(False)
   dialog.setTitle("Settings")
   dialog.setTypeHint(WINDOW_TYPE_HINT_DIALOG)
 
@@ -425,8 +623,10 @@ proc showSettings*(aWin: var utils.MainWin) =
   closeBtn.set_size_request(rq1.width + 10, rq1.height + 4)
   closeBtn.show()
   
+  initGeneral(settingsTabs)
   initEditor(settingsTabs)
   initFontsColors(settingsTabs)
+  initShortcuts(settingsTabs)
   initTools(settingsTabs)
   
   dialog.show()

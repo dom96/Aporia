@@ -8,7 +8,8 @@
 #
 
 # Stdlib imports:
-import glib2, gtk2, gdk2, gtksourceview, dialogs, os, pango, osproc, strutils
+import glib2, gtk2, gtksourceview, dialogs, os, pango, osproc, strutils
+import gdk2 except `delete` # Don't import delete to avoid "ambiguous identifier" error under Windows
 import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
 import tables, algorithm
 # Local imports:
@@ -30,9 +31,6 @@ win.Tabs = @[]
 search.win = addr(win) # TODO: Stop doing this.
 
 var lastSession: seq[string] = @[]
-
-var confParseFail = False # This gets set to true
-                          # When there is an error parsing the config
 
 proc writeHelp() =
   echo(helpText)
@@ -56,27 +54,30 @@ proc parseArgs(): seq[string] =
     of cmdEnd: assert(false) # cannot happen
 
 var loadFiles = parseArgs()
-
+ 
 # Load the settings
-try:
-  let (auto, global) = cfg.load(lastSession)
-  win.autoSettings = auto
-  win.globalSettings = global
-except ECFGParse, EInvalidValue:
-  # TODO: Make the dialog show the exception
-  confParseFail = True
-  win.autoSettings = cfg.defaultAutoSettings()
-  win.globalSettings = cfg.defaultGlobalSettings()
-except EIO:
-  win.autoSettings = cfg.defaultAutoSettings()
-  win.globalSettings = cfg.defaultGlobalSettings()
+var cfgErrors: seq[TError] = @[]
+let (auto, global) = cfg.load(cfgErrors, lastSession)
+win.autoSettings = auto
+win.globalSettings = global
 
+proc ShowConfigErrors*() =
+  if cfgErrors.len > 0:
+    for error in cfgErrors:
+      addError(win, error)
+    dialogs.warning(win.w, "Error parsing config file, see Error List.")  
+    
 proc updateMainTitle(pageNum: int) =
   if win.Tabs.len()-1 >= pageNum:
-    var name = ""
-    if win.Tabs[pageNum].filename == "": name = "Untitled" 
-    else: name = win.Tabs[pageNum].filename.extractFilename
-    win.w.setTitle("Aporia - " & name)
+    var title = ""
+    if win.Tabs[pageNum].filename == "": 
+      title = "Untitled" 
+    else: 
+      title = win.Tabs[pageNum].filename.extractFilename
+    if not win.Tabs[pageNum].saved:
+      title.add("*")
+    title.add(" - Aporia")
+    win.w.setTitle(title)
 
 proc plCheckUpdate(pageNum: int) =
   ## Updates the 'check state' of the syntax highlighting CheckMenuItems,
@@ -161,14 +162,13 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     var config = false
     if path == os.getConfigDir() / "Aporia" / "config.global.ini":
       # If we are overwriting Aporia's config file. Validate it.
-      try:
-        var newSettings = cfg.loadGlobal(newStringStream($text))
-        win.globalSettings = newSettings
-        config = true
-      except:
-        win.statusbar.setTemp("Error parsing config: " & getCurrentExceptionMsg(),
-                              UrgError, 8000)
-        return
+      cfgErrors = @[]
+      var newSettings = cfg.loadGlobal(cfgErrors, newStringStream($text))
+      if cfgErrors.len > 0:
+        ShowConfigErrors()
+        return     
+      win.globalSettings = newSettings
+      config = true
 
     # Handle text before saving
     text = win.Tabs[tabNr].lineEnding.normalize(text)
@@ -194,7 +194,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         else:
           win.statusbar.setTemp("File saved successfully.", UrgSuccess)
     else:
-      error(win.w, "Unable to write to file: " & OSErrorMsg())
+      error(win.w, "Unable to write to file: " & OSErrorMsg(osLastError()))
 
 proc saveTabAs(tab: int, startPath: string): bool =
   ## Returns whether we saved to a different filename.
@@ -370,7 +370,8 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
       # Ctrl + W
       closeTab(win.SourceViewTabs.getCurrentPage())
       return True
-    else: nil
+    else:
+      discard
 
   if event.keyval == KeyEscape:
     # Esc pressed
@@ -473,6 +474,7 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   var ctab = cast[Tab](theTab)
   #assert ((current > 0) and (current < win.tabs.len))
   updateTabUI(cTab)
+  updateMainTitle(win.SourceViewTabs.getCurrentPage())
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -588,7 +590,8 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           win.suggest.hide()
         else:
           # handled in ...KeyRelease
-  else: nil
+  else:
+    discard
 
 proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
                           userData: pgpointer): gboolean =
@@ -953,6 +956,9 @@ proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
     startpath = win.tempStuff.lastSaveDir
   discard saveTabAs(current, startpath)
 
+proc saveAll_Activate(menuItem: PMenuItem, user_data: pointer) =
+  saveAllTabs()
+  
 proc closeCurrentTab_Activate(menuItem: PMenuItem, user_data: pointer) =
   closeTab(win.SourceViewTabs.getCurrentPage())
 
@@ -1020,6 +1026,10 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.replaceLabel.show()
   win.replaceBtn.show()
   win.replaceAllBtn.show()
+
+proc findNext_Activate(menuitem: PMenuItem, user_data: pointer) = findText(true)
+
+proc findPrevious_Activate(menuitem: PMenuItem, user_data: pointer) = findText(false)
   
 proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.goLineBar.bar.show()
@@ -1054,7 +1064,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
       cb.getIterAtLineOffset(addr(endCmntIter), (addr start).getLine(),
                              comlen)
       # Remove comment char(s)
-      gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
+      cb.delete(addr(startCmntIter), addr(endCmntIter))
     else:
       var locNonWSIter: TTextIter
       cb.getIterAtLineOffset(addr(locNonWSIter), (addr start).getLine(),
@@ -1089,12 +1099,12 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
                            firstNonWS.gint)
         cb.getIterAtOffset(addr(endCmntIter), (addr start).getOffset() +
                            gint(firstNonWS+blockStart.len))
-        gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
+        cb.delete(addr(startCmntIter), addr(endCmntIter))
         
         cb.getIterAtMark(addr(startCmntIter), blockEndMark)
         cb.getIterAtOffset(addr(endCmntIter), (addr startCmntIter).getOffset() +
                            gint(blockEnd.len))
-        gtk2.delete(cb, addr(startCmntIter), addr(endCmntIter))
+        cb.delete(addr(startCmntIter), addr(endCmntIter))
       else:
         # Commenting selection
         var locNonWSIter: TTextIter
@@ -1151,7 +1161,23 @@ proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not (addr theEnd).forwardCursorPosition():
     discard (addr start).backwardCursorPosition()
 
-  gtk2.delete(textBuffer, addr(start), addr(theEnd))
+  textBuffer.delete(addr(start), addr(theEnd))
+  
+  textBuffer.endUserAction()
+  
+proc DuplicateLines_Activate(menuitem: PMenuItem, user_data: pointer) =
+  ## Callback for the Duplicate Lines menu point. Duplicates the current/selected line(s)
+  template textBuffer(): expr = win.Tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  var start, theEnd: TTextIter
+
+  textBuffer.beginUserAction()
+  discard textBuffer.getSelectionBounds(addr(start), addr(theEnd))
+  (addr start).setLineOffset(0) # Move to start of line
+  (addr theEnd).moveToEndLine() # Move to end of line
+
+  var text: string = "\n" & $textBuffer.getText(addr(start), addr(theEnd), false)
+  textBuffer.insert(addr(theEnd), text, text.len.gint)
   textBuffer.endUserAction()
 
 proc settings_Activate(menuitem: PMenuItem, user_data: pointer) =
@@ -1212,9 +1238,15 @@ proc saveForCompile(currentTab: int): string =
       saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
       win.Tabs[currentTab].filename = ""
       win.Tabs[currentTab].saved = false
+    
   else:
     saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir)
     result = win.tabs[currentTab].filename
+  # Save all tabs which have a filename
+  if win.globalSettings.compileSaveAll:
+    for i in 0..high(win.tabs): 
+      if win.tabs[i].filename != "":
+        saveTab(i, os.splitFile(win.tabs[i].filename).dir)
 
 proc supportedLang(): bool =
   result = false
@@ -1527,7 +1559,7 @@ proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
 
   win.Tabs[currentTab].buffer.beginUserAction()
   # Remove the text
-  gtk2.delete(win.Tabs[currentTab].buffer, addr(start), addr(theEnd))
+  win.Tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
   # Insert the replacement
   var text = getText(win.replaceEntry)
   win.Tabs[currentTab].buffer.insert(addr(start), text, int32(len(text)))
@@ -1664,8 +1696,8 @@ proc loadLanguageSections():
     v.sort do (x, y: PSourceLanguage) -> int {.closure.}:
       return cmp(toLower($x.getName()), toLower($y.getName()))
   
-  let cmpB = proc (x, y: tuple[key: string, val: seq[PSourceLanguage]]): int {.closure.} =
-    return cmp(x.key, y.key)
+  #let cmpB = proc (x, y: tuple[key: string, val: seq[PSourceLanguage]]): int {.closure.} =
+  #  return cmp(x.key, y.key)
   
   #result.sort cmpB
 
@@ -1682,33 +1714,35 @@ proc initTopMenu(MainBox: PBox) =
   win.FileMenu = menuNew()
   
   # New
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_n, newFile, ControlMask,
+  win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyNewFile.keyval, newFile, win.globalSettings.keyNewFile.state,
                                    StockNew)
   createSeparator(win.FileMenu)
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_o, openFile, ControlMask,
+  win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyOpenFile.keyval, openFile, win.globalSettings.keyOpenFile.state,
                                    StockOpen)
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFile_activate, 
-                                   ControlMask, StockSave)
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_s, saveFileAs_Activate,
-                                   ControlMask or gdk2.ShiftMask, StockSaveAs)
+  win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keySaveFile.keyval, saveFile_activate, 
+                                   win.globalSettings.keySaveFile.state, StockSave)
+  win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keySaveFileAs.keyval, saveFileAs_Activate,
+                                   win.globalSettings.keySaveFileAs.state, StockSaveAs)
 
+  win.FileMenu.createAccelMenuItem(accGroup, "Save All", win.globalSettings.keySaveAll.keyval, saveAll_Activate,
+                                   win.globalSettings.keySaveAll.state, "")
+                                   
   createSeparator(win.FileMenu)
   
   createSeparator(win.FileMenu)
   
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_w, closeCurrentTab_Activate,
-                                   ControlMask, StockClose)
-  win.FileMenu.createAccelMenuItem(accGroup, "Close All", KEY_w, closeAllTabs_Activate,
-                                   ControlMask or gdk2.ShiftMask, "")
+  win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyCloseCurrentTab.keyval, closeCurrentTab_Activate,
+                                   win.globalSettings.keyCloseCurrentTab.state, StockClose)
+  win.FileMenu.createAccelMenuItem(accGroup, "Close All", win.globalSettings.keyCloseAllTabs.keyval, closeAllTabs_Activate,
+                                   win.globalSettings.keyCloseAllTabs.state, "")
   
   createSeparator(win.FileMenu)
   let quitAporia = 
     proc (menuItem: PMenuItem, user_data: pointer) =
       if not deleteEvent(menuItem, nil, nil):
         aporia.Exit()
-  win.FileMenu.createAccelMenuItem(accGroup, "", KEY_q, quitAporia,
-                                   ControlMask,
-                                   StockQuit)
+  win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyQuit.keyval, 
+    quitAporia, win.globalSettings.keyQuit.state,  StockQuit)
   
   var FileMenuItem = menuItemNewWithMnemonic("_File")
   discard signalConnect(FileMenuItem, "activate",
@@ -1725,10 +1759,12 @@ proc initTopMenu(MainBox: PBox) =
   EditMenu.createImageMenuItem(STOCK_UNDO, aporia.undo)
   EditMenu.createImageMenuItem(STOCK_Redo, aporia.redo)
   createSeparator(EditMenu)
-  EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment line(s)", KEY_slash, 
-      CommentLines_Activate, ControlMask, "")
-  EditMenu.createAccelMenuItem(accGroup, "Delete Line", KEY_D,
-      DeleteLine_Activate, ControlMask, "")
+  EditMenu.createAccelMenuItem(accGroup, "Comment/Uncomment Line(s)", win.globalSettings.keyCommentLines.keyval, 
+      CommentLines_Activate, win.globalSettings.keyCommentLines.state, "")
+  EditMenu.createAccelMenuItem(accGroup, "Delete Line", win.globalSettings.keyDeleteLine.keyval,
+      DeleteLine_Activate, win.globalSettings.keyDeleteLine.state, "")
+  EditMenu.createAccelMenuItem(accGroup, "Duplicate Line(s)", win.globalSettings.keyDuplicateLines.keyval,
+      DuplicateLines_Activate, win.globalSettings.keyDuplicateLines.state, "")
   createSeparator(EditMenu)
   
   EditMenu.createMenuItem("Raw Preferences",
@@ -1750,15 +1786,20 @@ proc initTopMenu(MainBox: PBox) =
   # Search menu
   var SearchMenu = menuNew()
   # Find/Find & Replace
-  SearchMenu.createAccelMenuItem(accGroup, "", KEY_f, aporia.find_Activate,
-      ControlMask, StockFind)
-  SearchMenu.createAccelMenuItem(accGroup, "", KEY_h, aporia.replace_Activate,
-      ControlMask, StockFindAndReplace)
+  SearchMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyFind.keyval, aporia.find_Activate,
+      win.globalSettings.keyFind.state, StockFind)
+  SearchMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyReplace.keyval, aporia.replace_Activate,
+      win.globalSettings.keyReplace.state, StockFindAndReplace)
+  SearchMenu.createAccelMenuItem(accGroup, "Next", win.globalSettings.keyFindNext.keyval, aporia.findNext_Activate,
+      0, "")      
+  SearchMenu.createAccelMenuItem(accGroup, "Previous", win.globalSettings.keyFindPrevious.keyval, aporia.findPrevious_Activate,
+      0, "")       
+      
   createSeparator(SearchMenu)
-  SearchMenu.createAccelMenuItem(accGroup, "Go to line...", KEY_g, 
-      GoLine_Activate, ControlMask, "")
-  SearchMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", Key_r,
-      goToDef_Activate, ControlMask or gdk2.ShiftMask)
+  SearchMenu.createAccelMenuItem(accGroup, "Go to line...", win.globalSettings.keyGoToLine.keyval, 
+      GoLine_Activate, win.globalSettings.keyGoToLine.state, "")
+  SearchMenu.createAccelMenuItem(accGroup, "Go to definition under cursor", win.globalSettings.keyGoToDef.keyval,
+      goToDef_Activate, win.globalSettings.keyGoToDef.state)
   var SearchMenuItem = menuItemNewWithMnemonic("_Search")
   SearchMenuItem.setSubMenu(SearchMenu)
   SearchMenuItem.show()
@@ -1779,7 +1820,7 @@ proc initTopMenu(MainBox: PBox) =
   PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(
          win.autoSettings.bottomPanelVisible)
   win.viewBottomPanelMenuItem.add_accelerator("activate", accGroup, 
-                  KEY_b, CONTROL_MASK or SHIFT_MASK, ACCEL_VISIBLE) 
+         win.globalSettings.keyToggleBottomPanel.keyval, win.globalSettings.keyToggleBottomPanel.state, ACCEL_VISIBLE) 
   ViewMenu.append(win.viewBottomPanelMenuItem)
   show(win.viewBottomPanelMenuItem)
   discard signal_connect(win.viewBottomPanelMenuItem, "toggled", 
@@ -1830,26 +1871,26 @@ proc initTopMenu(MainBox: PBox) =
   var ToolsMenu = menuNew()
 
   createAccelMenuItem(ToolsMenu, accGroup, "Compile current file", 
-                      KEY_F4, aporia.CompileCurrent_Activate)
+                      win.globalSettings.keyCompileCurrent.keyval, aporia.CompileCurrent_Activate, win.globalSettings.keyCompileCurrent.state)
   createAccelMenuItem(ToolsMenu, accGroup, "Compile & run current file", 
-                      KEY_F5, aporia.CompileRunCurrent_Activate)
+                      win.globalSettings.keyCompileRunCurrent.keyval, aporia.CompileRunCurrent_Activate, win.globalSettings.keyCompileRunCurrent.state)
   createSeparator(ToolsMenu)
   createAccelMenuItem(ToolsMenu, accGroup, "Compile project", 
-                      KEY_F8, aporia.CompileProject_Activate)
+                      win.globalSettings.keyCompileProject.keyval, aporia.CompileProject_Activate, win.globalSettings.keyCompileProject.state)
   createAccelMenuItem(ToolsMenu, accGroup, "Compile & run project", 
-                      KEY_F9, aporia.CompileRunProject_Activate)
+                      win.globalSettings.keyCompileRunProject.keyval, aporia.CompileRunProject_Activate, win.globalSettings.keyCompileRunProject.state)
   createAccelMenuItem(ToolsMenu, accGroup, "Terminate running process", 
-                      KEY_F7, aporia.StopProcess_Activate)
+                      win.globalSettings.keyStopProcess.keyval, aporia.StopProcess_Activate, win.globalSettings.keyStopProcess.state)
   createSeparator(ToolsMenu)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 1", 
-                      KEY_F1, aporia.RunCustomCommand1)
+                      win.globalSettings.keyRunCustomCommand1.keyval, aporia.RunCustomCommand1, win.globalSettings.keyRunCustomCommand1.state)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 2", 
-                      KEY_F2, aporia.RunCustomCommand2)
+                      win.globalSettings.keyRunCustomCommand2.keyval, aporia.RunCustomCommand2, win.globalSettings.keyRunCustomCommand2.state)
   createAccelMenuItem(ToolsMenu, accGroup, "Run custom command 3", 
-                      KEY_F3, aporia.RunCustomCommand3)
+                      win.globalSettings.keyRunCustomCommand3.keyval, aporia.RunCustomCommand3, win.globalSettings.keyRunCustomCommand3.state)
   createSeparator(ToolsMenu)
   createAccelMenuItem(ToolsMenu, accGroup, "Check", 
-                      KEY_F5, aporia.RunCheck, CONTROL_MASK)
+                      win.globalSettings.keyRunCheck.keyval, aporia.RunCheck, win.globalSettings.keyRunCheck.state)
   
   
   var ToolsMenuItem = menuItemNewWithMnemonic("_Tools")
@@ -1883,20 +1924,20 @@ proc initToolBar(MainBox: PBox) =
   win.toolBar = toolbarNew()
   win.toolBar.setStyle(TOOLBAR_ICONS)
   
-  var NewFileItem = win.toolBar.insertStock(STOCK_NEW, "New File",
+  discard win.toolBar.insertStock(STOCK_NEW, "New File",
                       "New File", SIGNAL_FUNC(aporia.newFile), nil, 0)
   win.toolBar.appendSpace()
-  var OpenItem = win.toolBar.insertStock(STOCK_OPEN, "Open",
+  discard win.toolBar.insertStock(STOCK_OPEN, "Open",
                       "Open", SIGNAL_FUNC(aporia.openFile), nil, -1)
-  var SaveItem = win.toolBar.insertStock(STOCK_SAVE, "Save",
+  discard win.toolBar.insertStock(STOCK_SAVE, "Save",
                       "Save", SIGNAL_FUNC(saveFile_Activate), nil, -1)
   win.toolBar.appendSpace()
-  var UndoItem = win.toolBar.insertStock(STOCK_UNDO, "Undo", 
+  discard win.toolBar.insertStock(STOCK_UNDO, "Undo", 
                       "Undo", SIGNAL_FUNC(aporia.undo), nil, -1)
-  var RedoItem = win.toolBar.insertStock(STOCK_REDO, "Redo",
+  discard win.toolBar.insertStock(STOCK_REDO, "Redo",
                       "Redo", SIGNAL_FUNC(aporia.redo), nil, -1)
   win.toolBar.appendSpace()
-  var SearchItem = win.toolBar.insertStock(STOCK_FIND, "Find",
+  discard win.toolBar.insertStock(STOCK_FIND, "Find",
                       "Find", SIGNAL_FUNC(aporia.find_Activate), nil, -1)
   
   MainBox.packStart(win.toolBar, False, False, 0)
@@ -1970,13 +2011,16 @@ proc initSourceViewTabs() =
           SIGNAL_FUNC(onTabsPressed), nil)
   
   win.SourceViewTabs.show()
-  if lastSession.len != 0 or loadFiles.len != 0:
-    var count = 0
+
+  var count = 0
+  
+  if win.globalSettings.restoreTabs and lastSession.len > 0:
     for i in 0 .. lastSession.len-1:
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
         let newTab = addTab("", filename, win.autoSettings.lastSelectedTab == filename)
+        inc(count)
         if newTab == -1: continue # Error adding tab, ``addTab`` will update the status bar with more info        
         var iter: TTextIter
         # TODO: Save last cursor position as line and column offset combo.
@@ -1986,20 +2030,21 @@ proc initSourceViewTabs() =
         win.Tabs[newTab].buffer.placeCursor(addr(iter))
         
         win.forceScrollToInsert(int32(newTab))
-        inc(count)
+        
       else: dialogs.error(win.w, "Could not restore file from session, file not found: " & filename)
+  
+  for f in loadFiles:
+    if existsFile(f):
+      var absPath = f
+      if not isAbsolute(absPath):
+        absPath = getCurrentDir() / f
+      discard addTab("", absPath)
+      inc(count)
+    else:
+      dialogs.error(win.w, "Could not open " & f)
+      quit(QuitFailure)
     
-    for f in loadFiles:
-      if existsFile(f):
-        var absPath = f
-        if not isAbsolute(absPath):
-          absPath = getCurrentDir() / f
-        discard addTab("", absPath)
-      else:
-        dialogs.error(win.w, "Could not open " & f)
-        quit(QuitFailure)
-    
-  else:
+  if count == 0:
     discard addTab("", "", False)
 
 proc initBottomTabs() =
@@ -2047,15 +2092,15 @@ proc initBottomTabs() =
   
   errorsScrollWin.add(win.errorListWidget)
   
-  win.errorListWidget.createTextColumn("Type", 0)
-  win.errorListWidget.createTextColumn("Description", 1, true)
-  win.errorListWidget.createTextColumn("File", 2)
-  win.errorListWidget.createTextColumn("Line", 3)
-  win.errorListWidget.createTextColumn("Column", 4)
+  win.errorListWidget.createTextColumn("File", 0, false, 5)
+  win.errorListWidget.createTextColumn("Line", 1, false, 5)
+  win.errorListWidget.createTextColumn("Column", 2, false, 5)
+  win.errorListWidget.createTextColumn("Type", 3, false, 5)
+  win.errorListWidget.createTextColumn("Description", 4, true, 5)
+  win.errorListWidget.createTextColumn("Color", 5, false, 5, false)
 
-  # There are 3 attributes. The renderer is counted. Last is the tooltip text.
-  var listStore = listStoreNew(5, TypeString, TypeString, TypeString,
-                                  TypeString, TypeString)
+  var listStore = listStoreNew(6, TypeString, TypeString, TypeString,
+                                  TypeString, TypeString, TypeString)
   assert(listStore != nil)
   win.errorListWidget.setModel(liststore)
   win.errorListWidget.show()
@@ -2203,6 +2248,9 @@ proc initGoLineBar(MainBox: PBox) =
   win.goLineBar.bar.packStart(win.goLineBar.entry, False, False, 0)
   discard win.goLineBar.entry.signalConnect("changed", SIGNAL_FUNC(
                                       goLine_changed), nil)
+  # Go to line also when Return key is pressed:                                    
+  discard win.goLineBar.entry.signalConnect("activate", SIGNAL_FUNC(
+                                      goLine_changed), nil)
   win.goLineBar.entry.show()
   
   # Right side ...
@@ -2264,7 +2312,7 @@ proc initSocket() =
                 win.w.error("File not found: " & filepath)
                 win.w.present()
           else:
-            win.w.error("One instance socket error on recvLine operation: " & OSErrorMsg())
+            win.w.error("One instance socket error on recvLine operation: " & OSErrorMsg(osLastError()))
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)
@@ -2333,27 +2381,32 @@ proc initControls() =
   win.statusbar = initCustomStatusBar(mainBox)
   
   MainBox.show()
-  if confParseFail:
-    dialogs.warning(win.w, "Error parsing config file, using default settings.")
-
+  
   # TODO: The fact that this call was above all initializations was because of
   # the VPaned position. I had to move it here because showing the Window
   # before initializing (I presume, could be another widget) the GtkSourceView
   # (maybe the ScrolledView) means that the stupid thing won't scroll on startup.
   # This took me a VERY long time to find.
   win.w.show()
+  
+  # Show config errors after the main window is shown
+  ShowConfigErrors()
+    
+  # Set focus to text input:
+  win.Tabs[win.SourceViewTabs.getCurrentPage()].sourceview.grabFocus()
 
   when not defined(noSingleInstance):
-    try:
-      initSocket()
-    except:
-      echo getStackTrace()
-      dialogs.warning(win.w, 
-        "Unable to bind socket. Aporia will not " &
-        "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
-    discard gTimeoutAddFull(glib2.GPriorityDefault, 500, 
-      proc (dummy: pointer): bool =
-        result = win.IODispatcher.poll(5), nil, nil)
+    if win.globalSettings.singleInstance:
+      try:
+        initSocket()
+      except:
+        echo getStackTrace()
+        dialogs.warning(win.w, 
+          "Unable to bind socket. Aporia will not " &
+          "function properly as a single instance. Error was: " & getCurrentExceptionMsg())
+      discard gTimeoutAddFull(glib2.GPriorityDefault, 500, 
+        proc (dummy: pointer): bool =
+          result = win.IODispatcher.poll(5), nil, nil)
 
 proc checkAlreadyRunning(): bool =
   result = false
@@ -2383,8 +2436,9 @@ if versionReply != nil:
        [$GTKVerReq[0], $GTKVerReq[1], $GTKVerReq[2], $versionReply], QuitFailure)
 
 when not defined(noSingleInstance):
-  if checkAlreadyRunning():
-    quit(QuitSuccess)
+  if win.globalSettings.singleInstance:
+    if checkAlreadyRunning():
+      quit(QuitSuccess)
 
 createProcessThreads(win)
 nimrod_init()

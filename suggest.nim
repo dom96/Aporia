@@ -204,7 +204,8 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
     # Kill the current suggest process:
     try:
       win.tempStuff.execProcess.terminate()
-    except EOS: nil # fail may occur if process exited already
+    except EOS: 
+      discard # fail may occur if process exited already
     win.tempStuff.execProcess.close()
   else:
     # Run now!
@@ -274,7 +275,6 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     # activated to /tmp/aporia/suggest.
     for nimfile in walkFiles(tab.filename.splitFile.dir / "*.nim"):
       if nimfile notin alreadySaved:
-        var f: TFile
         var fileSplit = splitFile(nimfile)
         echod("Copying ", prefixDir / fileSplit.name & fileSplit.ext)
         copyFile(nimfile, prefixDir / fileSplit.name & fileSplit.ext)
@@ -409,7 +409,7 @@ proc rstToPango(r: PRstNode, result: var string) =
   of rnCodeBlock:
     result.add("\n")
     assert r.sons[0].kind == rnDirArg
-    let lang = r.sons[0].sons[0].text
+    #let lang = r.sons[0].sons[0].text
     assert r.sons[1] == nil
     assert r.sons[2].kind == rnLiteralBlock
     # TODO: Highlighting?
