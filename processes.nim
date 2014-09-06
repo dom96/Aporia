@@ -241,6 +241,8 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
             if event.exitCode == QuitSuccess:
               win.outputTextView.addText("> Process terminated with exit code " & 
                                                $event.exitCode & "\n", successTag)
+              # Activate "Output" tab, after successful compilation
+              win.bottomPanelTabs.SetCurrentPage(0)    
             else:
               win.outputTextView.addText("> Process terminated with exit code " & 
                                                $event.exitCode & "\n", errorTag)
@@ -260,10 +262,6 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
             if runAfterSuccess and (not win.tempStuff.compileSuccess):
               return
             echod("Exec Run-after.")
- 
-            # Activate "Output" tab
-            win.bottomPanelTabs.SetCurrentPage(0)    
-             
             win[].execProcAsync(runAfter)
   else:
     echod("idle proc exiting")

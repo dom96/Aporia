@@ -193,6 +193,9 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("customCmd1", settings.customCmd1)
     f.writeKeyVal("customCmd2", settings.customCmd2)
     f.writeKeyVal("customCmd3", settings.customCmd3)
+    
+    f.writeSection("ShortcutKeys")
+    
     f.writeKeyVal("keyQuit", KeyToStr(settings.keyQuit))
     f.writeKeyVal("keyCommentLines", KeyToStr(settings.keyCommentLines))
     f.writeKeyVal("keydeleteline", KeyToStr(settings.keyDeleteLine))
@@ -286,8 +289,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
         for count, file in pairs(e.value.split(';')):
           if file != "":
             if count > 19: 
-              #raise newException(ECFGParse, "Too many recent files")
-              discard # silently discard error and continue reading
+              cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.a.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.a.lastSelectedTab = e.value
@@ -336,8 +338,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
         for count, file in pairs(e.value.split(';')):
           if file != "":
             if count > 19: 
-              #raise newException(ECFGParse, "Too many recent files")
-              discard # silently discard error and continue reading
+              cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.lastSelectedTab = e.value

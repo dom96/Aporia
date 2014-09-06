@@ -531,7 +531,7 @@ proc initShortcuts(settingsTabs: PNotebook) =
   VBox.packStart(HBox, false, false, 5)
   HBox.show()
 
-  var hint = labelNew("Use the Delete button to clear a shortbut. Changes will be active after restart")
+  var hint = labelNew("Use the Delete button to clear a shortcut. Changes will be active after restart")
   hint.setAlignment(0, 0.5) 
   hint.show()
   var Box2 = hboxNew(false, 0)
