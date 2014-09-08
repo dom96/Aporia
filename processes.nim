@@ -155,19 +155,19 @@ proc printProcOutput(win: var MainWin, line: string) =
   case win.tempStuff.currentExec.mode:
   of ExecNimrod:
     if line =~ pegLineError / pegOtherError / pegLineInfo:
-      win.outputTextView.addText(line & "\n", errorTag)
+      win.outputTextView.addText(line & "\l", errorTag)
       paErr()
       win.tempStuff.compileSuccess = false
     elif line =~ pegSuccess:
-      win.outputTextView.addText(line & "\n", successTag)
+      win.outputTextView.addText(line & "\l", successTag)
       win.tempStuff.compileSuccess = true
     elif line =~ pegLineWarning:
-      win.outputTextView.addText(line & "\n", warningTag)
+      win.outputTextView.addText(line & "\l", warningTag)
       paErr()
     else:
-      win.outputTextView.addText(line & "\n", normalTag)
+      win.outputTextView.addText(line & "\l", normalTag)
   of ExecRun, ExecCustom:
-    win.outputTextView.addText(line & "\n", normalTag)
+    win.outputTextView.addText(line & "\l", normalTag)
 
 proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
   if event.line == "" or event.line.startsWith(pegSuccess) or
@@ -184,7 +184,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
     if not win.tempStuff.errorMsgStarted:
       #echod(2.1)
       win.tempStuff.errorMsgStarted = true
-      win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
+      win.tempStuff.compilationErrorBuffer.add(event.line & "\l")
     elif win.tempStuff.compilationErrorBuffer != "":
       #echod(2.2)
       win.printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
@@ -196,7 +196,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
   else:
     #echod(3)
     if win.tempStuff.errorMsgStarted:
-      win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
+      win.tempStuff.compilationErrorBuffer.add(event.line & "\l")
     else:
       win.printProcOutput(event.line)
 
@@ -240,12 +240,12 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
           
             if event.exitCode == QuitSuccess:
               win.outputTextView.addText("> Process terminated with exit code " & 
-                                               $event.exitCode & "\n", successTag)
+                                               $event.exitCode & "\l", successTag)
               # Activate "Output" tab, after successful compilation
               win.bottomPanelTabs.SetCurrentPage(0)    
             else:
               win.outputTextView.addText("> Process terminated with exit code " & 
-                                               $event.exitCode & "\n", errorTag)
+                                               $event.exitCode & "\l", errorTag)
           
           
           let runAfter = win.tempStuff.currentExec.runAfter
@@ -284,7 +284,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   # Output
   if exec.output:
     var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
-    win.outputTextView.addText("> " & exec.command & "\n", normalTag)
+    win.outputTextView.addText("> " & exec.command & "\l", normalTag)
     
   # Add a function which will be called when the UI is idle.
   win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, addr(win))
