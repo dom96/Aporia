@@ -807,9 +807,15 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
                               encoding & " encoding.", UrgError, 5000)
         win.infobar.show()
         return -1
+      # Detect line endings.
+      nTab.lineEnding = detectLineEndings(fileTxt)
+
+      # Normalize to LF to fix extra newline after copying issue on Windows.
+      fileTxt = normalize(leLf, fileTxt)
+
       # Read in the file.
       buffer.set_text(fileTxt, len(fileTxt).int32)
-      nTab.lineEnding = detectLineEndings(fileTxt)
+
     except EIO: raise
     finally:
       # Enable the undo/redo manager.
