@@ -884,7 +884,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
 
   win.tempStuff.recentFileMenuItems = @[]
   
-  const insertOffset = 6
+  const insertOffset = 7
 
   # Recently opened files
   # -- Show first ten in the File menu
