@@ -35,7 +35,7 @@ proc defaultStatus(): TStatus =
   result.urgency = UrgNormal
   result.startTime = epochTime()
 
-proc initCustomStatusBar*(MainBox: PBox): PCustomStatusBar =
+proc initCustomStatusBar*(mainBox: PBox): PCustomStatusBar =
   ## Creates a new custom status bar.
   new(result)
   result.hbox = hboxNew(false, 0)

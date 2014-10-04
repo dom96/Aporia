@@ -119,7 +119,7 @@ type
     viewToolBarMenuItem*: PMenuItem # view menu
     viewBottomPanelMenuItem*: PMenuItem # view menu
 
-    Tabs*: seq[Tab] # Other
+    tabs*: seq[Tab] # Other
     
     tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
     
@@ -175,7 +175,7 @@ type
   
   Temp = object
     lastSaveDir*: string # Last saved directory/last active directory
-    stopSBUpdates*: Bool
+    stopSBUpdates*: bool
     
     currentExec*: PExecOptions # nil if nothing is being executed.
     compileSuccess*: bool
