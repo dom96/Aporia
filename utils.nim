@@ -290,8 +290,8 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   if tabIndex != -1: current = tabIndex
   else: current = win.SourceViewTabs.getCurrentPage()
 
-  var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
+  var mark = win.tabs[current].buffer.getInsert()
+  win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
   
   # TODO: What if I remove the tab, while this is happening, segfault because
   # sourceview is gone? The likelihood of this happening is probably very unlikely
@@ -318,23 +318,23 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
       sv.scrollToMark(insertMark, 0.25, false, 0.0, 0.0)
       return true
   
-  discard gIdleAdd(idleConfirmScroll, win.Tabs[current].sourceview)
+  discard gIdleAdd(idleConfirmScroll, win.tabs[current].sourceview)
 
 proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   var current = -1
   if tabIndex != -1: current = tabIndex
   else: current = win.SourceViewTabs.getCurrentPage()
 
-  var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
+  var mark = win.tabs[current].buffer.getInsert()
+  win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
 
 proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
-  for i in 0..win.Tabs.len()-1:
+  for i in 0..win.tabs.len()-1:
     if absolute:
-      if win.Tabs[i].filename == filename: 
+      if win.tabs[i].filename == filename: 
         return i
     else:
-      if win.Tabs[i].filename.extractFilename == filename:
+      if win.tabs[i].filename.extractFilename == filename:
         return i 
       elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
         return i
@@ -514,9 +514,9 @@ proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   var currentPage = pageNum
   if currentPage == -1:
     currentPage = win.getCurrentTab()
-  var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
+  var isHighlighted = win.tabs[currentPage].buffer.getHighlightSyntax()
   if isHighlighted:
-    var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
+    var SourceLanguage = win.tabs[currentPage].buffer.getLanguage()
     if SourceLanguage == nil: return ""
     return $sourceLanguage.getID()
   else:
@@ -540,7 +540,7 @@ proc getLanguageName*(win: var MainWin, pageNum: int = -1): string =
   var currentPage = pageNum
   if currentPage == -1:
     currentPage = win.getCurrentTab()
-  return getLanguageName(win, win.Tabs[currentPage].buffer)
+  return getLanguageName(win, win.tabs[currentPage].buffer)
 
 proc getCurrentLanguageComment*(win: var MainWin,
           syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
@@ -555,7 +555,7 @@ proc getCurrentLanguageComment*(win: var MainWin,
       syntax.blockEnd = "\"\"\""
       syntax.line = "#"
     else:
-      var SourceLanguage = win.Tabs[pageNum].buffer.getLanguage()
+      var SourceLanguage = win.tabs[pageNum].buffer.getLanguage()
       var bs = sourceLanguage.getMetadata("block-comment-start")
       var be = sourceLanguage.getMetadata("block-comment-end")
       var lc = sourceLanguage.getMetadata("line-comment-start")
