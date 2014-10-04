@@ -23,7 +23,7 @@ var win: ptr utils.MainWin
 proc escapeMarkup(s: string): string =
   result = ""
   var i = 0
-  while True:
+  while true:
     case s[i]
     of '&': result.add("&amp;")
     of '<': result.add("&lt;")
@@ -50,7 +50,7 @@ proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
     if schemes[i] == win.globalSettings.colorSchemeID:
       schemeTree.getSelection.selectIter(addr(iter))
 
-proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
+proc schemesTreeView_onChanged(selection: PGObject, user_data: Pgpointer) =
   var iter: TTreeIter
   var model: PTreeModel
   var value: cstring
@@ -62,7 +62,7 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: pgpointer) =
     var schemeMan = schemeManagerGetDefault()
     win.scheme = schemeMan.getScheme(value)
     # Loop through each tab, and set the scheme
-    for i in items(win.Tabs):
+    for i in items(win.tabs):
       i.buffer.setScheme(win.scheme)
       
 proc fontDialog_OK(widget: PWidget, user_data: PFontSelectionDialog) =
@@ -77,9 +77,9 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
   fontDialog.setTransientFor(win.w)
   discard fontDialog.dialogSetFontName(win.globalSettings.font)
   
-  discard fontDialog.okButton.GSignalConnect("clicked", 
+  discard fontDialog.okButton.gSignalConnect("clicked", 
       G_CALLBACK(fontDialog_OK), fontDialog)
-  discard fontDialog.cancelButton.GSignalConnect("clicked", 
+  discard fontDialog.cancelButton.gSignalConnect("clicked", 
       G_CALLBACK(fontDialog_Canc), fontDialog)
   
   # This will wait until the user responds(clicks the OK or Cancel button)
@@ -89,7 +89,7 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
     win.globalSettings.font = $fontDialog.dialogGetFontName()
     userData.setText(fontDialog.dialogGetFontName())
     # Loop through each tab, and change the font
-    for i in items(win.Tabs):
+    for i in items(win.tabs):
       var font = fontDescriptionFromString(win.globalSettings.font)
       i.sourceView.modifyFont(font)
     
@@ -103,15 +103,15 @@ proc addTextEdit(parent: PVBox, labelText, value: string): PEntry =
   parent.packStart(HBox, false, false, 0)
   HBox.show()
   
-  HBox.packStart(Label, false, false, 5)
-  Label.show()
+  HBox.packStart(label, false, false, 5)
+  label.show()
   
-  var EntryHBox = hboxNew(false, 0)
-  parent.packStart(EntryHBox, false, false, 0)
-  EntryHBox.show()
+  var entryHBox = hboxNew(false, 0)
+  parent.packStart(entryHBox, false, false, 0)
+  entryHBox.show()
   
   var entry = entryNew()
-  entry.setEditable(True)
+  entry.setEditable(true)
   entry.setWidthChars(40)
   entry.setText(value)
   entryHBox.packStart(entry, false, false, 20)
@@ -197,7 +197,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   
   # Change font button
   var fontChangeBtn = buttonNew("Change Font")
-  discard fontChangeBtn.GSignalConnect("clicked", 
+  discard fontChangeBtn.gSignalConnect("clicked", 
     G_CALLBACK(fontChangeBtn_Clicked), fontEntry)
   fontEntryHBox.packEnd(fontChangeBtn, false, false, 10)
   fontChangeBtn.show()
@@ -214,13 +214,13 @@ proc initFontsColors(settingsTabs: PNotebook) =
   
   # Scheme TreeView(Well ListView...)
   var schemeTreeHBox = hboxNew(false, 0)
-  fontsColorsVBox.packStart(schemeTreeHBox, True, True, 10)
+  fontsColorsVBox.packStart(schemeTreeHBox, true, true, 10)
   schemeTreeHBox.show()
   
   var schemeTree = treeviewNew()
   schemeTree.setHeadersVisible(false) # Make the headers invisible
   var selection = schemeTree.getSelection()
-  discard selection.GSignalConnect("changed", 
+  discard selection.gSignalConnect("changed", 
     G_CALLBACK(schemesTreeView_onChanged), nil)
   var schemeTreeScrolled = scrolledWindowNew(nil, nil)
   # Make the scrollbars invisible by default
@@ -229,7 +229,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTreeScrolled.setShadowType(SHADOW_IN)
   
   schemeTreeScrolled.add(schemeTree)
-  schemeTreeHBox.packStart(schemeTreeScrolled, True, True, 20)
+  schemeTreeHBox.packStart(schemeTreeScrolled, true, true, 20)
   schemeTreeScrolled.show()
   
   var schemeModel = listStoreNew(2, TYPE_STRING, TYPE_STRING)
@@ -244,58 +244,58 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTree.addSchemes(schemeModel)
 
 # -- Editor settings
-proc showLineNums_Toggled(button: PToggleButton, user_data: pgpointer) =
+proc showLineNums_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.showLineNumbers = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.Tabs):
+  for i in items(win.tabs):
     i.sourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
     
-proc hlCurrLine_Toggled(button: PToggleButton, user_data: pgpointer) =
+proc hlCurrLine_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.highlightCurrentLine = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.Tabs):
+  for i in items(win.tabs):
     i.sourceView.setHighlightCurrentLine(
         win.globalSettings.highlightCurrentLine)
     
-proc showMargin_Toggled(button: PToggleButton, user_data: pgpointer) =
+proc showMargin_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.rightMargin = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.Tabs):
+  for i in items(win.tabs):
     i.sourceView.setShowRightMargin(win.globalSettings.rightMargin)
 
-proc brackMatch_Toggled(button: PToggleButton, user_data: pgpointer) =
+proc brackMatch_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.highlightMatchingBrackets = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.Tabs):
+  for i in items(win.tabs):
     i.buffer.setHighlightMatchingBrackets(
         win.globalSettings.highlightMatchingBrackets)
 
-proc indentWidth_changed(spinbtn: PSpinButton, user_data: pgpointer) =
+proc indentWidth_changed(spinbtn: PSpinButton, user_data: Pgpointer) =
   win.globalSettings.indentWidth = int32(spinbtn.getValue())
   # Loop through each tab, and change the setting.
-  for i in items(win.Tabs):
+  for i in items(win.tabs):
     i.sourceView.setIndentWidth(win.globalSettings.indentWidth)
   
-proc autoIndent_Toggled(button: PToggleButton, user_data: pgpointer) =
+proc autoIndent_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.autoIndent = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.Tabs):
+  for i in items(win.tabs):
     i.sourceView.setAutoIndent(win.globalSettings.autoIndent)
 
-proc suggestFeature_Toggled(button: PToggleButton, user_data: pgpointer) =
+proc suggestFeature_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.suggestFeature = button.getActive()
 
-proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: pgpointer) =
+proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.showCloseOnAllTabs = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in 0..len(win.Tabs)-1:
+  for i in 0..len(win.tabs)-1:
     if win.globalSettings.showCloseOnAllTabs:
-      win.Tabs[i].closeBtn.show()
+      win.tabs[i].closeBtn.show()
     else:
-      if i == win.SourceViewTabs.getCurrentPage():
-        win.Tabs[i].closeBtn.show()
+      if i == win.sourceViewTabs.getCurrentPage():
+        win.tabs[i].closeBtn.show()
       else:
-        win.Tabs[i].closeBtn.hide()
+        win.tabs[i].closeBtn.hide()
 
 proc initEditor(settingsTabs: PNotebook) =
   var editorLabel = labelNew("Editor")
@@ -314,7 +314,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var indentWidthSpinButton = spinButtonNew(1.0, 24.0, 1.0)
   indentWidthSpinButton.setValue(win.globalSettings.indentWidth.toFloat())
-  discard indentWidthSpinButton.GSignalConnect("value-changed", 
+  discard indentWidthSpinButton.gSignalConnect("value-changed", 
     G_CALLBACK(indentWidth_changed), nil)
   indentWidthHBox.packStart(indentWidthSpinButton, false, false, 0)
   indentWidthSpinButton.show()
@@ -326,7 +326,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var showLineNumsCheckBox = checkButtonNew("Show line numbers")
   showLineNumsCheckBox.setActive(win.globalSettings.showLineNumbers)
-  discard showLineNumsCheckBox.GSignalConnect("toggled", 
+  discard showLineNumsCheckBox.gSignalConnect("toggled", 
     G_CALLBACK(showLineNums_Toggled), nil)
   showLineNumsHBox.packStart(showLineNumsCheckBox, false, false, 20)
   showLineNumsCheckBox.show()
@@ -338,7 +338,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var hlCurrLineCheckBox = checkButtonNew("Highlight selected line")
   hlCurrLineCheckBox.setActive(win.globalSettings.highlightCurrentLine)
-  discard hlCurrLineCheckBox.GSignalConnect("toggled", 
+  discard hlCurrLineCheckBox.gSignalConnect("toggled", 
     G_CALLBACK(hlCurrLine_Toggled), nil)
   hlCurrLineHBox.packStart(hlCurrLineCheckBox, false, false, 20)
   hlCurrLineCheckBox.show()
@@ -350,7 +350,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var showMarginCheckBox = checkButtonNew("Show right margin")
   showMarginCheckBox.setActive(win.globalSettings.rightMargin)
-  discard showMarginCheckBox.GSignalConnect("toggled", 
+  discard showMarginCheckBox.gSignalConnect("toggled", 
     G_CALLBACK(showMargin_Toggled), nil)
   showMarginHBox.packStart(showMarginCheckBox, false, false, 20)
   showMarginCheckBox.show()
@@ -362,7 +362,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var brackMatchCheckBox = checkButtonNew("Enable bracket matching")
   brackMatchCheckBox.setActive(win.globalSettings.highlightMatchingBrackets)
-  discard brackMatchCheckBox.GSignalConnect("toggled", 
+  discard brackMatchCheckBox.gSignalConnect("toggled", 
     G_CALLBACK(brackMatch_Toggled), nil)
   brackMatchHBox.packStart(brackMatchCheckBox, false, false, 20)
   brackMatchCheckBox.show()
@@ -374,7 +374,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var autoIndentCheckBox = checkButtonNew("Enable auto indent")
   autoIndentCheckBox.setActive(win.globalSettings.autoIndent)
-  discard autoIndentCheckBox.GSignalConnect("toggled", 
+  discard autoIndentCheckBox.gSignalConnect("toggled", 
     G_CALLBACK(autoIndent_Toggled), nil)
   autoIndentHBox.packStart(autoIndentCheckBox, false, false, 20)
   autoIndentCheckBox.show()
@@ -386,7 +386,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature")
   suggestFeatureCheckBox.setActive(win.globalSettings.suggestFeature)
-  discard suggestFeatureCheckBox.GSignalConnect("toggled", 
+  discard suggestFeatureCheckBox.gSignalConnect("toggled", 
     G_CALLBACK(suggestFeature_Toggled), nil)
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, false, false, 20)
   suggestFeatureCheckBox.show()
@@ -593,15 +593,15 @@ proc showSettings*(aWin: var utils.MainWin) =
   contentArea.show()
   
   var sHBox = hboxNew(false, 0) # Just used for some padding
-  contentArea.packStart(sHBox, True, True, 10)
+  contentArea.packStart(sHBox, true, true, 10)
   sHBox.show()
   
   var tabsVBox = vboxNew(false, 0) # So that HSeperator is close to the tabs
-  sHBox.packStart(tabsVBox, True, True, 10)
+  sHBox.packStart(tabsVBox, true, true, 10)
   tabsVBox.show()
   
   var settingsTabs = notebookNew()
-  tabsVBox.packStart(settingsTabs, True, True, 0)
+  tabsVBox.packStart(settingsTabs, true, true, 0)
   settingsTabs.show()
   
   var tabsBottomLine = hSeparatorNew()
@@ -614,7 +614,7 @@ proc showSettings*(aWin: var utils.MainWin) =
   bottomHBox.show()
   
   var closeBtn = buttonNewWithMnemonic("_Close")
-  discard closeBtn.GSignalConnect("clicked", 
+  discard closeBtn.gSignalConnect("clicked", 
     G_CALLBACK(closeDialog), nil)
   bottomHBox.packEnd(closeBtn, false, false, 10)
   # Change the size of the close button

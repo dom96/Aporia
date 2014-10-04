@@ -234,7 +234,7 @@ proc save*(win: var MainWin) =
     removeFile(os.getConfigDir() / "Aporia" / "config.ini")
 
 
-proc isTrue(s: string): bool = 
+proc istrue(s: string): bool = 
   result = cmpIgnoreStyle(s, "true") == 0
 
 proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
@@ -246,7 +246,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
   # be set in the configuration file:
   result.a = defaultAutoSettings()
   result.g = defaultGlobalSettings()
-  while True:
+  while true:
     var e = next(p)
     case e.kind
     of cfgEof:
@@ -315,7 +315,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
   open(pAuto, autoStream, filename)
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
-  while True:
+  while true:
     var e = next(pAuto)
     case e.kind
     of CfgEof:

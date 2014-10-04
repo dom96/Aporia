@@ -505,7 +505,7 @@ proc createSuggestDialog*(win: var MainWin) =
   
   win.suggest.dialog.setTransientFor(win.w)
   win.suggest.dialog.setDecorated(false)
-  win.suggest.dialog.setSkipTaskbarHint(True)
+  win.suggest.dialog.setSkipTaskbarHint(true)
   discard win.suggest.dialog.signalConnect("focus-in-event",
       SIGNAL_FUNC(onFocusIn), addr(win))
   
@@ -513,7 +513,7 @@ proc createSuggestDialog*(win: var MainWin) =
   # -- ScrolledWindow
   var scrollWindow = scrolledWindowNew(nil, nil)
   scrollWindow.setPolicy(POLICY_NEVER, POLICY_AUTOMATIC)
-  vbox.packStart(scrollWindow, True, True, 0)
+  vbox.packStart(scrollWindow, true, true, 0)
   scrollWindow.show()
   # -- TreeView
   win.suggest.treeView = treeViewNew()
@@ -553,7 +553,7 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.tooltip = windowNew(gtk2.WINDOW_TOPLEVEL)
   #win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
   win.suggest.tooltip.setTransientFor(win.w)
-  win.suggest.tooltip.setSkipTaskbarHint(True)
+  win.suggest.tooltip.setSkipTaskbarHint(true)
   win.suggest.tooltip.setDecorated(false)
   win.suggest.tooltip.setDefaultSize(250, 450)
   

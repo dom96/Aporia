@@ -201,7 +201,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
       win.printProcOutput(event.line)
 
 proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
-  result = True
+  result = true
   if win.tempStuff.currentExec != nil:
     var events = execThrEventChan.peek()
     
@@ -328,7 +328,7 @@ proc execThreadProc(){.thread.} =
   var p: PProcess
   var o: PStream
   var started = false
-  while True:
+  while true:
     var tasks = execThrTaskChan.peek()
     if tasks == 0 and not started: tasks = 1
     if tasks > 0:

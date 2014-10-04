@@ -140,7 +140,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       var lang = langMan.guessLanguage(path, nil)
       if lang != nil:
         win.setLanguage(tabNr, lang)
-        win.setHighlightSyntax(tabNr, True)
+        win.setHighlightSyntax(tabNr, true)
       else:
         win.setHighlightSyntax(tabNr, false)
       if tabNr == win.getCurrentTab:
@@ -274,11 +274,11 @@ proc askCloseTab(tab: int): bool =
       var resp = win.confirmUnsaved(win.tabs[tab])
       if resp == RESPONSE_ACCEPT:
         saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-        result = True
+        result = true
       elif resp == RESPONSE_CANCEL:
         result = false
       elif resp == RESPONSE_REJECT:
-        result = True
+        result = true
       else:
         result = false
   
@@ -289,16 +289,16 @@ proc askCloseTab(tab: int): bool =
     elif resp == RESPONSE_OK:
       assert(not win.tabs[tab].saved)
       saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-      result = True
+      result = true
     elif resp == RESPONSE_CANCEL:
       result = false
     elif resp == RESPONSE_REJECT:
-      result = True
+      result = true
     else:
       result = false
 
-proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): gboolean =
-  var quit = True
+proc delete_event(widget: PWidget, event: PEvent, user_data: Pgpointer): gboolean =
+  var quit = true
   for i in win.Tabs.low .. win.Tabs.len-1:
     if not win.Tabs[i].saved or win.Tabs[i].isTemporary:
       win.sourceViewTabs.setCurrentPage(i.int32)
@@ -308,7 +308,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): gboolea
   return not quit
 
 proc windowState_Changed(widget: PWidget, event: PEventWindowState, 
-                         user_data: pgpointer) =
+                         user_data: Pgpointer) =
   win.autoSettings.winMaximized = (event.newWindowState and 
                                WINDOW_STATE_MAXIMIZED) != 0
   
@@ -316,7 +316,7 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState,
     win.suggest.hide()
 
 proc window_configureEvent(widget: PWidget, event: PEventConfigure,
-                           ud: pgpointer): gboolean =
+                           ud: Pgpointer): gboolean =
   if win.suggest.shown:
     var current = win.SourceViewTabs.getCurrentPage()
     var tab     = win.Tabs[current]
@@ -355,7 +355,7 @@ proc closeTab(tab: int) =
     win.sourceViewTabs.removePage(int32(tab))
 
 proc window_keyPress(widg: PWidget, event: PEventKey, 
-                          userData: pgpointer): gboolean =
+                          userData: Pgpointer): gboolean =
   result = false
   var modifiers = acceleratorGetDefaultModMask()
 
@@ -428,7 +428,7 @@ proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
       win.statusbar.setDocInfo(ln, ch)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
-                 mark: PTextMark, user_data: pgpointer){.cdecl.} =
+                 mark: PTextMark, user_data: Pgpointer){.cdecl.} =
   var markName = mark.getName()
   if markName == nil:
     return # We don't want anonymous marks.
@@ -461,7 +461,7 @@ proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box
   discard gSignalConnect(closebtn, "clicked", G_Callback(onCloseTab), t_child)
   closebtn.setImage(image)
   gtk2.setRelief(closebtn, RELIEF_NONE)
-  box.packStart(label, True, True, 0)
+  box.packStart(label, true, true, 0)
   box.packEnd(closebtn, false, false, 0)
   box.showAll()
 
@@ -482,7 +482,7 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   updateHighlightAll(buffer)
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
-                          userData: pgpointer): gboolean =
+                          userData: Pgpointer): gboolean =
   result = false
   let ctrlPressed = (event.state and ControlMask) != 0
   let keyNameCString = keyval_name(event.keyval)
@@ -518,13 +518,13 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         of "up":
           moved = prev(selectedPath)
         of "down":
-          moved = True
+          moved = true
           next(selectedPath)
         of "page_up":
-          moved = True
+          moved = true
           prevTimes(5)
         of "page_down":
-          moved = True
+          moved = true
           nextTimes(5)
         
         if moved:
@@ -546,7 +546,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       
       # Return true to stop this event from moving the cursor down in the
       # source view.
-      return True
+      return true
   
   of "left", "right", "home", "end", "delete":
     if win.globalSettings.suggestFeature and win.suggest.shown:
@@ -594,7 +594,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
     discard
 
 proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
-                          userData: pgpointer): gboolean =
+                          userData: Pgpointer): gboolean =
   result = true
   let keyNameCString = keyval_name(event.keyval)
   if keyNameCString == nil: return
@@ -622,7 +622,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
 proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): gboolean =
   win.suggest.hide()
 
-proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8"): int
+proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8"): int
 proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   let currentPage = win.sourceViewTabs.getCurrentPage()
   let tab = win.Tabs[currentPage]
@@ -721,7 +721,7 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   
   # SourceView(gtkSourceView)
   SourceView = sourceViewNew(buffer)
-  SourceView.setInsertSpacesInsteadOfTabs(True)
+  SourceView.setInsertSpacesInsteadOfTabs(true)
   SourceView.setIndentWidth(win.globalSettings.indentWidth)
   SourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
   SourceView.setHighlightCurrentLine(
@@ -752,7 +752,7 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8"): int =
+proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8"): int =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
   ## of the filename.
@@ -877,7 +877,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
 # -- TopMenu & TopBar
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer)
-proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
+proc fileMenuItem_Activate(menu: PMenuItem, user_data: Pgpointer) =
   if win.tempStuff.recentFileMenuItems.len > 0:
     for i in win.tempStuff.recentFileMenuItems:
       PWidget(i).destroy()
@@ -925,7 +925,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       win.FileMenu.insert(moreMenuItem, gint(insertOffset+10))
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 
-proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", True)
+proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", true)
   
 proc openFile(menuItem: PMenuItem, user_data: pointer) =
   var startpath = ""
@@ -943,7 +943,7 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
   if files.len() > 0:
     for f in items(files):
       try:
-        discard addTab("", f, True)
+        discard addTab("", f, true)
       except EIO:
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
   
@@ -975,7 +975,7 @@ proc closeAllTabs_Activate(menuItem: PMenuItem, user_data: pointer) =
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
   try:
-    discard addTab("", filename, True)
+    discard addTab("", filename, true)
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
@@ -1219,7 +1219,7 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
       win.setHighlightSyntax(currentTab, false)
     else:
       var langMan = languageManagerGetDefault()
-      win.setHighlightSyntax(currentTab, True)
+      win.setHighlightSyntax(currentTab, true)
       win.setLanguage(currentTab, langMan.getLanguage(id))
 
     setTabTooltip(win.tabs[currentTab])
@@ -1432,7 +1432,7 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
     discard addTab("", "", true)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
-                 user_data: pgpointer) =
+                 user_data: Pgpointer) =
   # hide close button of last active tab
   if not win.globalSettings.showCloseOnAllTabs and 
       win.tempStuff.lastTab < win.Tabs.len:
@@ -1475,8 +1475,8 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
           if existingTab != -1:
             win.sourceViewTabs.setCurrentPage(int32(existingTab))
           else:
-            discard addTab("", path, True)
-      success = True
+            discard addTab("", path, true)
+      success = true
     else: echod("dragDataReceived: Unknown `info`")
 
   dragFinish(context, success, false, time)
@@ -1573,29 +1573,29 @@ proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
   win.tabs[currentTab].buffer.endUserAction()
   
   # Find next match, this is just a convenience.
-  findText(True)
+  findText(true)
   
-proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
+proc replaceAllBtn_Clicked(button: PButton, user_data: Pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
   var count = replaceAll(find, replace)
   win.statusbar.setTemp("Replaced $1 matches." % $count, UrgNormal, 5000)
   
-proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = 
+proc closeBtn_Clicked(button: PButton, user_data: Pgpointer) = 
   win.findBar.hide()
 
-proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchCaseSens
-proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchCaseInsens
-proc style_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc style_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchStyleInsens
-proc regex_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc regex_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchRegex
-proc peg_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc peg_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchPeg
 
-proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
+proc extraBtn_Clicked(button: PButton, user_data: Pgpointer) =
   var extraMenu = menuNew()
   var group: PGSList
 
@@ -1636,20 +1636,20 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   # Make the correct radio button active
   case win.autoSettings.search
   of SearchCaseSens:
-    PCheckMenuItem(caseSensMenuItem).ItemSetActive(True)
+    PCheckMenuItem(caseSensMenuItem).ItemSetActive(true)
   of SearchCaseInsens:
-    PCheckMenuItem(caseInSensMenuItem).ItemSetActive(True)
+    PCheckMenuItem(caseInSensMenuItem).ItemSetActive(true)
   of SearchStyleInsens:
-    PCheckMenuItem(styleMenuItem).ItemSetActive(True)
+    PCheckMenuItem(styleMenuItem).ItemSetActive(true)
   of SearchRegex:
-    PCheckMenuItem(regexMenuItem).ItemSetActive(True)
+    PCheckMenuItem(regexMenuItem).ItemSetActive(true)
   of SearchPeg:
-    PCheckMenuItem(pegMenuItem).ItemSetActive(True)
+    PCheckMenuItem(pegMenuItem).ItemSetActive(true)
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
 # Go to line bar.
-proc goLine_Changed(ed: PEditable, d: pgpointer) =
+proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var line = win.goLineBar.entry.getText()
   var lineNum: biggestInt = -1
   if parseBiggestInt($line, lineNum) != 0:
@@ -1679,7 +1679,7 @@ proc goLine_Changed(ed: PEditable, d: pgpointer) =
   win.goLineBar.entry.modifyBase(STATE_NORMAL, addr(red))
   win.goLineBar.entry.modifyText(STATE_NORMAL, addr(white))
 
-proc goLineClose_clicked(button: PButton, user_data: pgpointer) = 
+proc goLineClose_clicked(button: PButton, user_data: Pgpointer) = 
   win.goLineBar.bar.hide()
 
 # GUI Initialization
@@ -1999,7 +1999,7 @@ proc initSourceViewTabs() =
   win.SourceViewTabs = notebookNew()
   discard win.SourceViewTabs.signalConnect(
           "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
-  win.SourceViewTabs.set_scrollable(True)
+  win.SourceViewTabs.set_scrollable(true)
   
   # Drag and Drop setup
   # TODO: This should only allow files.
@@ -2089,7 +2089,7 @@ proc initBottomTabs() =
   
   var errorsScrollWin = scrolledWindowNew(nil, nil)
   errorsScrollWin.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
-  errorListTab.packStart(errorsScrollWin, True, True, 0)
+  errorListTab.packStart(errorsScrollWin, true, true, 0)
   errorsScrollWin.show()
   
   win.errorListWidget = treeviewNew()
@@ -2123,9 +2123,9 @@ proc initTAndBP(MainBox: PBox) =
   initBottomTabs()
   
   var TAndBPVPaned = vpanedNew()
-  tandbpVPaned.pack1(win.sourceViewTabs, resize=True, shrink=false)
+  tandbpVPaned.pack1(win.sourceViewTabs, resize=true, shrink=false)
   tandbpVPaned.pack2(win.bottomPanelTabs, resize=false, shrink=false)
-  MainBox.packStart(TAndBPVPaned, True, True, 0)
+  MainBox.packStart(TAndBPVPaned, true, true, 0)
   tandbpVPaned.setPosition(win.autoSettings.VPanedPos)
   TAndBPVPaned.show()
 
@@ -2141,7 +2141,7 @@ proc initFindBar(MainBox: PBox) =
 
   # Add a (find) text entry
   win.findEntry = entryNew()
-  win.findBar.packStart(win.findEntry, True, True, 0)
+  win.findBar.packStart(win.findEntry, true, true, 0)
   # The following event gets fired when Enter is pressed.
   discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(
                                       aporia.nextBtn_Clicked), nil)
@@ -2161,7 +2161,7 @@ proc initFindBar(MainBox: PBox) =
   # Add a (replace) text entry 
   # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceEntry = entryNew()
-  win.findBar.packStart(win.replaceEntry, True, True, 0)
+  win.findBar.packStart(win.replaceEntry, true, true, 0)
   var rq1: TRequisition 
   win.replaceEntry.sizeRequest(addr(rq1))
 
@@ -2354,7 +2354,7 @@ proc initControls() =
   if win.autoSettings.winMaximized: win.w.maximize()
   
   let winDestroy = 
-    proc (widget: PWidget, data: pgpointer) {.cdecl.} =
+    proc (widget: PWidget, data: Pgpointer) {.cdecl.} =
       aporia.Exit()
   
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(winDestroy), nil)

@@ -115,7 +115,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
   if mode == SearchStyleInsens:
     reOptions = reOptions + {reIgnoreCase}
     newPattern = styleInsensitive(newPattern)
-    isRegex = True  
+    isRegex = true  
     
   var matches: array[0..re.MaxSubpatterns, string]
   var match = (-1, 0)
@@ -125,7 +125,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
     # Loop until there is no match to find the last match.
     # Yeah. I know inefficient, but that's the only way I know how to do this.
     var newMatch = (-1, 0)
-    while True:
+    while true:
       newMatch = findBoundsGen($text, newPattern, isRegex, reOptions, match[1])
       if newMatch != (-1, 0): match = newMatch
       else: break
@@ -142,7 +142,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
       buffer.getIterAtOffset(addr(endMatch), getOffset(addr(iter)) +
           int32(match[1]) + 1)
           
-    return (startMatch, endMatch, True)
+    return (startMatch, endMatch, true)
   else:
     if win.autoSettings.wrapAround and not wrappedAround:
       if forward:
@@ -191,7 +191,7 @@ iterator findTerm(buffer: PSourceBuffer, term: string, mode: TSearchEnum): tuple
   else:
     buffer.moveMark(searchPosMark, addr(startIter))
   
-  var found = True
+  var found = true
   var startSearchIter: TTextIter
   var startMatch, endMatch: TTextIter
   var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
@@ -288,7 +288,7 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
-  # True for Next and false for Previous
+  # true for Next and false for Previous
   var pattern = $(getText(win.findEntry)) # Text to search for.
 
   # Get the current tab
@@ -381,13 +381,13 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.getStartIter(addr(iter))
   
   # Disable bracket matching and status bar updates - for a speed up
-  win.tempStuff.stopSBUpdates = True
+  win.tempStuff.stopSBUpdates = true
   buffer.setHighlightMatchingBrackets(false)
   
   buffer.beginUserAction()
   
   # Replace all
-  var found = True
+  var found = true
   while found:
     case win.autoSettings.search
     of SearchCaseInsens, SearchCaseSens:
