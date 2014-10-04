@@ -318,7 +318,7 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState,
 proc window_configureEvent(widget: PWidget, event: PEventConfigure,
                            ud: Pgpointer): gboolean =
   if win.suggest.shown:
-    var current = win.SourceViewTabs.getCurrentPage()
+    var current = win.sourceViewTabs.getCurrentPage()
     var tab     = win.Tabs[current]
     var start: TTextIter
     # Get the iter at the cursor position.
@@ -328,7 +328,7 @@ proc window_configureEvent(widget: PWidget, event: PEventConfigure,
   return false
 
 proc cycleTab(win: var MainWin) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   if current + 1 >= win.tabs.len():
     current = 0
   else:
@@ -368,8 +368,8 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
       return true
     of KeyW:
       # Ctrl + W
-      closeTab(win.SourceViewTabs.getCurrentPage())
-      return True
+      closeTab(win.sourceViewTabs.getCurrentPage())
+      return true
     else:
       discard
 
@@ -377,7 +377,7 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
     # Esc pressed
     win.findBar.hide()
     win.goLineBar.bar.hide()
-    var current = win.SourceViewTabs.getCurrentPage()
+    var current = win.sourceViewTabs.getCurrentPage()
     win.tabs[current].sourceView.grabFocus()
     
 
@@ -498,7 +498,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       let childrenLen = TreeModel.iter_n_children(nil)
       
       # Get current tab(For tooltip)
-      var current = win.SourceViewTabs.getCurrentPage()
+      var current = win.sourceViewTabs.getCurrentPage()
       var tab     = win.Tabs[current]
       
       template nextTimes(t: expr): stmt {.immediate.} =
@@ -575,7 +575,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 
   of "backspace":
     if win.globalSettings.suggestFeature and win.suggest.shown:
-      var current = win.SourceViewTabs.getCurrentPage()
+      var current = win.sourceViewTabs.getCurrentPage()
       var tab     = win.Tabs[current]
       var endIter: TTextIter
       # Get the iter at the cursor position.
@@ -842,9 +842,9 @@ proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8")
   setTabTooltip(win.Tabs[win.tabs.len-1])
   
   # Add the tab to the GtkNotebook
-  let res = win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
+  let res = win.sourceViewTabs.appendPage(scrollWindow, TabLabel)
   assert res != -1
-  win.SourceViewTabs.setTabReorderable(scrollWindow, true)
+  win.sourceViewTabs.setTabReorderable(scrollWindow, true)
 
   PTextView(SourceView).setBuffer(nTab.buffer)
 
@@ -929,7 +929,7 @@ proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", t
   
 proc openFile(menuItem: PMenuItem, user_data: pointer) =
   var startpath = ""
-  var currPage = win.SourceViewTabs.getCurrentPage()
+  var currPage = win.sourceViewTabs.getCurrentPage()
   if currPage <% win.tabs.len: 
     startpath = os.splitFile(win.tabs[currPage].filename).dir
 
@@ -948,7 +948,7 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
   
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   var startpath = os.splitFile(win.tabs[current].filename).dir
   if startpath == "":
     startpath = win.tempStuff.lastSaveDir
@@ -956,7 +956,7 @@ proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
   saveTab(current, startpath)
     
 proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   var startpath = os.splitFile(win.tabs[current].filename).dir
   if startpath == "":
     startpath = win.tempStuff.lastSaveDir
@@ -966,11 +966,11 @@ proc saveAll_Activate(menuItem: PMenuItem, user_data: pointer) =
   saveAllTabs()
   
 proc closeCurrentTab_Activate(menuItem: PMenuItem, user_data: pointer) =
-  closeTab(win.SourceViewTabs.getCurrentPage())
+  closeTab(win.sourceViewTabs.getCurrentPage())
 
 proc closeAllTabs_Activate(menuItem: PMenuItem, user_data: pointer) =
   while win.Tabs.len() > 0:
-    closeTab(win.SourceViewTabs.getCurrentPage())
+    closeTab(win.sourceViewTabs.getCurrentPage())
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
@@ -980,7 +980,7 @@ proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
 proc undo(menuItem: PMenuItem, user_data: pointer) = 
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canUndo():
     win.Tabs[current].buffer.undo()
   else:
@@ -988,7 +988,7 @@ proc undo(menuItem: PMenuItem, user_data: pointer) =
   win.scrollToInsert()
   
 proc redo(menuItem: PMenuItem, user_data: pointer) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   if win.Tabs[current].buffer.canRedo():
     win.Tabs[current].buffer.redo()
   else:
@@ -997,7 +997,7 @@ proc redo(menuItem: PMenuItem, user_data: pointer) =
 
 proc setFindField() =
   # Get the selected text, and set the findEntry to it.
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   var insertIter: TTextIter
   win.Tabs[currentTab].buffer.getIterAtMark(addr(insertIter), 
                                       win.Tabs[currentTab].buffer.getInsert())
@@ -1286,12 +1286,12 @@ proc compileRun(filename: string, shouldRun: bool) =
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not supportedLang(): return
-  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  let filename = saveForCompile(win.sourceViewTabs.getCurrentPage())
   compileRun(filename, false)
   
 proc CompileRunCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not supportedLang(): return
-  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  let filename = saveForCompile(win.sourceViewTabs.getCurrentPage())
   compileRun(filename, true)
 
 proc prepareProjectCompile(): string =
@@ -1336,7 +1336,7 @@ proc RunCustomCommand(cmd: string) =
     return
   
   saveFile_Activate(nil, nil)
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   if win.Tabs[currentTab].filename.len == 0 or cmd.len == 0: return
   
   # Clear the outputTextView
@@ -1358,7 +1358,7 @@ proc RunCustomCommand3(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.globalSettings.customCmd3)
 
 proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
-  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  let filename = saveForCompile(win.sourceViewTabs.getCurrentPage())
   if filename.len == 0: return
   if win.tempStuff.currentExec != nil:
     win.statusbar.setTemp("Process already running!", UrgError, 5000)
@@ -1406,7 +1406,7 @@ proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
     infobar.hide()
   else: assert false
 
-# -- SourceViewTabs - Notebook.
+# -- sourceViewTabs - Notebook.
 
 proc onCloseTab(btn: PButton, child: PWidget) =
   if win.sourceViewTabs.getNPages() > 1:
@@ -1552,7 +1552,7 @@ proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
 proc prevBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(false)
 
 proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
   if not win.Tabs[currentTab].buffer.getSelectionBounds(
         addr(start), addr(theEnd)):
@@ -1654,7 +1654,7 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var lineNum: biggestInt = -1
   if parseBiggestInt($line, lineNum) != 0:
     # Get current tab
-    var current = win.SourceViewTabs.getCurrentPage()
+    var current = win.sourceViewTabs.getCurrentPage()
     template buffer: expr = win.tabs[current].buffer
     if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
       var iter: TTextIter
@@ -1995,25 +1995,25 @@ proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
   result.flags = flags.int32
   result.info = info.int32
 
-proc initSourceViewTabs() =
-  win.SourceViewTabs = notebookNew()
-  discard win.SourceViewTabs.signalConnect(
+proc initsourceViewTabs() =
+  win.sourceViewTabs = notebookNew()
+  discard win.sourceViewTabs.signalConnect(
           "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
-  win.SourceViewTabs.set_scrollable(true)
+  win.sourceViewTabs.set_scrollable(true)
   
   # Drag and Drop setup
   # TODO: This should only allow files.
   var targetList = createTargetEntry("STRING", 0, 0)
   
-  win.SourceViewTabs.dragDestSet(DEST_DEFAULT_ALL, addr(targetList),
+  win.sourceViewTabs.dragDestSet(DEST_DEFAULT_ALL, addr(targetList),
                                  1, ACTION_COPY)
-  discard win.SourceViewTabs.signalConnect(
+  discard win.sourceViewTabs.signalConnect(
           "drag-data-received", SIGNAL_FUNC(onDragDataReceived), nil)
   
   discard win.sourceViewTabs.signalConnect("page-reordered",
           SIGNAL_FUNC(onPageReordered), nil)
   
-  discard win.SourceViewTabs.signalConnect("button-press-event",
+  discard win.sourceViewTabs.signalConnect("button-press-event",
           SIGNAL_FUNC(onTabsPressed), nil)
   
   win.SourceViewTabs.show()

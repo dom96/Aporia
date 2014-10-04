@@ -292,7 +292,7 @@ proc findText*(forward: bool) =
   var pattern = $(getText(win.findEntry)) # Text to search for.
 
   # Get the current tab
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   if win.globalSettings.searchHighlightAll:
     highlightAll(win[], pattern, true, win.autoSettings.search)
   else:
@@ -372,7 +372,7 @@ proc replaceAll*(find, replace: cstring): Int =
   var replaceLen = len(replace)
 
   # Get the current tab
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   assert(currentTab <% win.Tabs.len())
 
   var buffer = win.Tabs[currentTab].buffer

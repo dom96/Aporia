@@ -75,7 +75,7 @@ proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
   win.suggest.dialog.move(x, y)
 
 proc doMoveSuggest*(win: var MainWin) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   var tab     = win.Tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
@@ -131,7 +131,7 @@ proc hide*(suggest: var TSuggestDialog) =
 
 proc getFilter(win: var MainWin): string =
   # Get text before the cursor, up to a dot.
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   var tab     = win.Tabs[current]
   var cursor: TTextIter
   # Get the iter at the cursor position.
@@ -335,7 +335,7 @@ proc asyncGetDef*(win: var MainWin, file: string,
   return ""
 
 proc doSuggest*(win: var MainWin) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   var tab     = win.Tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
@@ -351,7 +351,7 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
     name = name[win.suggest.currentFilter.len() .. -1]
   
   # We have the name of the item. Now insert it into the TextBuffer.
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   win.Tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
   
   # Now hide the suggest dialog and clear the items.
@@ -467,7 +467,7 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
   var TreeModel: PTreeModel
   if selection.getSelected(addr(TreeModel), addr(selectedIter)):
     # Get current tab(For tooltip)
-    var current = win.SourceViewTabs.getCurrentPage()
+    var current = win.sourceViewTabs.getCurrentPage()
     var tab     = win.Tabs[current]
     var selectedPath = TreeModel.getPath(addr(selectedIter))
     var index = selectedPath.getIndices()[]
@@ -477,7 +477,7 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
 
 proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
   win.w.present()
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   win.Tabs[current].sourceView.grabFocus()
   assert(win.Tabs[current].sourceView.isFocus())
 
