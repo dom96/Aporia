@@ -94,7 +94,7 @@ type
     suggest*: TSuggestDialog
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
-    SourceViewTabs*: PNotebook # Tabs which hold the sourceView
+    sourceViewTabs*: PNotebook # Tabs which hold the sourceView
     statusBar*: PCustomStatusBar
     
     infobar*: PInfoBar ## For encoding selection
@@ -288,7 +288,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   ## effective when the sourceview has just been initialised.
   var current = -1
   if tabIndex != -1: current = tabIndex
-  else: current = win.SourceViewTabs.getCurrentPage()
+  else: current = win.sourceViewTabs.getCurrentPage()
 
   var mark = win.tabs[current].buffer.getInsert()
   win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
@@ -323,7 +323,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
 proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   var current = -1
   if tabIndex != -1: current = tabIndex
-  else: current = win.SourceViewTabs.getCurrentPage()
+  else: current = win.sourceViewTabs.getCurrentPage()
 
   var mark = win.tabs[current].buffer.getInsert()
   win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
@@ -358,7 +358,7 @@ proc moveToEndLine*(iter: PTextIter) =
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
                       expand = false, foregroundColorColumn: gint = -1, visible = true) =
   ## Creates a new Text column.
-  var c = TreeViewColumnNew()
+  var c = treeViewColumnNew()
   var renderer = cellRendererTextNew()
   
   c.columnSetTitle(title)
@@ -373,7 +373,7 @@ proc createTextColumn*(tv: PTreeView, title: string, column: int,
   doAssert tv.appendColumn(c) == column+1
 
 # -- Useful ListStore functions
-proc add*(ls: PListStore, val: String, col = 0) =
+proc add*(ls: PListStore, val: string, col = 0) =
   var iter: TTreeIter
   ls.append(addr(iter))
   ls.set(addr(iter), col, val, -1)
@@ -391,7 +391,7 @@ proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup,
     result = menu_item_new(label)
   
   result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
-  ToolsMenu.append(result)
+  toolsMenu.append(result)
   show(result)
   discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
 
@@ -428,7 +428,7 @@ proc forcePresent*(w: PWindow) =
 # -- Others
 
 proc getCurrentTab*(win: var MainWin): int =
-  result = win.sourceViewTabs.GetCurrentPage()
+  result = win.sourceViewTabs.getCurrentPage()
   if result < 0:
     result = 0
 
@@ -516,8 +516,8 @@ proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
     currentPage = win.getCurrentTab()
   var isHighlighted = win.tabs[currentPage].buffer.getHighlightSyntax()
   if isHighlighted:
-    var SourceLanguage = win.tabs[currentPage].buffer.getLanguage()
-    if SourceLanguage == nil: return ""
+    var sourceLanguage = win.tabs[currentPage].buffer.getLanguage()
+    if sourceLanguage == nil: return ""
     return $sourceLanguage.getID()
   else:
     return ""
@@ -529,8 +529,8 @@ proc getLanguageName*(win: var MainWin, buffer: PSourceBuffer): string =
   ## returned.
   var isHighlighted = buffer.getHighlightSyntax()
   if isHighlighted:
-    var SourceLanguage = buffer.getLanguage()
-    if SourceLanguage == nil: return "Plain Text"
+    var sourceLanguage = buffer.getLanguage()
+    if sourceLanguage == nil: return "Plain Text"
     return $sourceLanguage.getName()
   else:
     return "Plain Text"
@@ -555,7 +555,7 @@ proc getCurrentLanguageComment*(win: var MainWin,
       syntax.blockEnd = "\"\"\""
       syntax.line = "#"
     else:
-      var SourceLanguage = win.tabs[pageNum].buffer.getLanguage()
+      var sourceLanguage = win.tabs[pageNum].buffer.getLanguage()
       var bs = sourceLanguage.getMetadata("block-comment-start")
       var be = sourceLanguage.getMetadata("block-comment-end")
       var lc = sourceLanguage.getMetadata("line-comment-start")
@@ -586,7 +586,7 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
     ## Otherwise returns ``settings.nimrodPath``.
     if win.globalSettings.nimrodPath == "":
       dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
-      win.globalSettings.nimrodPath = ChooseFileToOpen(win.w, "")
+      win.globalSettings.nimrodPath = chooseFileToOpen(win.w, "")
     result = win.globalSettings.nimrodPath
   
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
