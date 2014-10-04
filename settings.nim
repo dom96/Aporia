@@ -446,7 +446,7 @@ proc addCheckBox(parent: PVBox, labelText: string, value: bool): PCheckButton =
   CheckBox.setActive(value)
   Box.packStart(CheckBox, false, false, 20)
   CheckBox.show()
-  Result = CheckBox
+  result = CheckBox
   
 proc initGeneral(settingsTabs: PNotebook) =
   var box = vboxNew(false, 5)
