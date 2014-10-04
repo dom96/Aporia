@@ -170,55 +170,55 @@ proc initTools(settingsTabs: PNotebook) =
 
 proc initFontsColors(settingsTabs: PNotebook) =
   var fontsColorsLabel = labelNew("Fonts and colors")
-  var fontsColorsVBox = vboxNew(False, 5)
+  var fontsColorsVBox = vboxNew(false, 5)
   discard settingsTabs.appendPage(fontsColorsVBox, fontsColorsLabel)
   fontsColorsVBox.show()
   
   # 'Font' label
-  var fontLabelHBox = hboxNew(False, 0)
-  fontsColorsVBox.packStart(fontLabelHBox, False, False, 0)
+  var fontLabelHBox = hboxNew(false, 0)
+  fontsColorsVBox.packStart(fontLabelHBox, false, false, 0)
   fontLabelHBox.show()
   
   var fontLabel = labelNew("")
   fontLabel.setMarkup("<b>Font</b>")
-  fontLabelHBox.packStart(fontLabel, False, False, 5)
+  fontLabelHBox.packStart(fontLabel, false, false, 5)
   fontLabel.show()
   
   # Entry (For the font name and size, for example 'monospace 9')
-  var fontEntryHBox = hboxNew(False, 0)
-  fontsColorsVBox.packStart(fontEntryHBox, False, False, 0)
+  var fontEntryHBox = hboxNew(false, 0)
+  fontsColorsVBox.packStart(fontEntryHBox, false, false, 0)
   fontEntryHBox.show()
   
   var fontEntry = entryNew()
-  fontEntry.setEditable(False)
+  fontEntry.setEditable(false)
   fontEntry.setText(win.globalSettings.font)
-  fontEntryHBox.packStart(fontEntry, False, False, 20)
+  fontEntryHBox.packStart(fontEntry, false, false, 20)
   fontEntry.show()
   
   # Change font button
   var fontChangeBtn = buttonNew("Change Font")
   discard fontChangeBtn.GSignalConnect("clicked", 
     G_CALLBACK(fontChangeBtn_Clicked), fontEntry)
-  fontEntryHBox.packEnd(fontChangeBtn, False, False, 10)
+  fontEntryHBox.packEnd(fontChangeBtn, false, false, 10)
   fontChangeBtn.show()
 
   # 'Color Scheme' label
-  var schemeLabelHBox = hboxNew(False, 0)
-  fontsColorsVBox.packStart(schemeLabelHBox, False, False, 0)
+  var schemeLabelHBox = hboxNew(false, 0)
+  fontsColorsVBox.packStart(schemeLabelHBox, false, false, 0)
   schemeLabelHBox.show()
   
   var schemeLabel = labelNew("")
   schemeLabel.setMarkup("<b>Color Scheme</b>")
-  schemeLabelHBox.packStart(schemeLabel, False, False, 5)
+  schemeLabelHBox.packStart(schemeLabel, false, false, 5)
   schemeLabel.show()
   
   # Scheme TreeView(Well ListView...)
-  var schemeTreeHBox = hboxNew(False, 0)
+  var schemeTreeHBox = hboxNew(false, 0)
   fontsColorsVBox.packStart(schemeTreeHBox, True, True, 10)
   schemeTreeHBox.show()
   
   var schemeTree = treeviewNew()
-  schemeTree.setHeadersVisible(False) # Make the headers invisible
+  schemeTree.setHeadersVisible(false) # Make the headers invisible
   var selection = schemeTree.getSelection()
   discard selection.GSignalConnect("changed", 
     G_CALLBACK(schemesTreeView_onChanged), nil)
@@ -299,96 +299,96 @@ proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: pgpointer) =
 
 proc initEditor(settingsTabs: PNotebook) =
   var editorLabel = labelNew("Editor")
-  var editorVBox = vboxNew(False, 5)
+  var editorVBox = vboxNew(false, 5)
   discard settingsTabs.appendPage(editorVBox, editorLabel)
   editorVBox.show()
   
   # indentWidth - SpinButton
-  var indentWidthHBox = hboxNew(False, 0)
-  editorVBox.packStart(indentWidthHBox, False, False, 5)
+  var indentWidthHBox = hboxNew(false, 0)
+  editorVBox.packStart(indentWidthHBox, false, false, 5)
   indentWidthHBox.show()
   
   var indentWidthLabel = labelNew("Indent width: ")
-  indentWidthHBox.packStart(indentWidthLabel, False, False, 20)
+  indentWidthHBox.packStart(indentWidthLabel, false, false, 20)
   indentWidthLabel.show()
   
   var indentWidthSpinButton = spinButtonNew(1.0, 24.0, 1.0)
   indentWidthSpinButton.setValue(win.globalSettings.indentWidth.toFloat())
   discard indentWidthSpinButton.GSignalConnect("value-changed", 
     G_CALLBACK(indentWidth_changed), nil)
-  indentWidthHBox.packStart(indentWidthSpinButton, False, False, 0)
+  indentWidthHBox.packStart(indentWidthSpinButton, false, false, 0)
   indentWidthSpinButton.show()
   
   # showLineNumbers - checkbox
-  var showLineNumsHBox = hboxNew(False, 0)
-  editorVBox.packStart(showLineNumsHBox, False, False, 0)
+  var showLineNumsHBox = hboxNew(false, 0)
+  editorVBox.packStart(showLineNumsHBox, false, false, 0)
   showLineNumsHBox.show()
   
   var showLineNumsCheckBox = checkButtonNew("Show line numbers")
   showLineNumsCheckBox.setActive(win.globalSettings.showLineNumbers)
   discard showLineNumsCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(showLineNums_Toggled), nil)
-  showLineNumsHBox.packStart(showLineNumsCheckBox, False, False, 20)
+  showLineNumsHBox.packStart(showLineNumsCheckBox, false, false, 20)
   showLineNumsCheckBox.show()
   
   # highlightCurrentLine - checkbox
-  var hlCurrLineHBox = hboxNew(False, 0)
-  editorVBox.packStart(hlCurrLineHBox, False, False, 0)
+  var hlCurrLineHBox = hboxNew(false, 0)
+  editorVBox.packStart(hlCurrLineHBox, false, false, 0)
   hlCurrLineHBox.show()
   
   var hlCurrLineCheckBox = checkButtonNew("Highlight selected line")
   hlCurrLineCheckBox.setActive(win.globalSettings.highlightCurrentLine)
   discard hlCurrLineCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(hlCurrLine_Toggled), nil)
-  hlCurrLineHBox.packStart(hlCurrLineCheckBox, False, False, 20)
+  hlCurrLineHBox.packStart(hlCurrLineCheckBox, false, false, 20)
   hlCurrLineCheckBox.show()
   
   # showRightMargin - checkbox
-  var showMarginHBox = hboxNew(False, 0)
-  editorVBox.packStart(showMarginHBox, False, False, 0)
+  var showMarginHBox = hboxNew(false, 0)
+  editorVBox.packStart(showMarginHBox, false, false, 0)
   showMarginHBox.show()
   
   var showMarginCheckBox = checkButtonNew("Show right margin")
   showMarginCheckBox.setActive(win.globalSettings.rightMargin)
   discard showMarginCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(showMargin_Toggled), nil)
-  showMarginHBox.packStart(showMarginCheckBox, False, False, 20)
+  showMarginHBox.packStart(showMarginCheckBox, false, false, 20)
   showMarginCheckBox.show()
   
   # bracketMatching - checkbox
-  var brackMatchHBox = hboxNew(False, 0)
-  editorVBox.packStart(brackMatchHBox, False, False, 0)
+  var brackMatchHBox = hboxNew(false, 0)
+  editorVBox.packStart(brackMatchHBox, false, false, 0)
   brackMatchHBox.show()
   
   var brackMatchCheckBox = checkButtonNew("Enable bracket matching")
   brackMatchCheckBox.setActive(win.globalSettings.highlightMatchingBrackets)
   discard brackMatchCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(brackMatch_Toggled), nil)
-  brackMatchHBox.packStart(brackMatchCheckBox, False, False, 20)
+  brackMatchHBox.packStart(brackMatchCheckBox, false, false, 20)
   brackMatchCheckBox.show()
   
   # autoIndent - checkbox
-  var autoIndentHBox = hboxNew(False, 0)
-  editorVBox.packStart(autoIndentHBox, False, False, 0)
+  var autoIndentHBox = hboxNew(false, 0)
+  editorVBox.packStart(autoIndentHBox, false, false, 0)
   autoIndentHBox.show()
   
   var autoIndentCheckBox = checkButtonNew("Enable auto indent")
   autoIndentCheckBox.setActive(win.globalSettings.autoIndent)
   discard autoIndentCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(autoIndent_Toggled), nil)
-  autoIndentHBox.packStart(autoIndentCheckBox, False, False, 20)
+  autoIndentHBox.packStart(autoIndentCheckBox, false, false, 20)
   autoIndentCheckBox.show()
 
   # suggestFeature - checkbox
-  var suggestFeatureHBox = hboxNew(False, 0)
-  editorVBox.packStart(suggestFeatureHBox, False, False, 0)
+  var suggestFeatureHBox = hboxNew(false, 0)
+  editorVBox.packStart(suggestFeatureHBox, false, false, 0)
   suggestFeatureHBox.show()
   
   var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature")
   suggestFeatureCheckBox.setActive(win.globalSettings.suggestFeature)
   discard suggestFeatureCheckBox.GSignalConnect("toggled", 
     G_CALLBACK(suggestFeature_Toggled), nil)
-  suggestFeatureHBox.packStart(suggestFeatureCheckBox, False, False, 20)
+  suggestFeatureHBox.packStart(suggestFeatureCheckBox, false, false, 20)
   suggestFeatureCheckBox.show()
 
 var
@@ -588,15 +588,15 @@ proc showSettings*(aWin: var utils.MainWin) =
   dialog.setTitle("Settings")
   dialog.setTypeHint(WINDOW_TYPE_HINT_DIALOG)
 
-  var contentArea = vboxNew(False, 0)
+  var contentArea = vboxNew(false, 0)
   dialog.add(contentArea)
   contentArea.show()
   
-  var sHBox = hboxNew(False, 0) # Just used for some padding
+  var sHBox = hboxNew(false, 0) # Just used for some padding
   contentArea.packStart(sHBox, True, True, 10)
   sHBox.show()
   
-  var tabsVBox = vboxNew(False, 0) # So that HSeperator is close to the tabs
+  var tabsVBox = vboxNew(false, 0) # So that HSeperator is close to the tabs
   sHBox.packStart(tabsVBox, True, True, 10)
   tabsVBox.show()
   
@@ -605,18 +605,18 @@ proc showSettings*(aWin: var utils.MainWin) =
   settingsTabs.show()
   
   var tabsBottomLine = hSeparatorNew()
-  tabsVBox.packStart(tabsBottomLine, False, False, 0)
+  tabsVBox.packStart(tabsBottomLine, false, false, 0)
   tabsBottomLine.show()
   
   # HBox for the close button
-  var bottomHBox = hboxNew(False, 0)
-  contentArea.packStart(bottomHBox, False, False, 5)
+  var bottomHBox = hboxNew(false, 0)
+  contentArea.packStart(bottomHBox, false, false, 5)
   bottomHBox.show()
   
   var closeBtn = buttonNewWithMnemonic("_Close")
   discard closeBtn.GSignalConnect("clicked", 
     G_CALLBACK(closeDialog), nil)
-  bottomHBox.packEnd(closeBtn, False, False, 10)
+  bottomHBox.packEnd(closeBtn, false, false, 10)
   # Change the size of the close button
   var rq1: TRequisition 
   closeBtn.sizeRequest(addr(rq1))

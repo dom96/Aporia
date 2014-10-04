@@ -281,7 +281,7 @@ proc addText*(textView: PTextView, text: string,
     if scroll:
       var endMark = textView.getBuffer().getMark("endMark")
       # Yay! With the use of marks; scrolling always occurs!
-      textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
+      textView.scrollToMark(endMark, 0.0, false, 0.0, 1.0)
 
 proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   ## Uses an idle proc to make sure that the SourceView scrolls. This is quite
@@ -291,7 +291,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   else: current = win.SourceViewTabs.getCurrentPage()
 
   var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
   
   # TODO: What if I remove the tab, while this is happening, segfault because
   # sourceview is gone? The likelihood of this happening is probably very unlikely
@@ -315,7 +315,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
     if insertLoc.width <= 0: insertLoc.width = 1
     let inside = intersect(addr(rect), addr(insertLoc), nil)
     if not inside:
-      sv.scrollToMark(insertMark, 0.25, False, 0.0, 0.0)
+      sv.scrollToMark(insertMark, 0.25, false, 0.0, 0.0)
       return true
   
   discard gIdleAdd(idleConfirmScroll, win.Tabs[current].sourceview)
@@ -326,7 +326,7 @@ proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   else: current = win.SourceViewTabs.getCurrentPage()
 
   var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
 
 proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
   for i in 0..win.Tabs.len()-1:

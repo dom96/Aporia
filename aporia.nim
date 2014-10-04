@@ -142,7 +142,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         win.setLanguage(tabNr, lang)
         win.setHighlightSyntax(tabNr, True)
       else:
-        win.setHighlightSyntax(tabNr, False)
+        win.setHighlightSyntax(tabNr, false)
       if tabNr == win.getCurrentTab:
         plCheckUpdate(tabNr)
   else: 
@@ -157,7 +157,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     var endIter: TTextIter
     buffer.getEndIter(addr(endIter))
     
-    var text = $buffer.getText(addr(startIter), addr(endIter), False)
+    var text = $buffer.getText(addr(startIter), addr(endIter), false)
     
     var config = false
     if path == os.getConfigDir() / "Aporia" / "config.global.ini":
@@ -200,7 +200,7 @@ proc saveTabAs(tab: int, startPath: string): bool =
   ## Returns whether we saved to a different filename.
   var (filename, saved) = (win.Tabs[tab].filename, win.Tabs[tab].saved)
 
-  win.Tabs[tab].saved = False
+  win.Tabs[tab].saved = false
   win.Tabs[tab].filename = ""
   # saveTab will ask the user for a filename if the tab's filename is "".
   saveTab(tab, startpath)
@@ -276,11 +276,11 @@ proc askCloseTab(tab: int): bool =
         saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
         result = True
       elif resp == RESPONSE_CANCEL:
-        result = False
+        result = false
       elif resp == RESPONSE_REJECT:
         result = True
       else:
-        result = False
+        result = false
   
   if win.tabs[tab].isTemporary:
     var resp = win.confirmUnsaved(win.tabs[tab])
@@ -291,11 +291,11 @@ proc askCloseTab(tab: int): bool =
       saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
       result = True
     elif resp == RESPONSE_CANCEL:
-      result = False
+      result = false
     elif resp == RESPONSE_REJECT:
       result = True
     else:
-      result = False
+      result = false
 
 proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): gboolean =
   var quit = True
@@ -304,7 +304,7 @@ proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): gboolea
       win.sourceViewTabs.setCurrentPage(i.int32)
       quit = askCloseTab(i)
       if not quit: break
-  # If False is returned the window will close
+  # If false is returned the window will close
   return not quit
 
 proc windowState_Changed(widget: PWidget, event: PEventWindowState, 
@@ -325,7 +325,7 @@ proc window_configureEvent(widget: PWidget, event: PEventConfigure,
     tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
     moveSuggest(win, addr(start), tab)
 
-  return False
+  return false
 
 proc cycleTab(win: var MainWin) =
   var current = win.SourceViewTabs.getCurrentPage()
@@ -446,7 +446,7 @@ proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box
   discard signal_connect(eventBox, "button-release-event",
                     SIGNAL_FUNC(tab_buttonRelease), t_child)
   
-  var box = hboxNew(False, 0)
+  var box = hboxNew(false, 0)
   var label = labelNew(name)
   if filename.startsWith(getTempDir()):
     # If this is a temporary tab, mark it as such.
@@ -462,7 +462,7 @@ proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box
   closebtn.setImage(image)
   gtk2.setRelief(closebtn, RELIEF_NONE)
   box.packStart(label, True, True, 0)
-  box.packEnd(closebtn, False, False, 0)
+  box.packEnd(closebtn, false, false, 0)
   box.showAll()
 
   eventBox.add(box)
@@ -474,7 +474,7 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   var ctab = cast[Tab](theTab)
   #assert ((current > 0) and (current < win.tabs.len))
   updateTabUI(cTab)
-  updateMainTitle(win.SourceViewTabs.getCurrentPage())
+  updateMainTitle(win.sourceViewTabs.getCurrentPage())
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -513,7 +513,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
                                addr(selectedIter)):
         var selectedPath = TreeModel.getPath(addr(selectedIter))
 
-        var moved = False
+        var moved = false
         case key.toLower():
         of "up":
           moved = prev(selectedPath)
@@ -530,7 +530,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         if moved:
           # selectedPath is now the next or prev path.
           selection.selectPath(selectedPath)
-          win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+          win.suggest.treeview.scroll_to_cell(selectedPath, nil, false, 0.5, 0.5)
           var index = selectedPath.getIndices()[]
           if win.suggest.items.len() > index:
             win.showTooltip(tab, win.suggest.items[index], selectedPath)
@@ -538,7 +538,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         # No item selected, select the first one.
         var selectedPath = tree_path_new_first()
         selection.selectPath(selectedPath)
-        win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+        win.suggest.treeview.scroll_to_cell(selectedPath, nil, false, 0.5, 0.5)
         var index = selectedPath.getIndices()[]
         assert(index == 0)
         if win.suggest.items.len() > index:
@@ -779,7 +779,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
     if lang != nil:
       buffer.setLanguage(lang)
     else:
-      buffer.setHighlightSyntax(False)
+      buffer.setHighlightSyntax(false)
 
   # Init tab
   var nTab: Tab; new(nTab)
@@ -1216,7 +1216,7 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
   
     let currentTab = win.getCurrentTab()
     if id == "":
-      win.setHighlightSyntax(currentTab, False)
+      win.setHighlightSyntax(currentTab, false)
     else:
       var langMan = languageManagerGetDefault()
       win.setHighlightSyntax(currentTab, True)
@@ -1463,7 +1463,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
                         x: gint, y: gint, data: PSelectionData, info: guint,
                         time: guint, userData: pointer) =
   echod "dragDataReceived: ", $widget.getName()
-  var success = False
+  var success = false
   if data != nil and data.length >= 0:
     if info == 0:
       var sdata = cast[cstring](data.data)
@@ -1479,7 +1479,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
       success = True
     else: echod("dragDataReceived: Unknown `info`")
 
-  dragFinish(context, success, False, time)
+  dragFinish(context, success, false, time)
 
 proc onPageReordered(notebook: PNotebook, child: PWidget, pageNum: cuint, 
                      userData: pointer) =
@@ -1549,28 +1549,28 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
 # -- FindBar
 
 proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
-proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
+proc prevBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(false)
 
-proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
+proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
   var currentTab = win.SourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
   if not win.Tabs[currentTab].buffer.getSelectionBounds(
         addr(start), addr(theEnd)):
     # If no text is selected, try finding a match.
-    findText(True)
-    if not win.Tabs[currentTab].buffer.getSelectionBounds(
+    findText(true)
+    if not win.tabs[currentTab].buffer.getSelectionBounds(
           addr(start), addr(theEnd)):
       # No match
       return
 
   win.Tabs[currentTab].buffer.beginUserAction()
   # Remove the text
-  win.Tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
+  win.tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
   # Insert the replacement
   var text = getText(win.replaceEntry)
-  win.Tabs[currentTab].buffer.insert(addr(start), text, int32(len(text)))
+  win.tabs[currentTab].buffer.insert(addr(start), text, int32(len(text)))
 
-  win.Tabs[currentTab].buffer.endUserAction()
+  win.tabs[currentTab].buffer.endUserAction()
   
   # Find next match, this is just a convenience.
   findText(True)
@@ -1663,7 +1663,7 @@ proc goLine_Changed(ed: PEditable, d: pgpointer) =
       buffer.moveMarkByName("insert", addr(iter))
       buffer.moveMarkByName("selection_bound", addr(iter))
       discard PTextView(win.Tabs[current].sourceView).
-          scrollToIter(addr(iter), 0.2, False, 0.0, 0.0)
+          scrollToIter(addr(iter), 0.2, false, 0.0, 0.0)
       
       # Reset entry color.
       win.goLineBar.entry.modifyBase(STATE_NORMAL, nil)
@@ -1922,7 +1922,7 @@ proc initTopMenu(MainBox: PBox) =
   HelpMenuItem.show()
   TopMenu.append(HelpMenuItem)
   
-  MainBox.packStart(TopMenu, False, False, 0)
+  MainBox.packStart(TopMenu, false, false, 0)
   TopMenu.show()
 
 proc initToolBar(MainBox: PBox) =
@@ -1946,7 +1946,7 @@ proc initToolBar(MainBox: PBox) =
   discard win.toolBar.insertStock(STOCK_FIND, "Find",
                       "Find", SIGNAL_FUNC(aporia.find_Activate), nil, -1)
   
-  MainBox.packStart(win.toolBar, False, False, 0)
+  MainBox.packStart(win.toolBar, false, false, 0)
   if win.globalSettings.toolBarVisible == true:
     win.toolBar.show()
 
@@ -1962,7 +1962,7 @@ proc initInfoBar(MainBox: PBox) =
                          "</span>")
   messageLabel.setAlignment(0.0, 0.5) # Left align.
   messageLabel.show()
-  vbox.packStart(messageLabel, False, False, 0)
+  vbox.packStart(messageLabel, false, false, 0)
   
   var hbox = hboxNew(false, 0); hbox.show()
   var chooseEncodingLabel = labelNew("Choose encoding: ")
@@ -1981,11 +1981,11 @@ proc initInfoBar(MainBox: PBox) =
   encodingsComboBox.show()
   hbox.packStart(encodingsComboBox, false, false, 0)
   
-  vbox.packStart(hbox, False, False, 10)
+  vbox.packStart(hbox, false, false, 10)
   var contentArea = win.infobar.getContentArea()
   contentArea.add(vbox)
   
-  MainBox.packStart(win.infobar, False, False, 0)
+  MainBox.packStart(win.infobar, false, false, 0)
 
   discard win.infobar.signalConnect("response",
          SIGNAL_FUNC(InfoBarResponse), encodingsComboBox)
@@ -2060,7 +2060,7 @@ proc initBottomTabs() =
   
   # -- output tab
   var tabLabel = labelNew("Output")
-  var outputTab = vboxNew(False, 0)
+  var outputTab = vboxNew(false, 0)
   discard win.bottomPanelTabs.appendPage(outputTab, tabLabel)
   # Compiler tabs, gtktextview
   var outputScrolledWindow = scrolledwindowNew(nil, nil)
@@ -2078,7 +2078,7 @@ proc initBottomTabs() =
   var endIter: TTextIter
   win.outputTextView.getBuffer().getEndIter(addr(endIter))
   discard win.outputTextView.
-          getBuffer().createMark("endMark", addr(endIter), False)
+          getBuffer().createMark("endMark", addr(endIter), false)
   
   outputTab.show()
 
@@ -2123,20 +2123,20 @@ proc initTAndBP(MainBox: PBox) =
   initBottomTabs()
   
   var TAndBPVPaned = vpanedNew()
-  tandbpVPaned.pack1(win.sourceViewTabs, resize=True, shrink=False)
-  tandbpVPaned.pack2(win.bottomPanelTabs, resize=False, shrink=False)
+  tandbpVPaned.pack1(win.sourceViewTabs, resize=True, shrink=false)
+  tandbpVPaned.pack2(win.bottomPanelTabs, resize=false, shrink=false)
   MainBox.packStart(TAndBPVPaned, True, True, 0)
   tandbpVPaned.setPosition(win.autoSettings.VPanedPos)
   TAndBPVPaned.show()
 
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container
-  win.findBar = HBoxNew(False, 0)
+  win.findBar = HBoxNew(false, 0)
   win.findBar.setSpacing(4)
 
   # Add a Label 'Find'
   var findLabel = labelNew("Find:")
-  win.findBar.packStart(findLabel, False, False, 5)
+  win.findBar.packStart(findLabel, false, false, 5)
   findLabel.show()
 
   # Add a (find) text entry
@@ -2156,7 +2156,7 @@ proc initFindBar(MainBox: PBox) =
   # Add a Label 'Replace' 
   # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceLabel = labelNew("Replace:")
-  win.findBar.packStart(win.replaceLabel, False, False, 0)
+  win.findBar.packStart(win.replaceLabel, false, false, 0)
   
   # Add a (replace) text entry 
   # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
@@ -2203,31 +2203,31 @@ proc initFindBar(MainBox: PBox) =
   # Close button - With a close stock image
   var closeBtn = buttonNew()
   var closeImage = imageNewFromStock(STOCK_CLOSE, ICON_SIZE_SMALL_TOOLBAR)
-  var closeBox = hboxNew(False, 0)
+  var closeBox = hboxNew(false, 0)
   closeBtn.add(closeBox)
   closeBox.show()
   closeBox.add(closeImage)
   closeImage.show()
   discard closeBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.closeBtn_Clicked), nil)
-  win.findBar.packEnd(closeBtn, False, False, 2)
+  win.findBar.packEnd(closeBtn, false, false, 2)
   closeBtn.show()
   
   # Extra button - When clicked shows a menu with options like 'Use regex'
   var extraBtn = buttonNew()
   var extraImage = imageNewFromStock(STOCK_PROPERTIES, ICON_SIZE_SMALL_TOOLBAR)
 
-  var extraBox = hboxNew(False, 0)
+  var extraBox = hboxNew(false, 0)
   extraBtn.add(extraBox)
   extraBox.show()
   extraBox.add(extraImage)
   extraImage.show()
   discard extraBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.extraBtn_Clicked), nil)
-  win.findBar.packEnd(extraBtn, False, False, 0)
+  win.findBar.packEnd(extraBtn, false, false, 0)
   extraBtn.show()
   
-  MainBox.packStart(win.findBar, False, False, 0)
+  MainBox.packStart(win.findBar, false, false, 0)
   #win.findBar.show()
 
   proc findBar_Hide(widget: PWidget, dummy: gpointer) {.cdecl.} =
@@ -2241,17 +2241,17 @@ proc initFindBar(MainBox: PBox) =
 
 proc initGoLineBar(MainBox: PBox) =
   # Create a fixed container
-  win.goLineBar.bar = HBoxNew(False, 0)
+  win.goLineBar.bar = HBoxNew(false, 0)
   win.goLineBar.bar.setSpacing(4)
 
   # Add a Label 'Go to line'
   var goLineLabel = labelNew("Go to line:")
-  win.goLineBar.bar.packStart(goLineLabel, False, False, 5)
+  win.goLineBar.bar.packStart(goLineLabel, false, false, 5)
   goLineLabel.show()
 
   # Add a text entry
   win.goLineBar.entry = entryNew()
-  win.goLineBar.bar.packStart(win.goLineBar.entry, False, False, 0)
+  win.goLineBar.bar.packStart(win.goLineBar.entry, false, false, 0)
   discard win.goLineBar.entry.signalConnect("changed", SIGNAL_FUNC(
                                       goLine_changed), nil)
   # Go to line also when Return key is pressed:                                    
@@ -2264,17 +2264,17 @@ proc initGoLineBar(MainBox: PBox) =
   # Close button - With a close stock image
   var closeBtn = buttonNew()
   var closeImage = imageNewFromStock(STOCK_CLOSE, ICON_SIZE_SMALL_TOOLBAR)
-  var closeBox = hboxNew(False, 0)
+  var closeBox = hboxNew(false, 0)
   closeBtn.add(closeBox)
   closeBox.show()
   closeBox.add(closeImage)
   closeImage.show()
   discard closeBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.goLineClose_Clicked), nil)
-  win.goLineBar.bar.packEnd(closeBtn, False, False, 2)
+  win.goLineBar.bar.packEnd(closeBtn, false, false, 2)
   closeBtn.show()
 
-  MainBox.packStart(win.goLineBar.bar, False, False, 0)
+  MainBox.packStart(win.goLineBar.bar, false, false, 0)
 
 proc initTempStuff() =
   win.tempStuff.lastSaveDir = ""
@@ -2374,7 +2374,7 @@ proc initControls() =
   createSuggestDialog(win)
   
   # MainBox (vbox)
-  var MainBox = vboxNew(False, 0)
+  var MainBox = vboxNew(false, 0)
   win.w.add(MainBox)
   
   initTopMenu(MainBox)

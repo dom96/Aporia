@@ -38,7 +38,7 @@ proc defaultStatus(): TStatus =
 proc initCustomStatusBar*(MainBox: PBox): PCustomStatusBar =
   ## Creates a new custom status bar.
   new(result)
-  result.hbox = hboxNew(False, 0)
+  result.hbox = hboxNew(false, 0)
   
   result.statusLabel = labelNew("Ready")
   result.hbox.packStart(result.statusLabel, false, false, 5)

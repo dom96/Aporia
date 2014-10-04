@@ -116,7 +116,7 @@ proc show*(suggest: var TSuggestDialog) =
     var selection = suggest.treeview.getSelection()  
     var selectedPath = tree_path_new_first()
     selection.selectPath(selectedPath)
-    suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+    suggest.treeview.scroll_to_cell(selectedPath, nil, false, 0.5, 0.5)
   
     suggest.shown = true
     suggest.dialog.show()
@@ -259,7 +259,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
           var endIter: TTextIter
           t.buffer.getEndIter(addr(endIter))
           
-          var text = t.buffer.getText(addr(startIter), addr(endIter), False)
+          var text = t.buffer.getText(addr(startIter), addr(endIter), false)
           
           # - Save it.
           f.write(text)
@@ -301,7 +301,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
       var endIter: TTextIter
       tab.buffer.getEndIter(addr(endIter))
       
-      var text = tab.buffer.getText(addr(startIter), addr(endIter), False)
+      var text = tab.buffer.getText(addr(startIter), addr(endIter), false)
       
       # - Save it.
       f.write(text)
@@ -488,7 +488,7 @@ proc createSuggestDialog*(win: var MainWin) =
   #win.suggest.dialog = dialogNew()
   win.suggest.dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
 
-  var vbox = vboxNew(False, 0)
+  var vbox = vboxNew(false, 0)
   win.suggest.dialog.add(vbox)
   vbox.show()
 
@@ -504,7 +504,7 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.dialog.setDefaultSize(250, 150)
   
   win.suggest.dialog.setTransientFor(win.w)
-  win.suggest.dialog.setDecorated(False)
+  win.suggest.dialog.setDecorated(false)
   win.suggest.dialog.setSkipTaskbarHint(True)
   discard win.suggest.dialog.signalConnect("focus-in-event",
       SIGNAL_FUNC(onFocusIn), addr(win))
@@ -517,7 +517,7 @@ proc createSuggestDialog*(win: var MainWin) =
   scrollWindow.show()
   # -- TreeView
   win.suggest.treeView = treeViewNew()
-  win.suggest.treeView.setHeadersVisible(False)
+  win.suggest.treeView.setHeadersVisible(false)
   #win.suggest.treeView.setHasTooltip(true)
   #win.suggest.treeView.setTooltipColumn(3)
   scrollWindow.add(win.suggest.treeView)
@@ -554,7 +554,7 @@ proc createSuggestDialog*(win: var MainWin) =
   #win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
   win.suggest.tooltip.setTransientFor(win.w)
   win.suggest.tooltip.setSkipTaskbarHint(True)
-  win.suggest.tooltip.setDecorated(False)
+  win.suggest.tooltip.setDecorated(false)
   win.suggest.tooltip.setDefaultSize(250, 450)
   
   discard win.suggest.tooltip.signalConnect("focus-in-event",

@@ -153,7 +153,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
         buffer.getEndIter(addr(startMatch))
       return findRePeg(forward, addr(startMatch), buffer, pattern, mode, true)
   
-    return (startMatch, endMatch, False)
+    return (startMatch, endMatch, false)
 
 proc findSimple(forward: bool, startIter: PTextIter,
                 buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
@@ -288,7 +288,7 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
-  # True for Next and False for Previous
+  # True for Next and false for Previous
   var pattern = $(getText(win.findEntry)) # Text to search for.
 
   # Get the current tab
@@ -336,7 +336,7 @@ proc findText*(forward: bool) =
     buffer.moveMarkByName("insert", addr(startMatch))
     buffer.moveMarkByName("selection_bound", addr(endMatch))
     discard PTextView(win.Tabs[currentTab].sourceView).
-        scrollToIter(addr(startMatch), 0.2, False, 0.0, 0.0)
+        scrollToIter(addr(startMatch), 0.2, false, 0.0, 0.0)
     
     # Reset the findEntry color
     win.findEntry.modifyBase(STATE_NORMAL, nil)
@@ -382,7 +382,7 @@ proc replaceAll*(find, replace: cstring): Int =
   
   # Disable bracket matching and status bar updates - for a speed up
   win.tempStuff.stopSBUpdates = True
-  buffer.setHighlightMatchingBrackets(False)
+  buffer.setHighlightMatchingBrackets(false)
   
   buffer.beginUserAction()
   
@@ -410,7 +410,7 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.endUserAction()
   
   # Re-Enable bracket matching and status bar updates
-  win.tempStuff.stopSBUpdates = False
+  win.tempStuff.stopSBUpdates = false
   buffer.setHighlightMatchingBrackets(win.globalSettings.highlightMatchingBrackets)
 
   return count
