@@ -666,7 +666,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   if err != "":
     win.statusbar.setTemp(err, UrgError, 5000)
 
-proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
+proc sourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
   if win.getCurrentLanguage() == "nimrod":
     createSeparator(menu)
     createMenuItem(menu, "Go to definition...", goToDef_Activate)
@@ -736,10 +736,10 @@ proc initSourceView(sourceView: var PSourceView, scrollWindow: var PScrolledWind
                          GCallback(sourceViewPopulatePopup), nil)
 
   var font = font_description_from_string(win.globalSettings.font)
-  SourceView.modifyFont(font)
+  sourceView.modifyFont(font)
   
-  scrollWindow.add(SourceView)
-  SourceView.show()
+  scrollWindow.add(sourceView)
+  sourceView.show()
 
   buffer.setHighlightMatchingBrackets(
       win.globalSettings.highlightMatchingBrackets)
@@ -799,7 +799,7 @@ proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8")
     # Read the file first so that we can affirm its encoding.
     try:
       var fileTxt: string = readFile(filename)
-      if encoding.ToLower() != "utf-8":
+      if encoding.toLower() != "utf-8":
         fileTxt = convert(fileTxt, "UTF-8", encoding)
       if not g_utf8_validate(fileTxt, fileTxt.len().gssize, nil):
         win.tempStuff.pendingFilename = filename
@@ -846,7 +846,7 @@ proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8")
   assert res != -1
   win.sourceViewTabs.setTabReorderable(scrollWindow, true)
 
-  PTextView(SourceView).setBuffer(nTab.buffer)
+  PTextView(sourceView).setBuffer(nTab.buffer)
 
   # UGLY workaround for yet another compiler bug:
   discard gsignalConnect(buffer, "mark-set", 
@@ -863,9 +863,9 @@ proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8")
 
   # Adjustment signals for scrolling past bottom.
   if win.globalSettings.scrollPastBottom:
-    discard SourceView.get_vadjustment().signalConnect("value_changed",
+    discard sourceView.get_vadjustment().signalConnect("value_changed",
         SIGNALFUNC(SourceView_Adjustment_valueChanged), addr nTab.spbInfo)
-    discard SourceView.signalConnect("size-allocate",
+    discard sourceView.signalConnect("size-allocate",
         SIGNALFUNC(SourceView_sizeAllocate), addr nTab.spbInfo)
 
   if setCurrent:
@@ -939,7 +939,7 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
     if isNil(startpath) or startpath.len == 0:
       startpath = os.getHomeDir()
 
-  var files = ChooseFilesToOpen(win.w, startpath)
+  var files = chooseFilesToOpen(win.w, startpath)
   if files.len() > 0:
     for f in items(files):
       try:
@@ -1043,7 +1043,7 @@ proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
 
 proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
   template cb(): expr = win.tabs[currentPage].buffer
-  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
   proc toggleSingle() =
     cb.beginUserAction()
@@ -1126,6 +1126,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     else:
       # TODO: Loop through each line and add `lineComment` 
       # (# in the case of Nimrod) to it.
+      discard
     cb.endUserAction()
     
   if win.tempStuff.commentSyntax.line == "" and 
@@ -1155,7 +1156,7 @@ proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Delete Line menu point. Removes the current line
   ## at the cursor, or all marked lines in case text is selected
   template textBuffer(): expr = win.tabs[currentPage].buffer
-  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
 
   textBuffer.beginUserAction()
@@ -1375,7 +1376,7 @@ proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
   echod("Memory usage: ")
   gMemProfile()
   var stats = "Memory usage: "
-  stats.add gcGetStatistics()
+  stats.add GC_getStatistics()
   win.w.info(stats)
 
 proc about_click(menuitem: PMenuItem, user_data: pointer) =
@@ -1413,12 +1414,12 @@ proc onCloseTab(btn: PButton, child: PWidget) =
     closeTab(win.sourceViewTabs.pageNum(child))
 
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget): gboolean =
+                       userDat: PWidget): gboolean =
   if ev.button == 2: # Middle click.
     closeTab(win.sourceViewTabs.pageNum(userDat))
 
 proc onTabsPressed(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget): gboolean =
+                       userDat: PWidget): gboolean =
   if ev.button == 1 and ev.`type` == BUTTON2_PRESS:
     let galloc = win.tabs[win.tabs.len-1].closeBtn.allocation
     if galloc.x == -1:
@@ -1604,28 +1605,28 @@ proc extraBtn_Clicked(button: PButton, user_data: Pgpointer) =
   discard signal_connect(caseSensMenuItem, "toggled", 
                           SIGNAL_FUNC(caseSens_Changed), nil)
   caseSensMenuItem.show()
-  group = caseSensMenuItem.ItemGetGroup()
+  group = caseSensMenuItem.itemGetGroup()
   
   var caseInSensMenuItem = radio_menu_item_new(group, "Case insensitive")
   extraMenu.append(caseInSensMenuItem)
   discard signal_connect(caseInSensMenuItem, "toggled", 
                           SIGNAL_FUNC(caseInSens_Changed), nil)
   caseInSensMenuItem.show()
-  group = caseInSensMenuItem.ItemGetGroup()
+  group = caseInSensMenuItem.itemGetGroup()
   
   var styleMenuItem = radio_menu_item_new(group, "Style insensitive")
   extraMenu.append(styleMenuItem)
   discard signal_connect(styleMenuItem, "toggled", 
                           SIGNAL_FUNC(style_Changed), nil)
   styleMenuItem.show()
-  group = styleMenuItem.ItemGetGroup()
+  group = styleMenuItem.itemGetGroup()
   
   var regexMenuItem = radio_menu_item_new(group, "Regex")
   extraMenu.append(regexMenuItem)
   discard signal_connect(regexMenuItem, "toggled", 
                           SIGNAL_FUNC(regex_Changed), nil)
   regexMenuItem.show()
-  group = regexMenuItem.ItemGetGroup()
+  group = regexMenuItem.itemGetGroup()
   
   var pegMenuItem = radio_menu_item_new(group, "Pegs")
   extraMenu.append(pegMenuItem)
@@ -1636,22 +1637,22 @@ proc extraBtn_Clicked(button: PButton, user_data: Pgpointer) =
   # Make the correct radio button active
   case win.autoSettings.search
   of SearchCaseSens:
-    PCheckMenuItem(caseSensMenuItem).ItemSetActive(true)
+    PCheckMenuItem(caseSensMenuItem).itemSetActive(true)
   of SearchCaseInsens:
-    PCheckMenuItem(caseInSensMenuItem).ItemSetActive(true)
+    PCheckMenuItem(caseInSensMenuItem).itemSetActive(true)
   of SearchStyleInsens:
-    PCheckMenuItem(styleMenuItem).ItemSetActive(true)
+    PCheckMenuItem(styleMenuItem).itemSetActive(true)
   of SearchRegex:
-    PCheckMenuItem(regexMenuItem).ItemSetActive(true)
+    PCheckMenuItem(regexMenuItem).itemSetActive(true)
   of SearchPeg:
-    PCheckMenuItem(pegMenuItem).ItemSetActive(true)
+    PCheckMenuItem(pegMenuItem).itemSetActive(true)
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
 # Go to line bar.
 proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var line = win.goLineBar.entry.getText()
-  var lineNum: biggestInt = -1
+  var lineNum: BiggestInt = -1
   if parseBiggestInt($line, lineNum) != 0:
     # Get current tab
     var current = win.sourceViewTabs.getCurrentPage()
@@ -1671,9 +1672,9 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
       return # Success
   
   # Make entry red.
-  var red: Gdk2.TColor
+  var red: gdk2.TColor
   discard colorParse("#ff6666", addr(red))
-  var white: Gdk2.TColor
+  var white: gdk2.TColor
   discard colorParse("white", addr(white))
   
   win.goLineBar.entry.modifyBase(STATE_NORMAL, addr(red))
@@ -1914,7 +1915,7 @@ proc initTopMenu(MainBox: PBox) =
   discard signal_connect(MemMenuItem, "activate", 
                          SIGNAL_FUNC(aporia.memUsage_click), nil)
   
-  HelpMenu.createImageMenuItem(StockAbout, aporia.About_click)
+  HelpMenu.createImageMenuItem(StockAbout, aporia.about_click)
   
   var HelpMenuItem = menuItemNewWithMnemonic("_Help")
   
@@ -2116,22 +2117,22 @@ proc initBottomTabs() =
   #  "file.nim", "190", "5")
 
 
-proc initTAndBP(MainBox: PBox) =
+proc initTAndBP(mainBox: PBox) =
   # This init's the HPaned, which splits the sourceViewTabs
   # and the BottomPanelTabs
   initSourceViewTabs()
   initBottomTabs()
   
-  var TAndBPVPaned = vpanedNew()
+  var tAndBPVPaned = vpanedNew()
   tandbpVPaned.pack1(win.sourceViewTabs, resize=true, shrink=false)
   tandbpVPaned.pack2(win.bottomPanelTabs, resize=false, shrink=false)
-  MainBox.packStart(TAndBPVPaned, true, true, 0)
+  mainBox.packStart(tAndBPVPaned, true, true, 0)
   tandbpVPaned.setPosition(win.autoSettings.VPanedPos)
-  TAndBPVPaned.show()
+  tAndBPVPaned.show()
 
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container
-  win.findBar = HBoxNew(false, 0)
+  win.findBar = hBoxNew(false, 0)
   win.findBar.setSpacing(4)
 
   # Add a Label 'Find'
@@ -2241,7 +2242,7 @@ proc initFindBar(MainBox: PBox) =
 
 proc initGoLineBar(MainBox: PBox) =
   # Create a fixed container
-  win.goLineBar.bar = HBoxNew(false, 0)
+  win.goLineBar.bar = hBoxNew(false, 0)
   win.goLineBar.bar.setSpacing(4)
 
   # Add a Label 'Go to line'
@@ -2293,14 +2294,15 @@ proc initTempStuff() =
 {.pop.}
 proc initSocket() =
   win.IODispatcher = newDispatcher()
-  win.oneInstSock = AsyncSocket()
+  win.oneInstSock = asyncSocket()
   win.oneInstSock.handleAccept =
     proc (s: PAsyncSocket) =
       var client: PAsyncSocket
       new(client)
       s.accept(client)
       client.handleRead =
-        proc (c: PAsyncSocket) =
+        #FIXME: threadAnalysis is off set to off to work around anonymous proc not being gc safe
+        proc (c: PAsyncSocket) {.closure, gcsafe.} =
           var line = ""
           if c.readLine(line):
             if line == "":
@@ -2374,19 +2376,19 @@ proc initControls() =
   createSuggestDialog(win)
   
   # MainBox (vbox)
-  var MainBox = vboxNew(false, 0)
-  win.w.add(MainBox)
+  var mainBox = vboxNew(false, 0)
+  win.w.add(mainBox)
   
-  initTopMenu(MainBox)
-  initToolBar(MainBox)
-  initInfoBar(MainBox)
-  initTAndBP(MainBox)
-  initFindBar(MainBox)
-  initGoLineBar(MainBox)
+  initTopMenu(mainBox)
+  initToolBar(mainBox)
+  initInfoBar(mainBox)
+  initTAndBP(mainBox)
+  initFindBar(mainBox)
+  initGoLineBar(mainBox)
   #initStatusBar(MainBox)
   win.statusbar = initCustomStatusBar(mainBox)
   
-  MainBox.show()
+  mainBox.show()
   
   # TODO: The fact that this call was above all initializations was because of
   # the VPaned position. I had to move it here because showing the Window
