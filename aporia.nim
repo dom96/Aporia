@@ -70,7 +70,7 @@ proc ShowConfigErrors*() =
 proc updateMainTitle(pageNum: int) =
   if win.tabs.len()-1 >= pageNum:
     var title = ""
-    if win.Tabs[pageNum].filename == "": 
+    if win.tabs[pageNum].filename == "": 
       title = "Untitled" 
     else: 
       title = win.tabs[pageNum].filename.extractFilename
@@ -194,7 +194,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         else:
           win.statusbar.setTemp("File saved successfully.", UrgSuccess)
     else:
-      error(win.w, "Unable to write to file: " & OSErrorMsg(osLastError()))
+      error(win.w, "Unable to write to file: " & oSErrorMsg(osLastError()))
 
 proc saveTabAs(tab: int, startPath: string): bool =
   ## Returns whether we saved to a different filename.
@@ -590,6 +590,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           win.suggest.hide()
         else:
           # handled in ...KeyRelease
+          discard
   else:
     discard
 
@@ -1174,8 +1175,8 @@ proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   
 proc DuplicateLines_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Duplicate Lines menu point. Duplicates the current/selected line(s)
-  template textBuffer(): expr = win.Tabs[currentPage].buffer
-  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  template textBuffer(): expr = win.tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
 
   textBuffer.beginUserAction()
@@ -1549,7 +1550,7 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
 
 # -- FindBar
 
-proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
+proc nextBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(true)
 proc prevBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(false)
 
 proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
@@ -2017,7 +2018,7 @@ proc initsourceViewTabs() =
   discard win.sourceViewTabs.signalConnect("button-press-event",
           SIGNAL_FUNC(onTabsPressed), nil)
   
-  win.SourceViewTabs.show()
+  win.sourceViewTabs.show()
 
   var count = 0
   
@@ -2052,7 +2053,7 @@ proc initsourceViewTabs() =
       quit(QuitFailure)
     
   if count == 0:
-    discard addTab("", "", False)
+    discard addTab("", "", false)
 
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
@@ -2120,7 +2121,7 @@ proc initBottomTabs() =
 proc initTAndBP(mainBox: PBox) =
   # This init's the HPaned, which splits the sourceViewTabs
   # and the BottomPanelTabs
-  initSourceViewTabs()
+  initsourceViewTabs()
   initBottomTabs()
   
   var tAndBPVPaned = vpanedNew()
@@ -2320,7 +2321,7 @@ proc initSocket() =
                 win.w.error("File not found: " & filepath)
                 win.w.present()
           else:
-            win.w.error("One instance socket error on recvLine operation: " & OSErrorMsg(osLastError()))
+            win.w.error("One instance socket error on recvLine operation: " & oSErrorMsg(osLastError()))
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)
@@ -2401,7 +2402,7 @@ proc initControls() =
   ShowConfigErrors()
     
   # Set focus to text input:
-  win.Tabs[win.SourceViewTabs.getCurrentPage()].sourceview.grabFocus()
+  win.tabs[win.sourceViewTabs.getCurrentPage()].sourceview.grabFocus()
 
   when not defined(noSingleInstance):
     if win.globalSettings.singleInstance:

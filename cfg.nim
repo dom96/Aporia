@@ -358,7 +358,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
   var pGlobal: TCfgParser
   var filename = os.getConfigDir() / "Aporia" / "config.global.ini"
   open(pGlobal, input, filename)
-  while True:
+  while true:
     var e = next(pGlobal)
     case e.kind
     of cfgEof:

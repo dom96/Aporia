@@ -394,7 +394,7 @@ proc initEditor(settingsTabs: PNotebook) =
 var
   dialog: gtk2.PWindow
   
-proc closeDialog(widget: pWidget, user_data: pgpointer) =
+proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   # General:
   win.globalSettings.restoreTabs = restoreTabsCheckBox.getActive()
   win.globalSettings.singleInstance = singleInstanceCheckBox.getActive()
@@ -462,7 +462,7 @@ proc initGeneral(settingsTabs: PNotebook) =
   activateErrorTabOnErrorsCheckBox = addCheckBox(box, "Activate Error list tab on errors", win.globalSettings.activateErrorTabOnErrors)
   
   showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
-  discard showCloseOnAllTabsCheckBox.GSignalConnect("toggled", 
+  discard showCloseOnAllTabsCheckBox.gSignalConnect("toggled", 
     G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
 
 proc removeDuplicateShortcut(entrySender: PEntry, entryToCheck: PEntry) = 

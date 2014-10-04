@@ -39,7 +39,7 @@ proc clearErrors*(win: var MainWin) =
 proc addError*(win: var MainWin, error: TError) =
   # Make the file path a bit shorter, so it's more readable
   var fileShort = error.file
-  var mainDir = win.Tabs[win.SourceViewTabs.getCurrentPage()].filename
+  var mainDir = win.tabs[win.sourceViewTabs.getCurrentPage()].filename
   var i = mainDir.rfind($os.DirSep)
   if i > 0 and error.file.startsWith(mainDir.substr(0, i)):
      fileShort = "..." & fileShort.substr(i) 
@@ -54,12 +54,12 @@ proc addError*(win: var MainWin, error: TError) =
     ls.set(addr(iter), 0, fileShort, 1, error.line, 2, error.column, 3, $error.kind, 4, error.desc, 5, nil, -1)
   
   # Scroll to last error
-  var treepath = win.errorListWidget.GetModel().get_path(addr(iter));
+  var treepath = win.errorListWidget.getModel().get_path(addr(iter));
   win.errorListWidget.scrollToCell(treepath, nil, false, 0, 0)
   
   # Activate "Error list" tab
   if win.globalSettings.activateErrorTabOnErrors:
-    win.bottomPanelTabs.SetCurrentPage(1)
+    win.bottomPanelTabs.setCurrentPage(1)
   
   win.tempStuff.errorList.add(error)
 
@@ -242,7 +242,7 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
               win.outputTextView.addText("> Process terminated with exit code " & 
                                                $event.exitCode & "\l", successTag)
               # Activate "Output" tab, after successful compilation
-              win.bottomPanelTabs.SetCurrentPage(0)    
+              win.bottomPanelTabs.setCurrentPage(0)    
             else:
               win.outputTextView.addText("> Process terminated with exit code " & 
                                                $event.exitCode & "\l", errorTag)
