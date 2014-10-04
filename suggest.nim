@@ -29,10 +29,10 @@ proc escapePango(s: string): string =
     else:
       result.add(i)
 
-proc addSuggestItem*(win: var MainWin, name: string, markup: String,
-                     tooltipText: string, color: String = "#000000") =
+proc addSuggestItem*(win: var MainWin, name: string, markup: string,
+                     tooltipText: string, color: string = "#000000") =
   var iter: TTreeIter
-  var listStore = cast[PListStore](win.suggest.TreeView.getModel())
+  var listStore = cast[PListStore](win.suggest.treeView.getModel())
   listStore.append(addr(iter))
   listStore.set(addr(iter), 0, name, 1, markup, 2, color, 3, tooltipText, -1)
 
@@ -76,7 +76,7 @@ proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
 
 proc doMoveSuggest*(win: var MainWin) =
   var current = win.sourceViewTabs.getCurrentPage()
-  var tab     = win.Tabs[current]
+  var tab     = win.tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
@@ -105,7 +105,7 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
     result = true
 
 proc clear*(suggest: var TSuggestDialog) =
-  var TreeModel = suggest.TreeView.getModel()
+  var TreeModel = suggest.treeView.getModel()
   # TODO: Why do I have to cast it? Why can't I just do PListStore(TreeModel)?
   cast[PListStore](TreeModel).clear()
   suggest.items = @[]
@@ -132,7 +132,7 @@ proc hide*(suggest: var TSuggestDialog) =
 proc getFilter(win: var MainWin): string =
   # Get text before the cursor, up to a dot.
   var current = win.sourceViewTabs.getCurrentPage()
-  var tab     = win.Tabs[current]
+  var tab     = win.tabs[current]
   var cursor: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
@@ -244,7 +244,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     # Save tabs that are in the same directory as the file
     # being suggested to /tmp/aporia/suggest
     var alreadySaved: seq[string] = @[]
-    for t in items(win.Tabs):
+    for t in items(win.tabs):
       if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
         var f: TFile
         var fileSplit = splitFile(t.filename)
@@ -336,7 +336,7 @@ proc asyncGetDef*(win: var MainWin, file: string,
 
 proc doSuggest*(win: var MainWin) =
   var current = win.sourceViewTabs.getCurrentPage()
-  var tab     = win.Tabs[current]
+  var tab     = win.tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
@@ -352,7 +352,7 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
   
   # We have the name of the item. Now insert it into the TextBuffer.
   var currentTab = win.sourceViewTabs.getCurrentPage()
-  win.Tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
+  win.tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
   
   # Now hide the suggest dialog and clear the items.
   win.suggest.hide()
@@ -468,7 +468,7 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
   if selection.getSelected(addr(TreeModel), addr(selectedIter)):
     # Get current tab(For tooltip)
     var current = win.sourceViewTabs.getCurrentPage()
-    var tab     = win.Tabs[current]
+    var tab     = win.tabs[current]
     var selectedPath = TreeModel.getPath(addr(selectedIter))
     var index = selectedPath.getIndices()[]
     if win.suggest.items.len() > index:
@@ -478,8 +478,8 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
 proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
   win.w.present()
   var current = win.sourceViewTabs.getCurrentPage()
-  win.Tabs[current].sourceView.grabFocus()
-  assert(win.Tabs[current].sourceView.isFocus())
+  win.tabs[current].sourceView.grabFocus()
+  assert(win.tabs[current].sourceView.isFocus())
 
 # -- GUI
 proc createSuggestDialog*(win: var MainWin) =

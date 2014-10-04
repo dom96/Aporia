@@ -577,7 +577,7 @@ proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
 
 # -- Compilation-specific
 
-proc GetCmd*(win: var MainWin, cmd, filename: string): string =
+proc getCmd*(win: var MainWin, cmd, filename: string): string =
   ## ``cmd`` specifies the format string. ``findExe(exe)`` is allowed as well
   ## as ``#$``. The ``#$`` is replaced by ``filename``.
   var f = quoteIfContainsWhite(filename)

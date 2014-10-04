@@ -222,7 +222,7 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
           if win.tempStuff.currentExec.onLine != nil:
             win.tempStuff.currentExec.onLine(win[], win.tempStuff.currentExec, event.line)
           if win.tempStuff.currentExec.output:
-            if win.tempStuff.currentExec.mode == execNimrod:
+            if win.tempStuff.currentExec.mode == ExecNimrod:
               win[].parseCompilerOutput(event)
             else:
               # TODO: Print "" as a \n?

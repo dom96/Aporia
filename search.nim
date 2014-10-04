@@ -302,13 +302,13 @@ proc findText*(forward: bool) =
   # Get the position where the cursor is,
   # Search based on that.
   var startSel, endSel: TTextIter
-  discard win.Tabs[currentTab].buffer.getSelectionBounds(
+  discard win.tabs[currentTab].buffer.getSelectionBounds(
       addr(startsel), addr(endsel))
   
   var startMatch, endMatch: TTextIter
   var matchFound: gboolean = false
   
-  var buffer = win.Tabs[currentTab].buffer
+  var buffer = win.tabs[currentTab].buffer
   var mode = win.autoSettings.search
   
   case mode
@@ -335,7 +335,7 @@ proc findText*(forward: bool) =
   if matchFound:
     buffer.moveMarkByName("insert", addr(startMatch))
     buffer.moveMarkByName("selection_bound", addr(endMatch))
-    discard PTextView(win.Tabs[currentTab].sourceView).
+    discard PTextView(win.tabs[currentTab].sourceView).
         scrollToIter(addr(startMatch), 0.2, false, 0.0, 0.0)
     
     # Reset the findEntry color
@@ -354,9 +354,9 @@ proc findText*(forward: bool) =
         win.statusbar.setTemp("Wrapped around end of file", UrgNormal, 5000)
   else:
     # Change the findEntry color to red
-    var red: Gdk2.TColor
+    var red: gdk2.TColor
     discard colorParse("#ff6666", addr(red))
-    var white: Gdk2.TColor
+    var white: gdk2.TColor
     discard colorParse("white", addr(white))
     
     win.findEntry.modifyBase(STATE_NORMAL, addr(red))
@@ -365,7 +365,7 @@ proc findText*(forward: bool) =
     # Set the status bar
     win.statusbar.setTemp("Match not found.", UrgError, 5000)
     
-proc replaceAll*(find, replace: cstring): Int =
+proc replaceAll*(find, replace: cstring): int =
   # gedit-document.c, gedit_document_replace_all
   var count = 0
   var startMatch, endMatch: TTextIter
@@ -373,9 +373,9 @@ proc replaceAll*(find, replace: cstring): Int =
 
   # Get the current tab
   var currentTab = win.sourceViewTabs.getCurrentPage()
-  assert(currentTab <% win.Tabs.len())
+  assert(currentTab <% win.tabs.len())
 
-  var buffer = win.Tabs[currentTab].buffer
+  var buffer = win.tabs[currentTab].buffer
   
   var iter: TTextIter
   buffer.getStartIter(addr(iter))
