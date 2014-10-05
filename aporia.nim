@@ -26,7 +26,7 @@ const
 """
 
 var win: utils.MainWin
-win.Tabs = @[]
+win.tabs = @[]
 
 search.win = addr(win) # TODO: Stop doing this.
 
@@ -38,7 +38,7 @@ proc writeHelp() =
 
 proc writeVersion() =
   echo("Aporia v$1 compiled at $2 $3.\nCopyright (c) Dominik Picheta 2010-2013" % 
-       [aporiaVersion, compileDate, compileTime])
+       [aporiaVersion, CompileDate, CompileTime])
   quit(QuitSuccess)
 
 proc parseArgs(): seq[string] =
@@ -68,13 +68,13 @@ proc ShowConfigErrors*() =
     dialogs.warning(win.w, "Error parsing config file, see Error List.")  
     
 proc updateMainTitle(pageNum: int) =
-  if win.Tabs.len()-1 >= pageNum:
+  if win.tabs.len()-1 >= pageNum:
     var title = ""
-    if win.Tabs[pageNum].filename == "": 
+    if win.tabs[pageNum].filename == "": 
       title = "Untitled" 
     else: 
-      title = win.Tabs[pageNum].filename.extractFilename
-    if not win.Tabs[pageNum].saved:
+      title = win.tabs[pageNum].filename.extractFilename
+    if not win.tabs[pageNum].saved:
       title.add("*")
     title.add(" - Aporia")
     win.w.setTitle(title)
@@ -130,26 +130,26 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
 
   # TODO: Refactor this function. It's a disgrace.
   if tabNr < 0: return
-  if win.Tabs[tabNr].saved: return
+  if win.tabs[tabNr].saved: return
   var path = ""
-  if win.Tabs[tabNr].filename == "":
-    path = ChooseFileToSave(win.w, startpath)
+  if win.tabs[tabNr].filename == "":
+    path = chooseFileToSave(win.w, startpath)
     if path != "":
       # Change syntax highlighting for this tab.
       var langMan = languageManagerGetDefault()
       var lang = langMan.guessLanguage(path, nil)
       if lang != nil:
         win.setLanguage(tabNr, lang)
-        win.setHighlightSyntax(tabNr, True)
+        win.setHighlightSyntax(tabNr, true)
       else:
-        win.setHighlightSyntax(tabNr, False)
+        win.setHighlightSyntax(tabNr, false)
       if tabNr == win.getCurrentTab:
         plCheckUpdate(tabNr)
   else: 
-    path = win.Tabs[tabNr].filename
+    path = win.tabs[tabNr].filename
   
   if path != "":
-    var buffer = PTextBuffer(win.Tabs[tabNr].buffer)
+    var buffer = PTextBuffer(win.tabs[tabNr].buffer)
     # Get the text from the TextView
     var startIter: TTextIter
     buffer.getStartIter(addr(startIter))
@@ -157,7 +157,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     var endIter: TTextIter
     buffer.getEndIter(addr(endIter))
     
-    var text = $buffer.getText(addr(startIter), addr(endIter), False)
+    var text = $buffer.getText(addr(startIter), addr(endIter), false)
     
     var config = false
     if path == os.getConfigDir() / "Aporia" / "config.global.ini":
@@ -171,8 +171,8 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       config = true
 
     # Handle text before saving
-    text = win.Tabs[tabNr].lineEnding.normalize(text)
-    win.Tabs[tabNr].lineEnding.addExtraNL(text)
+    text = win.tabs[tabNr].lineEnding.normalize(text)
+    win.tabs[tabNr].lineEnding.addExtraNL(text)
     
     # Save it to a file
     var f: TFile
@@ -183,10 +183,10 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       win.tempStuff.lastSaveDir = splitFile(path).dir
       
       # Change the tab name and .Tabs.filename etc.
-      win.Tabs[tabNr].filename = path
+      win.tabs[tabNr].filename = path
       
       if updateGUI:
-        win.Tabs[tabNr].saved = true
+        win.tabs[tabNr].saved = true
         
         updateMainTitle(tabNr)
         if config:
@@ -194,23 +194,23 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         else:
           win.statusbar.setTemp("File saved successfully.", UrgSuccess)
     else:
-      error(win.w, "Unable to write to file: " & OSErrorMsg(osLastError()))
+      error(win.w, "Unable to write to file: " & oSErrorMsg(osLastError()))
 
 proc saveTabAs(tab: int, startPath: string): bool =
   ## Returns whether we saved to a different filename.
-  var (filename, saved) = (win.Tabs[tab].filename, win.Tabs[tab].saved)
+  var (filename, saved) = (win.tabs[tab].filename, win.tabs[tab].saved)
 
-  win.Tabs[tab].saved = False
-  win.Tabs[tab].filename = ""
+  win.tabs[tab].saved = false
+  win.tabs[tab].filename = ""
   # saveTab will ask the user for a filename if the tab's filename is "".
   saveTab(tab, startpath)
   # If the user cancels the save file dialog. Restore the previous filename
   # and saved state
-  if win.Tabs[tab].filename == "":
-    win.Tabs[tab].filename = filename
-    win.Tabs[tab].saved = saved
+  if win.tabs[tab].filename == "":
+    win.tabs[tab].filename = filename
+    win.tabs[tab].saved = saved
 
-  result = win.Tabs[tab].filename != filename
+  result = win.tabs[tab].filename != filename
 
   updateMainTitle(tab)
 
@@ -270,17 +270,17 @@ proc askCloseTab(tab: int): bool =
   result = true
   if not win.tabs[tab].saved and not win.tabs[tab].isTemporary:
     # Only ask to save if file isn't empty or has a "history" (undo can be performed)
-    if win.Tabs[tab].buffer.get_char_count != 0 or can_undo(win.Tabs[tab].buffer):
+    if win.tabs[tab].buffer.get_char_count != 0 or can_undo(win.tabs[tab].buffer):
       var resp = win.confirmUnsaved(win.tabs[tab])
       if resp == RESPONSE_ACCEPT:
         saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-        result = True
+        result = true
       elif resp == RESPONSE_CANCEL:
-        result = False
+        result = false
       elif resp == RESPONSE_REJECT:
-        result = True
+        result = true
       else:
-        result = False
+        result = false
   
   if win.tabs[tab].isTemporary:
     var resp = win.confirmUnsaved(win.tabs[tab])
@@ -289,26 +289,26 @@ proc askCloseTab(tab: int): bool =
     elif resp == RESPONSE_OK:
       assert(not win.tabs[tab].saved)
       saveTab(tab, os.splitFile(win.tabs[tab].filename).dir)
-      result = True
+      result = true
     elif resp == RESPONSE_CANCEL:
-      result = False
+      result = false
     elif resp == RESPONSE_REJECT:
-      result = True
+      result = true
     else:
-      result = False
+      result = false
 
-proc delete_event(widget: PWidget, event: PEvent, user_data: pgpointer): gboolean =
-  var quit = True
-  for i in win.Tabs.low .. win.Tabs.len-1:
-    if not win.Tabs[i].saved or win.Tabs[i].isTemporary:
+proc delete_event(widget: PWidget, event: PEvent, user_data: Pgpointer): gboolean =
+  var quit = true
+  for i in win.tabs.low .. win.tabs.len-1:
+    if not win.tabs[i].saved or win.tabs[i].isTemporary:
       win.sourceViewTabs.setCurrentPage(i.int32)
       quit = askCloseTab(i)
       if not quit: break
-  # If False is returned the window will close
+  # If false is returned the window will close
   return not quit
 
 proc windowState_Changed(widget: PWidget, event: PEventWindowState, 
-                         user_data: pgpointer) =
+                         user_data: Pgpointer) =
   win.autoSettings.winMaximized = (event.newWindowState and 
                                WINDOW_STATE_MAXIMIZED) != 0
   
@@ -316,19 +316,19 @@ proc windowState_Changed(widget: PWidget, event: PEventWindowState,
     win.suggest.hide()
 
 proc window_configureEvent(widget: PWidget, event: PEventConfigure,
-                           ud: pgpointer): gboolean =
+                           ud: Pgpointer): gboolean =
   if win.suggest.shown:
-    var current = win.SourceViewTabs.getCurrentPage()
-    var tab     = win.Tabs[current]
+    var current = win.sourceViewTabs.getCurrentPage()
+    var tab     = win.tabs[current]
     var start: TTextIter
     # Get the iter at the cursor position.
     tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
     moveSuggest(win, addr(start), tab)
 
-  return False
+  return false
 
 proc cycleTab(win: var MainWin) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   if current + 1 >= win.tabs.len():
     current = 0
   else:
@@ -350,12 +350,12 @@ proc closeTab(tab: int) =
   if close:
     # Add to recently opened files.
     if win.tabs[tab].filename != "":
-      recentlyOpenedAdd(win.Tabs[tab].filename)
-    system.delete(win.Tabs, tab)
+      recentlyOpenedAdd(win.tabs[tab].filename)
+    system.delete(win.tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
 
 proc window_keyPress(widg: PWidget, event: PEventKey, 
-                          userData: pgpointer): gboolean =
+                          userData: Pgpointer): gboolean =
   result = false
   var modifiers = acceleratorGetDefaultModMask()
 
@@ -368,8 +368,8 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
       return true
     of KeyW:
       # Ctrl + W
-      closeTab(win.SourceViewTabs.getCurrentPage())
-      return True
+      closeTab(win.sourceViewTabs.getCurrentPage())
+      return true
     else:
       discard
 
@@ -377,7 +377,7 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
     # Esc pressed
     win.findBar.hide()
     win.goLineBar.bar.hide()
-    var current = win.SourceViewTabs.getCurrentPage()
+    var current = win.sourceViewTabs.getCurrentPage()
     win.tabs[current].sourceView.grabFocus()
     
 
@@ -428,7 +428,7 @@ proc updateStatusBar(buffer: PTextBuffer, markName: string = "") =
       win.statusbar.setDocInfo(ln, ch)
   
 proc cursorMoved(buffer: PTextBuffer, location: PTextIter, 
-                 mark: PTextMark, user_data: pgpointer){.cdecl.} =
+                 mark: PTextMark, user_data: Pgpointer){.cdecl.} =
   var markName = mark.getName()
   if markName == nil:
     return # We don't want anonymous marks.
@@ -438,7 +438,7 @@ proc cursorMoved(buffer: PTextBuffer, location: PTextIter,
 
 proc onCloseTab(btn: PButton, child: PWidget)
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget): gboolean
+                       userDat: PWidget): gboolean
 proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box: PWidget,
                     label: PLabel, closeBtn: PButton] =                  
   var eventBox = eventBoxNew()
@@ -446,7 +446,7 @@ proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box
   discard signal_connect(eventBox, "button-release-event",
                     SIGNAL_FUNC(tab_buttonRelease), t_child)
   
-  var box = hboxNew(False, 0)
+  var box = hboxNew(false, 0)
   var label = labelNew(name)
   if filename.startsWith(getTempDir()):
     # If this is a temporary tab, mark it as such.
@@ -461,8 +461,8 @@ proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box
   discard gSignalConnect(closebtn, "clicked", G_Callback(onCloseTab), t_child)
   closebtn.setImage(image)
   gtk2.setRelief(closebtn, RELIEF_NONE)
-  box.packStart(label, True, True, 0)
-  box.packEnd(closebtn, False, False, 0)
+  box.packStart(label, true, true, 0)
+  box.packEnd(closebtn, false, false, 0)
   box.showAll()
 
   eventBox.add(box)
@@ -474,7 +474,7 @@ proc onModifiedChanged(buffer: PTextBuffer, theTab: gpointer) =
   var ctab = cast[Tab](theTab)
   #assert ((current > 0) and (current < win.tabs.len))
   updateTabUI(cTab)
-  updateMainTitle(win.SourceViewTabs.getCurrentPage())
+  updateMainTitle(win.sourceViewTabs.getCurrentPage())
 
 proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   ## This function is connected to the "changed" event on `buffer`.
@@ -482,7 +482,7 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   updateHighlightAll(buffer)
 
 proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
-                          userData: pgpointer): gboolean =
+                          userData: Pgpointer): gboolean =
   result = false
   let ctrlPressed = (event.state and ControlMask) != 0
   let keyNameCString = keyval_name(event.keyval)
@@ -493,13 +493,13 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
     if win.globalSettings.suggestFeature and win.suggest.shown:
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
-      var TreeModel = win.suggest.TreeView.getModel()
+      var TreeModel = win.suggest.treeView.getModel()
       
       let childrenLen = TreeModel.iter_n_children(nil)
       
       # Get current tab(For tooltip)
-      var current = win.SourceViewTabs.getCurrentPage()
-      var tab     = win.Tabs[current]
+      var current = win.sourceViewTabs.getCurrentPage()
+      var tab     = win.tabs[current]
       
       template nextTimes(t: expr): stmt {.immediate.} =
         for i in 0..t:
@@ -513,24 +513,24 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
                                addr(selectedIter)):
         var selectedPath = TreeModel.getPath(addr(selectedIter))
 
-        var moved = False
+        var moved = false
         case key.toLower():
         of "up":
           moved = prev(selectedPath)
         of "down":
-          moved = True
+          moved = true
           next(selectedPath)
         of "page_up":
-          moved = True
+          moved = true
           prevTimes(5)
         of "page_down":
-          moved = True
+          moved = true
           nextTimes(5)
         
         if moved:
           # selectedPath is now the next or prev path.
           selection.selectPath(selectedPath)
-          win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+          win.suggest.treeview.scroll_to_cell(selectedPath, nil, false, 0.5, 0.5)
           var index = selectedPath.getIndices()[]
           if win.suggest.items.len() > index:
             win.showTooltip(tab, win.suggest.items[index], selectedPath)
@@ -538,7 +538,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         # No item selected, select the first one.
         var selectedPath = tree_path_new_first()
         selection.selectPath(selectedPath)
-        win.suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+        win.suggest.treeview.scroll_to_cell(selectedPath, nil, false, 0.5, 0.5)
         var index = selectedPath.getIndices()[]
         assert(index == 0)
         if win.suggest.items.len() > index:
@@ -546,7 +546,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       
       # Return true to stop this event from moving the cursor down in the
       # source view.
-      return True
+      return true
   
   of "left", "right", "home", "end", "delete":
     if win.globalSettings.suggestFeature and win.suggest.shown:
@@ -557,7 +557,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       echod("[Suggest] Selected.")
       var selection = win.suggest.treeview.getSelection()
       var selectedIter: TTreeIter
-      var TreeModel = win.suggest.TreeView.getModel()
+      var TreeModel = win.suggest.treeView.getModel()
       if selection.getSelected(cast[PPGtkTreeModel](addr(TreeModel)),
                                addr(selectedIter)):
         var selectedPath = TreeModel.getPath(addr(selectedIter))
@@ -575,8 +575,8 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 
   of "backspace":
     if win.globalSettings.suggestFeature and win.suggest.shown:
-      var current = win.SourceViewTabs.getCurrentPage()
-      var tab     = win.Tabs[current]
+      var current = win.sourceViewTabs.getCurrentPage()
+      var tab     = win.tabs[current]
       var endIter: TTextIter
       # Get the iter at the cursor position.
       tab.buffer.getIterAtMark(addr(endIter), tab.buffer.getInsert())
@@ -590,11 +590,12 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
           win.suggest.hide()
         else:
           # handled in ...KeyRelease
+          discard
   else:
     discard
 
 proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
-                          userData: pgpointer): gboolean =
+                          userData: Pgpointer): gboolean =
   result = true
   let keyNameCString = keyval_name(event.keyval)
   if keyNameCString == nil: return
@@ -622,10 +623,10 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
 proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): gboolean =
   win.suggest.hide()
 
-proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8"): int
+proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8"): int
 proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   let currentPage = win.sourceViewTabs.getCurrentPage()
-  let tab = win.Tabs[currentPage]
+  let tab = win.tabs[currentPage]
   if win.getCurrentLanguage(currentPage) != "nimrod":
     win.statusbar.setTemp("This feature is only supported for Nimrod.", UrgError)
     return
@@ -666,7 +667,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   if err != "":
     win.statusbar.setTemp(err, UrgError, 5000)
 
-proc SourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
+proc sourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
   if win.getCurrentLanguage() == "nimrod":
     createSeparator(menu)
     createMenuItem(menu, "Go to definition...", goToDef_Activate)
@@ -710,7 +711,7 @@ proc SourceView_sizeAllocate(sourceView: PSourceView,
 
 # Other(Helper) functions
 
-proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWindow,
+proc initSourceView(sourceView: var PSourceView, scrollWindow: var PScrolledWindow,
                     buffer: var PSourceBuffer) =
   # This gets called by addTab
   # Each tabs creates a new SourceView
@@ -720,39 +721,39 @@ proc initSourceView(SourceView: var PSourceView, scrollWindow: var PScrolledWind
   scrollWindow.show()
   
   # SourceView(gtkSourceView)
-  SourceView = sourceViewNew(buffer)
-  SourceView.setInsertSpacesInsteadOfTabs(True)
-  SourceView.setIndentWidth(win.globalSettings.indentWidth)
-  SourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
-  SourceView.setHighlightCurrentLine(
+  sourceView = sourceViewNew(buffer)
+  sourceView.setInsertSpacesInsteadOfTabs(true)
+  sourceView.setIndentWidth(win.globalSettings.indentWidth)
+  sourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
+  sourceView.setHighlightCurrentLine(
                win.globalSettings.highlightCurrentLine)
-  SourceView.setShowRightMargin(win.globalSettings.rightMargin)
-  SourceView.setAutoIndent(win.globalSettings.autoIndent)
-  SourceView.setSmartHomeEnd(SmartHomeEndBefore)
-  SourceView.setWrapMode(win.globalSettings.wrapMode)
-  discard signalConnect(SourceView, "button-press-event",
-                        signalFunc(SourceViewMousePress), nil)
+  sourceView.setShowRightMargin(win.globalSettings.rightMargin)
+  sourceView.setAutoIndent(win.globalSettings.autoIndent)
+  sourceView.setSmartHomeEnd(SmartHomeEndBefore)
+  sourceView.setWrapMode(win.globalSettings.wrapMode)
+  discard signalConnect(sourceView, "button-press-event",
+                        SIGNALFUNC(SourceViewMousePress), nil)
   discard gSignalConnect(sourceView, "populate-popup",
                          GCallback(sourceViewPopulatePopup), nil)
 
   var font = font_description_from_string(win.globalSettings.font)
-  SourceView.modifyFont(font)
+  sourceView.modifyFont(font)
   
-  scrollWindow.add(SourceView)
-  SourceView.show()
+  scrollWindow.add(sourceView)
+  sourceView.show()
 
   buffer.setHighlightMatchingBrackets(
       win.globalSettings.highlightMatchingBrackets)
   
   discard signalConnect(sourceView, "key-press-event", 
-                        signalFunc(SourceViewKeyPress), nil)
+                        SIGNALFUNC(SourceViewKeyPress), nil)
   discard signalConnect(sourceView, "key-release-event", 
-                        signalFunc(SourceViewKeyRelease), nil)
+                        SIGNALFUNC(SourceViewKeyRelease), nil)
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8"): int =
+proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8"): int =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
   ## of the filename.
@@ -779,7 +780,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
     if lang != nil:
       buffer.setLanguage(lang)
     else:
-      buffer.setHighlightSyntax(False)
+      buffer.setHighlightSyntax(false)
 
   # Init tab
   var nTab: Tab; new(nTab)
@@ -799,7 +800,7 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
     # Read the file first so that we can affirm its encoding.
     try:
       var fileTxt: string = readFile(filename)
-      if encoding.ToLower() != "utf-8":
+      if encoding.toLower() != "utf-8":
         fileTxt = convert(fileTxt, "UTF-8", encoding)
       if not g_utf8_validate(fileTxt, fileTxt.len().gssize, nil):
         win.tempStuff.pendingFilename = filename
@@ -836,17 +837,17 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
   nTab.highlighted = newNoHighlightAll()
   if not win.globalSettings.showCloseOnAllTabs:
     nTab.closeBtn.hide()
-  win.Tabs.add(nTab)
+  win.tabs.add(nTab)
   
   # Set the tooltip
-  setTabTooltip(win.Tabs[win.tabs.len-1])
+  setTabTooltip(win.tabs[win.tabs.len-1])
   
   # Add the tab to the GtkNotebook
-  let res = win.SourceViewTabs.appendPage(scrollWindow, TabLabel)
+  let res = win.sourceViewTabs.appendPage(scrollWindow, TabLabel)
   assert res != -1
-  win.SourceViewTabs.setTabReorderable(scrollWindow, true)
+  win.sourceViewTabs.setTabReorderable(scrollWindow, true)
 
-  PTextView(SourceView).setBuffer(nTab.buffer)
+  PTextView(sourceView).setBuffer(nTab.buffer)
 
   # UGLY workaround for yet another compiler bug:
   discard gsignalConnect(buffer, "mark-set", 
@@ -863,21 +864,21 @@ proc addTab(name, filename: string, setCurrent: bool = True, encoding = "utf-8")
 
   # Adjustment signals for scrolling past bottom.
   if win.globalSettings.scrollPastBottom:
-    discard SourceView.get_vadjustment().signalConnect("value_changed",
-        signalFunc(SourceView_Adjustment_valueChanged), addr nTab.spbInfo)
-    discard SourceView.signalConnect("size-allocate",
-        signalFunc(SourceView_sizeAllocate), addr nTab.spbInfo)
+    discard sourceView.get_vadjustment().signalConnect("value_changed",
+        SIGNALFUNC(SourceView_Adjustment_valueChanged), addr nTab.spbInfo)
+    discard sourceView.signalConnect("size-allocate",
+        SIGNALFUNC(SourceView_sizeAllocate), addr nTab.spbInfo)
 
   if setCurrent:
     # Select the newly created tab
-    win.sourceViewTabs.setCurrentPage(int32(win.Tabs.len())-1)
-  return win.Tabs.len()-1
+    win.sourceViewTabs.setCurrentPage(int32(win.tabs.len())-1)
+  return win.tabs.len()-1
 
 # GTK Events Contd.
 # -- TopMenu & TopBar
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer)
-proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
+proc fileMenuItem_Activate(menu: PMenuItem, user_data: Pgpointer) =
   if win.tempStuff.recentFileMenuItems.len > 0:
     for i in win.tempStuff.recentFileMenuItems:
       PWidget(i).destroy()
@@ -925,11 +926,11 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: pgpointer) =
       win.FileMenu.insert(moreMenuItem, gint(insertOffset+10))
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 
-proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", True)
+proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", true)
   
 proc openFile(menuItem: PMenuItem, user_data: pointer) =
   var startpath = ""
-  var currPage = win.SourceViewTabs.getCurrentPage()
+  var currPage = win.sourceViewTabs.getCurrentPage()
   if currPage <% win.tabs.len: 
     startpath = os.splitFile(win.tabs[currPage].filename).dir
 
@@ -939,16 +940,16 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
     if isNil(startpath) or startpath.len == 0:
       startpath = os.getHomeDir()
 
-  var files = ChooseFilesToOpen(win.w, startpath)
+  var files = chooseFilesToOpen(win.w, startpath)
   if files.len() > 0:
     for f in items(files):
       try:
-        discard addTab("", f, True)
+        discard addTab("", f, true)
       except EIO:
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
   
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   var startpath = os.splitFile(win.tabs[current].filename).dir
   if startpath == "":
     startpath = win.tempStuff.lastSaveDir
@@ -956,7 +957,7 @@ proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
   saveTab(current, startpath)
     
 proc saveFileAs_Activate(menuItem: PMenuItem, user_data: pointer) =
-  var current = win.SourceViewTabs.getCurrentPage()
+  var current = win.sourceViewTabs.getCurrentPage()
   var startpath = os.splitFile(win.tabs[current].filename).dir
   if startpath == "":
     startpath = win.tempStuff.lastSaveDir
@@ -966,50 +967,50 @@ proc saveAll_Activate(menuItem: PMenuItem, user_data: pointer) =
   saveAllTabs()
   
 proc closeCurrentTab_Activate(menuItem: PMenuItem, user_data: pointer) =
-  closeTab(win.SourceViewTabs.getCurrentPage())
+  closeTab(win.sourceViewTabs.getCurrentPage())
 
 proc closeAllTabs_Activate(menuItem: PMenuItem, user_data: pointer) =
-  while win.Tabs.len() > 0:
-    closeTab(win.SourceViewTabs.getCurrentPage())
+  while win.tabs.len() > 0:
+    closeTab(win.sourceViewTabs.getCurrentPage())
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
   try:
-    discard addTab("", filename, True)
+    discard addTab("", filename, true)
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
 proc undo(menuItem: PMenuItem, user_data: pointer) = 
-  var current = win.SourceViewTabs.getCurrentPage()
-  if win.Tabs[current].buffer.canUndo():
-    win.Tabs[current].buffer.undo()
+  var current = win.sourceViewTabs.getCurrentPage()
+  if win.tabs[current].buffer.canUndo():
+    win.tabs[current].buffer.undo()
   else:
     win.statusbar.setTemp("Nothing to undo.", UrgError, 5000)
   win.scrollToInsert()
   
 proc redo(menuItem: PMenuItem, user_data: pointer) =
-  var current = win.SourceViewTabs.getCurrentPage()
-  if win.Tabs[current].buffer.canRedo():
-    win.Tabs[current].buffer.redo()
+  var current = win.sourceViewTabs.getCurrentPage()
+  if win.tabs[current].buffer.canRedo():
+    win.tabs[current].buffer.redo()
   else:
     win.statusbar.setTemp("Nothing to redo.", UrgError, 5000)
   win.scrollToInsert()
 
 proc setFindField() =
   # Get the selected text, and set the findEntry to it.
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   var insertIter: TTextIter
-  win.Tabs[currentTab].buffer.getIterAtMark(addr(insertIter), 
-                                      win.Tabs[currentTab].buffer.getInsert())
+  win.tabs[currentTab].buffer.getIterAtMark(addr(insertIter), 
+                                      win.tabs[currentTab].buffer.getInsert())
   var insertOffset = getOffset(addr insertIter)
   
   var selectIter: TTextIter
-  win.Tabs[currentTab].buffer.getIterAtMark(addr(selectIter), 
-                win.Tabs[currentTab].buffer.getSelectionBound())
+  win.tabs[currentTab].buffer.getIterAtMark(addr(selectIter), 
+                win.tabs[currentTab].buffer.getSelectionBound())
   var selectOffset = getOffset(addr selectIter)
   
   if insertOffset != selectOffset:
-    var text = win.Tabs[currentTab].buffer.getText(addr(insertIter), 
+    var text = win.tabs[currentTab].buffer.getText(addr(insertIter), 
                                                    addr(selectIter), false)
     win.findEntry.setText(text)
 
@@ -1042,8 +1043,8 @@ proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.goLineBar.entry.grabFocus()
 
 proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
-  template cb(): expr = win.Tabs[currentPage].buffer
-  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  template cb(): expr = win.tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
   proc toggleSingle() =
     cb.beginUserAction()
@@ -1126,6 +1127,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
     else:
       # TODO: Loop through each line and add `lineComment` 
       # (# in the case of Nimrod) to it.
+      discard
     cb.endUserAction()
     
   if win.tempStuff.commentSyntax.line == "" and 
@@ -1154,8 +1156,8 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
 proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Delete Line menu point. Removes the current line
   ## at the cursor, or all marked lines in case text is selected
-  template textBuffer(): expr = win.Tabs[currentPage].buffer
-  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  template textBuffer(): expr = win.tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
 
   textBuffer.beginUserAction()
@@ -1173,8 +1175,8 @@ proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   
 proc DuplicateLines_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Duplicate Lines menu point. Duplicates the current/selected line(s)
-  template textBuffer(): expr = win.Tabs[currentPage].buffer
-  var currentPage = win.sourceViewTabs.GetCurrentPage()
+  template textBuffer(): expr = win.tabs[currentPage].buffer
+  var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
 
   textBuffer.beginUserAction()
@@ -1216,10 +1218,10 @@ proc pl_Toggled(menuitem: PCheckMenuItem, id: cstring) =
   
     let currentTab = win.getCurrentTab()
     if id == "":
-      win.setHighlightSyntax(currentTab, False)
+      win.setHighlightSyntax(currentTab, false)
     else:
       var langMan = languageManagerGetDefault()
-      win.setHighlightSyntax(currentTab, True)
+      win.setHighlightSyntax(currentTab, true)
       win.setLanguage(currentTab, langMan.getLanguage(id))
 
     setTabTooltip(win.tabs[currentTab])
@@ -1233,17 +1235,17 @@ proc showBottomPanel() =
     PCheckMenuItem(win.viewBottomPanelMenuItem).itemSetActive(true)
 
 proc saveForCompile(currentTab: int): string =
-  if win.Tabs[currentTab].filename.len == 0:
+  if win.tabs[currentTab].filename.len == 0:
     # Save to /tmp
     if not existsDir(getTempDir() / "aporia"): createDir(getTempDir() / "aporia")
     result = getTempDir() / "aporia" / "a" & ($currentTab).addFileExt("nim")
-    win.Tabs[currentTab].filename = result
+    win.tabs[currentTab].filename = result
     if win.globalSettings.compileUnsavedSave:
       saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, true)
     else:
       saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir, false)
-      win.Tabs[currentTab].filename = ""
-      win.Tabs[currentTab].saved = false
+      win.tabs[currentTab].filename = ""
+      win.tabs[currentTab].saved = false
     
   else:
     saveTab(currentTab, os.splitFile(win.tabs[currentTab].filename).dir)
@@ -1273,7 +1275,7 @@ proc compileRun(filename: string, shouldRun: bool) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = win.GetCmd(win.globalSettings.nimrodCmd, filename)
+  var cmd = win.getCmd(win.globalSettings.nimrodCmd, filename)
 
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
@@ -1286,12 +1288,12 @@ proc compileRun(filename: string, shouldRun: bool) =
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not supportedLang(): return
-  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  let filename = saveForCompile(win.sourceViewTabs.getCurrentPage())
   compileRun(filename, false)
   
 proc CompileRunCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not supportedLang(): return
-  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  let filename = saveForCompile(win.sourceViewTabs.getCurrentPage())
   compileRun(filename, true)
 
 proc prepareProjectCompile(): string =
@@ -1336,17 +1338,17 @@ proc RunCustomCommand(cmd: string) =
     return
   
   saveFile_Activate(nil, nil)
-  var currentTab = win.SourceViewTabs.getCurrentPage()
-  if win.Tabs[currentTab].filename.len == 0 or cmd.len == 0: return
+  var currentTab = win.sourceViewTabs.getCurrentPage()
+  if win.tabs[currentTab].filename.len == 0 or cmd.len == 0: return
   
   # Clear the outputTextView
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
   
-  let workDir = win.Tabs[currentTab].filename.splitFile.dir
+  let workDir = win.tabs[currentTab].filename.splitFile.dir
   
   win.execProcAsync(
-    newExec(win.GetCmd(cmd, win.Tabs[currentTab].filename), workDir, ExecCustom))
+    newExec(win.getCmd(cmd, win.tabs[currentTab].filename), workDir, ExecCustom))
 
 proc RunCustomCommand1(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.globalSettings.customCmd1)
@@ -1358,7 +1360,7 @@ proc RunCustomCommand3(menuitem: PMenuItem, user_data: pointer) =
   RunCustomCommand(win.globalSettings.customCmd3)
 
 proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
-  let filename = saveForCompile(win.SourceViewTabs.getCurrentPage())
+  let filename = saveForCompile(win.sourceViewTabs.getCurrentPage())
   if filename.len == 0: return
   if win.tempStuff.currentExec != nil:
     win.statusbar.setTemp("Process already running!", UrgError, 5000)
@@ -1368,14 +1370,14 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = win.GetCmd("$findExe(nimrod) check --listFullPaths $#", filename)
+  var cmd = win.getCmd("$findExe(nimrod) check --listFullPaths $#", filename)
   win.execProcAsync newExec(cmd, "", ExecNimrod)
 
 proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
   echod("Memory usage: ")
   gMemProfile()
   var stats = "Memory usage: "
-  stats.add gcGetStatistics()
+  stats.add GC_getStatistics()
   win.w.info(stats)
 
 proc about_click(menuitem: PMenuItem, user_data: pointer) =
@@ -1406,19 +1408,19 @@ proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
     infobar.hide()
   else: assert false
 
-# -- SourceViewTabs - Notebook.
+# -- sourceViewTabs - Notebook.
 
 proc onCloseTab(btn: PButton, child: PWidget) =
   if win.sourceViewTabs.getNPages() > 1:
     closeTab(win.sourceViewTabs.pageNum(child))
 
 proc tab_buttonRelease(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget): gboolean =
+                       userDat: PWidget): gboolean =
   if ev.button == 2: # Middle click.
     closeTab(win.sourceViewTabs.pageNum(userDat))
 
 proc onTabsPressed(widg: PWidget, ev: PEventButton,
-                       userDat: pwidget): gboolean =
+                       userDat: PWidget): gboolean =
   if ev.button == 1 and ev.`type` == BUTTON2_PRESS:
     let galloc = win.tabs[win.tabs.len-1].closeBtn.allocation
     if galloc.x == -1:
@@ -1432,26 +1434,26 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
     discard addTab("", "", true)
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint, 
-                 user_data: pgpointer) =
+                 user_data: Pgpointer) =
   # hide close button of last active tab
   if not win.globalSettings.showCloseOnAllTabs and 
-      win.tempStuff.lastTab < win.Tabs.len:
-    win.Tabs[win.tempStuff.lastTab].closeBtn.hide()
+      win.tempStuff.lastTab < win.tabs.len:
+    win.tabs[win.tempStuff.lastTab].closeBtn.hide()
   
   win.tempStuff.lastTab = pageNum
   updateMainTitle(pageNum)
-  updateStatusBar(win.Tabs[pageNum].buffer)
+  updateStatusBar(win.tabs[pageNum].buffer)
   # Set the lastSavedDir
   if win.tabs.len > pageNum:
-    if win.Tabs[pageNum].filename.len != 0:
-      win.tempStuff.lastSaveDir = splitFile(win.Tabs[pageNum].filename).dir
+    if win.tabs[pageNum].filename.len != 0:
+      win.tempStuff.lastSaveDir = splitFile(win.tabs[pageNum].filename).dir
   
   # Hide the suggest dialog
   win.suggest.hide()
   
   if not win.globalSettings.showCloseOnAllTabs:
     # Show close button of tab
-    win.Tabs[pageNum].closeBtn.show()
+    win.tabs[pageNum].closeBtn.show()
 
   # Get info about the current tabs language. Comment syntax etc.
   win.getCurrentLanguageComment(win.tempStuff.commentSyntax, pageNum)
@@ -1463,7 +1465,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
                         x: gint, y: gint, data: PSelectionData, info: guint,
                         time: guint, userData: pointer) =
   echod "dragDataReceived: ", $widget.getName()
-  var success = False
+  var success = false
   if data != nil and data.length >= 0:
     if info == 0:
       var sdata = cast[cstring](data.data)
@@ -1475,17 +1477,17 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
           if existingTab != -1:
             win.sourceViewTabs.setCurrentPage(int32(existingTab))
           else:
-            discard addTab("", path, True)
-      success = True
+            discard addTab("", path, true)
+      success = true
     else: echod("dragDataReceived: Unknown `info`")
 
-  dragFinish(context, success, False, time)
+  dragFinish(context, success, false, time)
 
 proc onPageReordered(notebook: PNotebook, child: PWidget, pageNum: cuint, 
                      userData: pointer) =
-  let oldPos = win.Tabs[win.tempStuff.lastTab]
-  system.delete(win.Tabs, win.tempStuff.lastTab)
-  win.Tabs.insert(oldPos, int(pageNum))
+  let oldPos = win.tabs[win.tempStuff.lastTab]
+  system.delete(win.tabs, win.tempStuff.lastTab)
+  win.tabs.insert(oldPos, int(pageNum))
   
   win.tempStuff.lastTab = int(pageNum)
 
@@ -1515,13 +1517,13 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
   
   # Validate that this line/col combo is not outside bounds
   var endIter: TTextIter
-  win.Tabs[existingTab].buffer.getEndIter(addr(endIter))
+  win.tabs[existingTab].buffer.getEndIter(addr(endIter))
   let lastLine = getLine(addr(endIter))
   if line > lastLine:
     line = lastLine
   
   var colEndAtLine: TTextIter
-  win.Tabs[existingTab].buffer.getIterAtLine(addr(colEndAtLine), line.gint)
+  win.tabs[existingTab].buffer.getIterAtLine(addr(colEndAtLine), line.gint)
   moveToEndLine(addr(colEndAtLine))
   let lastColumnAtLine = getLineOffset(addr(colEndAtLine))
   if selectionBound > lastColumnAtLine:
@@ -1532,70 +1534,70 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
   
   var iter: TTextIter
   var iterPlus1: TTextIter 
-  win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
+  win.tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
       line.int32, insertIndex)
-  win.Tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
+  win.tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
       line.int32, selectionBound)
   
-  win.Tabs[existingTab].buffer.selectRange(addr(iter), addr(iterPlus1))
+  win.tabs[existingTab].buffer.selectRange(addr(iter), addr(iterPlus1))
   
   # TODO: This should be getting focus, but as usual it's not... FIXME
   # TODO: This can perhaps be done by providing a 'initialised' signal, once
   # the scrolling occurs ... look down.
-  win.Tabs[existingTab].sourceView.grabFocus()
+  win.tabs[existingTab].sourceView.grabFocus()
 
   win.forceScrollToInsert(int32(existingTab))
 
 # -- FindBar
 
-proc nextBtn_Clicked(button: PButton, user_data: pgpointer) = findText(True)
-proc prevBtn_Clicked(button: PButton, user_data: pgpointer) = findText(False)
+proc nextBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(true)
+proc prevBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(false)
 
-proc replaceBtn_Clicked(button: PButton, user_data: pgpointer) =
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
-  if not win.Tabs[currentTab].buffer.getSelectionBounds(
+  if not win.tabs[currentTab].buffer.getSelectionBounds(
         addr(start), addr(theEnd)):
     # If no text is selected, try finding a match.
-    findText(True)
-    if not win.Tabs[currentTab].buffer.getSelectionBounds(
+    findText(true)
+    if not win.tabs[currentTab].buffer.getSelectionBounds(
           addr(start), addr(theEnd)):
       # No match
       return
 
-  win.Tabs[currentTab].buffer.beginUserAction()
+  win.tabs[currentTab].buffer.beginUserAction()
   # Remove the text
-  win.Tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
+  win.tabs[currentTab].buffer.delete(addr(start), addr(theEnd))
   # Insert the replacement
   var text = getText(win.replaceEntry)
-  win.Tabs[currentTab].buffer.insert(addr(start), text, int32(len(text)))
+  win.tabs[currentTab].buffer.insert(addr(start), text, int32(len(text)))
 
-  win.Tabs[currentTab].buffer.endUserAction()
+  win.tabs[currentTab].buffer.endUserAction()
   
   # Find next match, this is just a convenience.
-  findText(True)
+  findText(true)
   
-proc replaceAllBtn_Clicked(button: PButton, user_data: pgpointer) =
+proc replaceAllBtn_Clicked(button: PButton, user_data: Pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
   var count = replaceAll(find, replace)
   win.statusbar.setTemp("Replaced $1 matches." % $count, UrgNormal, 5000)
   
-proc closeBtn_Clicked(button: PButton, user_data: pgpointer) = 
+proc closeBtn_Clicked(button: PButton, user_data: Pgpointer) = 
   win.findBar.hide()
 
-proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc caseSens_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchCaseSens
-proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc caseInSens_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchCaseInsens
-proc style_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc style_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchStyleInsens
-proc regex_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc regex_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchRegex
-proc peg_Changed(radiomenuitem: PRadioMenuitem, user_data: pgpointer) =
+proc peg_Changed(radiomenuitem: PRadioMenuitem, user_data: Pgpointer) =
   win.autoSettings.search = SearchPeg
 
-proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
+proc extraBtn_Clicked(button: PButton, user_data: Pgpointer) =
   var extraMenu = menuNew()
   var group: PGSList
 
@@ -1604,28 +1606,28 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   discard signal_connect(caseSensMenuItem, "toggled", 
                           SIGNAL_FUNC(caseSens_Changed), nil)
   caseSensMenuItem.show()
-  group = caseSensMenuItem.ItemGetGroup()
+  group = caseSensMenuItem.itemGetGroup()
   
   var caseInSensMenuItem = radio_menu_item_new(group, "Case insensitive")
   extraMenu.append(caseInSensMenuItem)
   discard signal_connect(caseInSensMenuItem, "toggled", 
                           SIGNAL_FUNC(caseInSens_Changed), nil)
   caseInSensMenuItem.show()
-  group = caseInSensMenuItem.ItemGetGroup()
+  group = caseInSensMenuItem.itemGetGroup()
   
   var styleMenuItem = radio_menu_item_new(group, "Style insensitive")
   extraMenu.append(styleMenuItem)
   discard signal_connect(styleMenuItem, "toggled", 
                           SIGNAL_FUNC(style_Changed), nil)
   styleMenuItem.show()
-  group = styleMenuItem.ItemGetGroup()
+  group = styleMenuItem.itemGetGroup()
   
   var regexMenuItem = radio_menu_item_new(group, "Regex")
   extraMenu.append(regexMenuItem)
   discard signal_connect(regexMenuItem, "toggled", 
                           SIGNAL_FUNC(regex_Changed), nil)
   regexMenuItem.show()
-  group = regexMenuItem.ItemGetGroup()
+  group = regexMenuItem.itemGetGroup()
   
   var pegMenuItem = radio_menu_item_new(group, "Pegs")
   extraMenu.append(pegMenuItem)
@@ -1636,25 +1638,25 @@ proc extraBtn_Clicked(button: PButton, user_data: pgpointer) =
   # Make the correct radio button active
   case win.autoSettings.search
   of SearchCaseSens:
-    PCheckMenuItem(caseSensMenuItem).ItemSetActive(True)
+    PCheckMenuItem(caseSensMenuItem).itemSetActive(true)
   of SearchCaseInsens:
-    PCheckMenuItem(caseInSensMenuItem).ItemSetActive(True)
+    PCheckMenuItem(caseInSensMenuItem).itemSetActive(true)
   of SearchStyleInsens:
-    PCheckMenuItem(styleMenuItem).ItemSetActive(True)
+    PCheckMenuItem(styleMenuItem).itemSetActive(true)
   of SearchRegex:
-    PCheckMenuItem(regexMenuItem).ItemSetActive(True)
+    PCheckMenuItem(regexMenuItem).itemSetActive(true)
   of SearchPeg:
-    PCheckMenuItem(pegMenuItem).ItemSetActive(True)
+    PCheckMenuItem(pegMenuItem).itemSetActive(true)
 
   extraMenu.popup(nil, nil, nil, nil, 0, get_current_event_time())
 
 # Go to line bar.
-proc goLine_Changed(ed: PEditable, d: pgpointer) =
+proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var line = win.goLineBar.entry.getText()
-  var lineNum: biggestInt = -1
+  var lineNum: BiggestInt = -1
   if parseBiggestInt($line, lineNum) != 0:
     # Get current tab
-    var current = win.SourceViewTabs.getCurrentPage()
+    var current = win.sourceViewTabs.getCurrentPage()
     template buffer: expr = win.tabs[current].buffer
     if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
       var iter: TTextIter
@@ -1662,8 +1664,8 @@ proc goLine_Changed(ed: PEditable, d: pgpointer) =
       
       buffer.moveMarkByName("insert", addr(iter))
       buffer.moveMarkByName("selection_bound", addr(iter))
-      discard PTextView(win.Tabs[current].sourceView).
-          scrollToIter(addr(iter), 0.2, False, 0.0, 0.0)
+      discard PTextView(win.tabs[current].sourceView).
+          scrollToIter(addr(iter), 0.2, false, 0.0, 0.0)
       
       # Reset entry color.
       win.goLineBar.entry.modifyBase(STATE_NORMAL, nil)
@@ -1671,15 +1673,15 @@ proc goLine_Changed(ed: PEditable, d: pgpointer) =
       return # Success
   
   # Make entry red.
-  var red: Gdk2.TColor
+  var red: gdk2.TColor
   discard colorParse("#ff6666", addr(red))
-  var white: Gdk2.TColor
+  var white: gdk2.TColor
   discard colorParse("white", addr(white))
   
   win.goLineBar.entry.modifyBase(STATE_NORMAL, addr(red))
   win.goLineBar.entry.modifyText(STATE_NORMAL, addr(white))
 
-proc goLineClose_clicked(button: PButton, user_data: pgpointer) = 
+proc goLineClose_clicked(button: PButton, user_data: Pgpointer) = 
   win.goLineBar.bar.hide()
 
 # GUI Initialization
@@ -1914,7 +1916,7 @@ proc initTopMenu(MainBox: PBox) =
   discard signal_connect(MemMenuItem, "activate", 
                          SIGNAL_FUNC(aporia.memUsage_click), nil)
   
-  HelpMenu.createImageMenuItem(StockAbout, aporia.About_click)
+  HelpMenu.createImageMenuItem(StockAbout, aporia.about_click)
   
   var HelpMenuItem = menuItemNewWithMnemonic("_Help")
   
@@ -1922,7 +1924,7 @@ proc initTopMenu(MainBox: PBox) =
   HelpMenuItem.show()
   TopMenu.append(HelpMenuItem)
   
-  MainBox.packStart(TopMenu, False, False, 0)
+  MainBox.packStart(TopMenu, false, false, 0)
   TopMenu.show()
 
 proc initToolBar(MainBox: PBox) =
@@ -1946,7 +1948,7 @@ proc initToolBar(MainBox: PBox) =
   discard win.toolBar.insertStock(STOCK_FIND, "Find",
                       "Find", SIGNAL_FUNC(aporia.find_Activate), nil, -1)
   
-  MainBox.packStart(win.toolBar, False, False, 0)
+  MainBox.packStart(win.toolBar, false, false, 0)
   if win.globalSettings.toolBarVisible == true:
     win.toolBar.show()
 
@@ -1962,7 +1964,7 @@ proc initInfoBar(MainBox: PBox) =
                          "</span>")
   messageLabel.setAlignment(0.0, 0.5) # Left align.
   messageLabel.show()
-  vbox.packStart(messageLabel, False, False, 0)
+  vbox.packStart(messageLabel, false, false, 0)
   
   var hbox = hboxNew(false, 0); hbox.show()
   var chooseEncodingLabel = labelNew("Choose encoding: ")
@@ -1981,11 +1983,11 @@ proc initInfoBar(MainBox: PBox) =
   encodingsComboBox.show()
   hbox.packStart(encodingsComboBox, false, false, 0)
   
-  vbox.packStart(hbox, False, False, 10)
+  vbox.packStart(hbox, false, false, 10)
   var contentArea = win.infobar.getContentArea()
   contentArea.add(vbox)
   
-  MainBox.packStart(win.infobar, False, False, 0)
+  MainBox.packStart(win.infobar, false, false, 0)
 
   discard win.infobar.signalConnect("response",
          SIGNAL_FUNC(InfoBarResponse), encodingsComboBox)
@@ -1995,28 +1997,28 @@ proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
   result.flags = flags.int32
   result.info = info.int32
 
-proc initSourceViewTabs() =
-  win.SourceViewTabs = notebookNew()
-  discard win.SourceViewTabs.signalConnect(
+proc initsourceViewTabs() =
+  win.sourceViewTabs = notebookNew()
+  discard win.sourceViewTabs.signalConnect(
           "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
-  win.SourceViewTabs.set_scrollable(True)
+  win.sourceViewTabs.set_scrollable(true)
   
   # Drag and Drop setup
   # TODO: This should only allow files.
   var targetList = createTargetEntry("STRING", 0, 0)
   
-  win.SourceViewTabs.dragDestSet(DEST_DEFAULT_ALL, addr(targetList),
+  win.sourceViewTabs.dragDestSet(DEST_DEFAULT_ALL, addr(targetList),
                                  1, ACTION_COPY)
-  discard win.SourceViewTabs.signalConnect(
+  discard win.sourceViewTabs.signalConnect(
           "drag-data-received", SIGNAL_FUNC(onDragDataReceived), nil)
   
   discard win.sourceViewTabs.signalConnect("page-reordered",
           SIGNAL_FUNC(onPageReordered), nil)
   
-  discard win.SourceViewTabs.signalConnect("button-press-event",
+  discard win.sourceViewTabs.signalConnect("button-press-event",
           SIGNAL_FUNC(onTabsPressed), nil)
   
-  win.SourceViewTabs.show()
+  win.sourceViewTabs.show()
 
   var count = 0
   
@@ -2032,8 +2034,8 @@ proc initSourceViewTabs() =
         # TODO: Save last cursor position as line and column offset combo.
         # This will help with int overflows which would happen more often with
         # a char offset.
-        win.Tabs[newTab].buffer.getIterAtOffset(addr(iter), int32(offset.parseInt()))
-        win.Tabs[newTab].buffer.placeCursor(addr(iter))
+        win.tabs[newTab].buffer.getIterAtOffset(addr(iter), int32(offset.parseInt()))
+        win.tabs[newTab].buffer.placeCursor(addr(iter))
         
         win.forceScrollToInsert(int32(newTab))
         
@@ -2051,7 +2053,7 @@ proc initSourceViewTabs() =
       quit(QuitFailure)
     
   if count == 0:
-    discard addTab("", "", False)
+    discard addTab("", "", false)
 
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
@@ -2060,7 +2062,7 @@ proc initBottomTabs() =
   
   # -- output tab
   var tabLabel = labelNew("Output")
-  var outputTab = vboxNew(False, 0)
+  var outputTab = vboxNew(false, 0)
   discard win.bottomPanelTabs.appendPage(outputTab, tabLabel)
   # Compiler tabs, gtktextview
   var outputScrolledWindow = scrolledwindowNew(nil, nil)
@@ -2078,7 +2080,7 @@ proc initBottomTabs() =
   var endIter: TTextIter
   win.outputTextView.getBuffer().getEndIter(addr(endIter))
   discard win.outputTextView.
-          getBuffer().createMark("endMark", addr(endIter), False)
+          getBuffer().createMark("endMark", addr(endIter), false)
   
   outputTab.show()
 
@@ -2089,7 +2091,7 @@ proc initBottomTabs() =
   
   var errorsScrollWin = scrolledWindowNew(nil, nil)
   errorsScrollWin.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
-  errorListTab.packStart(errorsScrollWin, True, True, 0)
+  errorListTab.packStart(errorsScrollWin, true, true, 0)
   errorsScrollWin.show()
   
   win.errorListWidget = treeviewNew()
@@ -2116,32 +2118,32 @@ proc initBottomTabs() =
   #  "file.nim", "190", "5")
 
 
-proc initTAndBP(MainBox: PBox) =
+proc initTAndBP(mainBox: PBox) =
   # This init's the HPaned, which splits the sourceViewTabs
   # and the BottomPanelTabs
-  initSourceViewTabs()
+  initsourceViewTabs()
   initBottomTabs()
   
-  var TAndBPVPaned = vpanedNew()
-  tandbpVPaned.pack1(win.sourceViewTabs, resize=True, shrink=False)
-  tandbpVPaned.pack2(win.bottomPanelTabs, resize=False, shrink=False)
-  MainBox.packStart(TAndBPVPaned, True, True, 0)
+  var tAndBPVPaned = vpanedNew()
+  tandbpVPaned.pack1(win.sourceViewTabs, resize=true, shrink=false)
+  tandbpVPaned.pack2(win.bottomPanelTabs, resize=false, shrink=false)
+  mainBox.packStart(tAndBPVPaned, true, true, 0)
   tandbpVPaned.setPosition(win.autoSettings.VPanedPos)
-  TAndBPVPaned.show()
+  tAndBPVPaned.show()
 
 proc initFindBar(MainBox: PBox) =
   # Create a fixed container
-  win.findBar = HBoxNew(False, 0)
+  win.findBar = hBoxNew(false, 0)
   win.findBar.setSpacing(4)
 
   # Add a Label 'Find'
   var findLabel = labelNew("Find:")
-  win.findBar.packStart(findLabel, False, False, 5)
+  win.findBar.packStart(findLabel, false, false, 5)
   findLabel.show()
 
   # Add a (find) text entry
   win.findEntry = entryNew()
-  win.findBar.packStart(win.findEntry, True, True, 0)
+  win.findBar.packStart(win.findEntry, true, true, 0)
   # The following event gets fired when Enter is pressed.
   discard win.findEntry.signalConnect("activate", SIGNAL_FUNC(
                                       aporia.nextBtn_Clicked), nil)
@@ -2156,12 +2158,12 @@ proc initFindBar(MainBox: PBox) =
   # Add a Label 'Replace' 
   # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceLabel = labelNew("Replace:")
-  win.findBar.packStart(win.replaceLabel, False, False, 0)
+  win.findBar.packStart(win.replaceLabel, false, false, 0)
   
   # Add a (replace) text entry 
   # - This Is only shown when the 'Search & Replace'(CTRL + H) is shown
   win.replaceEntry = entryNew()
-  win.findBar.packStart(win.replaceEntry, True, True, 0)
+  win.findBar.packStart(win.replaceEntry, true, true, 0)
   var rq1: TRequisition 
   win.replaceEntry.sizeRequest(addr(rq1))
 
@@ -2203,31 +2205,31 @@ proc initFindBar(MainBox: PBox) =
   # Close button - With a close stock image
   var closeBtn = buttonNew()
   var closeImage = imageNewFromStock(STOCK_CLOSE, ICON_SIZE_SMALL_TOOLBAR)
-  var closeBox = hboxNew(False, 0)
+  var closeBox = hboxNew(false, 0)
   closeBtn.add(closeBox)
   closeBox.show()
   closeBox.add(closeImage)
   closeImage.show()
   discard closeBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.closeBtn_Clicked), nil)
-  win.findBar.packEnd(closeBtn, False, False, 2)
+  win.findBar.packEnd(closeBtn, false, false, 2)
   closeBtn.show()
   
   # Extra button - When clicked shows a menu with options like 'Use regex'
   var extraBtn = buttonNew()
   var extraImage = imageNewFromStock(STOCK_PROPERTIES, ICON_SIZE_SMALL_TOOLBAR)
 
-  var extraBox = hboxNew(False, 0)
+  var extraBox = hboxNew(false, 0)
   extraBtn.add(extraBox)
   extraBox.show()
   extraBox.add(extraImage)
   extraImage.show()
   discard extraBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.extraBtn_Clicked), nil)
-  win.findBar.packEnd(extraBtn, False, False, 0)
+  win.findBar.packEnd(extraBtn, false, false, 0)
   extraBtn.show()
   
-  MainBox.packStart(win.findBar, False, False, 0)
+  MainBox.packStart(win.findBar, false, false, 0)
   #win.findBar.show()
 
   proc findBar_Hide(widget: PWidget, dummy: gpointer) {.cdecl.} =
@@ -2241,17 +2243,17 @@ proc initFindBar(MainBox: PBox) =
 
 proc initGoLineBar(MainBox: PBox) =
   # Create a fixed container
-  win.goLineBar.bar = HBoxNew(False, 0)
+  win.goLineBar.bar = hBoxNew(false, 0)
   win.goLineBar.bar.setSpacing(4)
 
   # Add a Label 'Go to line'
   var goLineLabel = labelNew("Go to line:")
-  win.goLineBar.bar.packStart(goLineLabel, False, False, 5)
+  win.goLineBar.bar.packStart(goLineLabel, false, false, 5)
   goLineLabel.show()
 
   # Add a text entry
   win.goLineBar.entry = entryNew()
-  win.goLineBar.bar.packStart(win.goLineBar.entry, False, False, 0)
+  win.goLineBar.bar.packStart(win.goLineBar.entry, false, false, 0)
   discard win.goLineBar.entry.signalConnect("changed", SIGNAL_FUNC(
                                       goLine_changed), nil)
   # Go to line also when Return key is pressed:                                    
@@ -2264,17 +2266,17 @@ proc initGoLineBar(MainBox: PBox) =
   # Close button - With a close stock image
   var closeBtn = buttonNew()
   var closeImage = imageNewFromStock(STOCK_CLOSE, ICON_SIZE_SMALL_TOOLBAR)
-  var closeBox = hboxNew(False, 0)
+  var closeBox = hboxNew(false, 0)
   closeBtn.add(closeBox)
   closeBox.show()
   closeBox.add(closeImage)
   closeImage.show()
   discard closeBtn.signalConnect("clicked", 
              SIGNAL_FUNC(aporia.goLineClose_Clicked), nil)
-  win.goLineBar.bar.packEnd(closeBtn, False, False, 2)
+  win.goLineBar.bar.packEnd(closeBtn, false, false, 2)
   closeBtn.show()
 
-  MainBox.packStart(win.goLineBar.bar, False, False, 0)
+  MainBox.packStart(win.goLineBar.bar, false, false, 0)
 
 proc initTempStuff() =
   win.tempStuff.lastSaveDir = ""
@@ -2293,14 +2295,15 @@ proc initTempStuff() =
 {.pop.}
 proc initSocket() =
   win.IODispatcher = newDispatcher()
-  win.oneInstSock = AsyncSocket()
+  win.oneInstSock = asyncSocket()
   win.oneInstSock.handleAccept =
     proc (s: PAsyncSocket) =
       var client: PAsyncSocket
       new(client)
       s.accept(client)
       client.handleRead =
-        proc (c: PAsyncSocket) =
+        #FIXME: threadAnalysis is off set to off to work around anonymous proc not being gc safe
+        proc (c: PAsyncSocket) {.closure, gcsafe.} =
           var line = ""
           if c.readLine(line):
             if line == "":
@@ -2318,7 +2321,7 @@ proc initSocket() =
                 win.w.error("File not found: " & filepath)
                 win.w.present()
           else:
-            win.w.error("One instance socket error on recvLine operation: " & OSErrorMsg(osLastError()))
+            win.w.error("One instance socket error on recvLine operation: " & oSErrorMsg(osLastError()))
       win.IODispatcher.register(client)
       
   win.IODispatcher.register(win.oneInstSock)
@@ -2354,7 +2357,7 @@ proc initControls() =
   if win.autoSettings.winMaximized: win.w.maximize()
   
   let winDestroy = 
-    proc (widget: PWidget, data: pgpointer) {.cdecl.} =
+    proc (widget: PWidget, data: Pgpointer) {.cdecl.} =
       aporia.Exit()
   
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(winDestroy), nil)
@@ -2374,19 +2377,19 @@ proc initControls() =
   createSuggestDialog(win)
   
   # MainBox (vbox)
-  var MainBox = vboxNew(False, 0)
-  win.w.add(MainBox)
+  var mainBox = vboxNew(false, 0)
+  win.w.add(mainBox)
   
-  initTopMenu(MainBox)
-  initToolBar(MainBox)
-  initInfoBar(MainBox)
-  initTAndBP(MainBox)
-  initFindBar(MainBox)
-  initGoLineBar(MainBox)
+  initTopMenu(mainBox)
+  initToolBar(mainBox)
+  initInfoBar(mainBox)
+  initTAndBP(mainBox)
+  initFindBar(mainBox)
+  initGoLineBar(mainBox)
   #initStatusBar(MainBox)
   win.statusbar = initCustomStatusBar(mainBox)
   
-  MainBox.show()
+  mainBox.show()
   
   # TODO: The fact that this call was above all initializations was because of
   # the VPaned position. I had to move it here because showing the Window
@@ -2399,7 +2402,7 @@ proc initControls() =
   ShowConfigErrors()
     
   # Set focus to text input:
-  win.Tabs[win.SourceViewTabs.getCurrentPage()].sourceview.grabFocus()
+  win.tabs[win.sourceViewTabs.getCurrentPage()].sourceview.grabFocus()
 
   when not defined(noSingleInstance):
     if win.globalSettings.singleInstance:

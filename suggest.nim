@@ -29,10 +29,10 @@ proc escapePango(s: string): string =
     else:
       result.add(i)
 
-proc addSuggestItem*(win: var MainWin, name: string, markup: String,
-                     tooltipText: string, color: String = "#000000") =
+proc addSuggestItem*(win: var MainWin, name: string, markup: string,
+                     tooltipText: string, color: string = "#000000") =
   var iter: TTreeIter
-  var listStore = cast[PListStore](win.suggest.TreeView.getModel())
+  var listStore = cast[PListStore](win.suggest.treeView.getModel())
   listStore.append(addr(iter))
   listStore.set(addr(iter), 0, name, 1, markup, 2, color, 3, tooltipText, -1)
 
@@ -75,8 +75,8 @@ proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
   win.suggest.dialog.move(x, y)
 
 proc doMoveSuggest*(win: var MainWin) =
-  var current = win.SourceViewTabs.getCurrentPage()
-  var tab     = win.Tabs[current]
+  var current = win.sourceViewTabs.getCurrentPage()
+  var tab     = win.tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
@@ -105,7 +105,7 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
     result = true
 
 proc clear*(suggest: var TSuggestDialog) =
-  var TreeModel = suggest.TreeView.getModel()
+  var TreeModel = suggest.treeView.getModel()
   # TODO: Why do I have to cast it? Why can't I just do PListStore(TreeModel)?
   cast[PListStore](TreeModel).clear()
   suggest.items = @[]
@@ -116,7 +116,7 @@ proc show*(suggest: var TSuggestDialog) =
     var selection = suggest.treeview.getSelection()  
     var selectedPath = tree_path_new_first()
     selection.selectPath(selectedPath)
-    suggest.treeview.scroll_to_cell(selectedPath, nil, False, 0.5, 0.5)
+    suggest.treeview.scroll_to_cell(selectedPath, nil, false, 0.5, 0.5)
   
     suggest.shown = true
     suggest.dialog.show()
@@ -131,8 +131,8 @@ proc hide*(suggest: var TSuggestDialog) =
 
 proc getFilter(win: var MainWin): string =
   # Get text before the cursor, up to a dot.
-  var current = win.SourceViewTabs.getCurrentPage()
-  var tab     = win.Tabs[current]
+  var current = win.sourceViewTabs.getCurrentPage()
+  var tab     = win.tabs[current]
   var cursor: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
@@ -244,7 +244,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     # Save tabs that are in the same directory as the file
     # being suggested to /tmp/aporia/suggest
     var alreadySaved: seq[string] = @[]
-    for t in items(win.Tabs):
+    for t in items(win.tabs):
       if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
         var f: TFile
         var fileSplit = splitFile(t.filename)
@@ -259,7 +259,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
           var endIter: TTextIter
           t.buffer.getEndIter(addr(endIter))
           
-          var text = t.buffer.getText(addr(startIter), addr(endIter), False)
+          var text = t.buffer.getText(addr(startIter), addr(endIter), false)
           
           # - Save it.
           f.write(text)
@@ -301,7 +301,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
       var endIter: TTextIter
       tab.buffer.getEndIter(addr(endIter))
       
-      var text = tab.buffer.getText(addr(startIter), addr(endIter), False)
+      var text = tab.buffer.getText(addr(startIter), addr(endIter), false)
       
       # - Save it.
       f.write(text)
@@ -335,8 +335,8 @@ proc asyncGetDef*(win: var MainWin, file: string,
   return ""
 
 proc doSuggest*(win: var MainWin) =
-  var current = win.SourceViewTabs.getCurrentPage()
-  var tab     = win.Tabs[current]
+  var current = win.sourceViewTabs.getCurrentPage()
+  var tab     = win.tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
@@ -351,8 +351,8 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
     name = name[win.suggest.currentFilter.len() .. -1]
   
   # We have the name of the item. Now insert it into the TextBuffer.
-  var currentTab = win.SourceViewTabs.getCurrentPage()
-  win.Tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
+  var currentTab = win.sourceViewTabs.getCurrentPage()
+  win.tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
   
   # Now hide the suggest dialog and clear the items.
   win.suggest.hide()
@@ -467,8 +467,8 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
   var TreeModel: PTreeModel
   if selection.getSelected(addr(TreeModel), addr(selectedIter)):
     # Get current tab(For tooltip)
-    var current = win.SourceViewTabs.getCurrentPage()
-    var tab     = win.Tabs[current]
+    var current = win.sourceViewTabs.getCurrentPage()
+    var tab     = win.tabs[current]
     var selectedPath = TreeModel.getPath(addr(selectedIter))
     var index = selectedPath.getIndices()[]
     if win.suggest.items.len() > index:
@@ -477,9 +477,9 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
 
 proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
   win.w.present()
-  var current = win.SourceViewTabs.getCurrentPage()
-  win.Tabs[current].sourceView.grabFocus()
-  assert(win.Tabs[current].sourceView.isFocus())
+  var current = win.sourceViewTabs.getCurrentPage()
+  win.tabs[current].sourceView.grabFocus()
+  assert(win.tabs[current].sourceView.isFocus())
 
 # -- GUI
 proc createSuggestDialog*(win: var MainWin) =
@@ -488,7 +488,7 @@ proc createSuggestDialog*(win: var MainWin) =
   #win.suggest.dialog = dialogNew()
   win.suggest.dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
 
-  var vbox = vboxNew(False, 0)
+  var vbox = vboxNew(false, 0)
   win.suggest.dialog.add(vbox)
   vbox.show()
 
@@ -504,8 +504,8 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.dialog.setDefaultSize(250, 150)
   
   win.suggest.dialog.setTransientFor(win.w)
-  win.suggest.dialog.setDecorated(False)
-  win.suggest.dialog.setSkipTaskbarHint(True)
+  win.suggest.dialog.setDecorated(false)
+  win.suggest.dialog.setSkipTaskbarHint(true)
   discard win.suggest.dialog.signalConnect("focus-in-event",
       SIGNAL_FUNC(onFocusIn), addr(win))
   
@@ -513,11 +513,11 @@ proc createSuggestDialog*(win: var MainWin) =
   # -- ScrolledWindow
   var scrollWindow = scrolledWindowNew(nil, nil)
   scrollWindow.setPolicy(POLICY_NEVER, POLICY_AUTOMATIC)
-  vbox.packStart(scrollWindow, True, True, 0)
+  vbox.packStart(scrollWindow, true, true, 0)
   scrollWindow.show()
   # -- TreeView
   win.suggest.treeView = treeViewNew()
-  win.suggest.treeView.setHeadersVisible(False)
+  win.suggest.treeView.setHeadersVisible(false)
   #win.suggest.treeView.setHasTooltip(true)
   #win.suggest.treeView.setTooltipColumn(3)
   scrollWindow.add(win.suggest.treeView)
@@ -553,8 +553,8 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.tooltip = windowNew(gtk2.WINDOW_TOPLEVEL)
   #win.suggest.tooltip.setTypeHint(WINDOW_TYPE_HINT_TOOLTIP)
   win.suggest.tooltip.setTransientFor(win.w)
-  win.suggest.tooltip.setSkipTaskbarHint(True)
-  win.suggest.tooltip.setDecorated(False)
+  win.suggest.tooltip.setSkipTaskbarHint(true)
+  win.suggest.tooltip.setDecorated(false)
   win.suggest.tooltip.setDefaultSize(250, 450)
   
   discard win.suggest.tooltip.signalConnect("focus-in-event",

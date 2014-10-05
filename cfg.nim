@@ -127,11 +127,11 @@ proc save(settings: TAutoSettings, win: var MainWin) =
       f.writeKeyValRaw("recentlyOpenedFiles", 
                     join(settings.recentlyOpenedFiles[frm..to], ";"))
 
-    if win.Tabs.len != 0:
+    if win.tabs.len != 0:
       f.writeSection("session")
       var tabs = "tabs = r\""
       # Save all the tabs that have a filename.
-      for i in items(win.Tabs):
+      for i in items(win.tabs):
         if i.filename != "":
           var cursorIter: TTextIter
           i.buffer.getIterAtMark(addr(cursorIter), i.buffer.getInsert())
@@ -234,7 +234,7 @@ proc save*(win: var MainWin) =
     removeFile(os.getConfigDir() / "Aporia" / "config.ini")
 
 
-proc isTrue(s: string): bool = 
+proc istrue(s: string): bool = 
   result = cmpIgnoreStyle(s, "true") == 0
 
 proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
@@ -246,7 +246,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
   # be set in the configuration file:
   result.a = defaultAutoSettings()
   result.g = defaultGlobalSettings()
-  while True:
+  while true:
     var e = next(p)
     case e.kind
     of cfgEof:
@@ -311,14 +311,14 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
   let filename = os.getConfigDir() / "Aporia" / "config.auto.ini"
   if not existsFile(filename): return
   var pAuto: TCfgParser
-  var AutoStream = newFileStream(filename, fmRead)
+  var autoStream = newFileStream(filename, fmRead)
   open(pAuto, autoStream, filename)
   # It is important to initialize every field, because some fields may not 
   # be set in the configuration file:
-  while True:
+  while true:
     var e = next(pAuto)
     case e.kind
-    of CfgEof:
+    of cfgEof:
       break
     of cfgKeyValuePair:
       case normalize(e.key):
@@ -358,7 +358,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
   var pGlobal: TCfgParser
   var filename = os.getConfigDir() / "Aporia" / "config.global.ini"
   open(pGlobal, input, filename)
-  while True:
+  while true:
     var e = next(pGlobal)
     case e.kind
     of cfgEof:

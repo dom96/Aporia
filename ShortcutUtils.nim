@@ -16,21 +16,21 @@ var
     
 proc StrToKey*(str: string): TShortcutKey =
   # Convert a string (e.g. "F1") to TShortcutKey
-  Result.keyval = 0
-  Result.state = 0
+  result.keyval = 0
+  result.state = 0
   var norm = normalize(str)
   var tokens = split(normalize(str), " + ")
   for token in tokens:
     var found = false
     for key, val in stateLookupTable:
       if token == normalize(val):
-        Result.state = Result.state + key
+        result.state = result.state + key
         found = true
         break
     if not found:   
       for key, val in keyLookupTable:
         if token == normalize(val):
-          Result.keyval = key
+          result.keyval = key
           break
 
 proc KeyToStr*(key: TShortcutKey): string =

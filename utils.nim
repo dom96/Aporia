@@ -94,7 +94,7 @@ type
     suggest*: TSuggestDialog
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
-    SourceViewTabs*: PNotebook # Tabs which hold the sourceView
+    sourceViewTabs*: PNotebook # Tabs which hold the sourceView
     statusBar*: PCustomStatusBar
     
     infobar*: PInfoBar ## For encoding selection
@@ -119,7 +119,7 @@ type
     viewToolBarMenuItem*: PMenuItem # view menu
     viewBottomPanelMenuItem*: PMenuItem # view menu
 
-    Tabs*: seq[Tab] # Other
+    tabs*: seq[Tab] # Other
     
     tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
     
@@ -175,7 +175,7 @@ type
   
   Temp = object
     lastSaveDir*: string # Last saved directory/last active directory
-    stopSBUpdates*: Bool
+    stopSBUpdates*: bool
     
     currentExec*: PExecOptions # nil if nothing is being executed.
     compileSuccess*: bool
@@ -281,17 +281,17 @@ proc addText*(textView: PTextView, text: string,
     if scroll:
       var endMark = textView.getBuffer().getMark("endMark")
       # Yay! With the use of marks; scrolling always occurs!
-      textView.scrollToMark(endMark, 0.0, False, 0.0, 1.0)
+      textView.scrollToMark(endMark, 0.0, false, 0.0, 1.0)
 
 proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   ## Uses an idle proc to make sure that the SourceView scrolls. This is quite
   ## effective when the sourceview has just been initialised.
   var current = -1
   if tabIndex != -1: current = tabIndex
-  else: current = win.SourceViewTabs.getCurrentPage()
+  else: current = win.sourceViewTabs.getCurrentPage()
 
-  var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
+  var mark = win.tabs[current].buffer.getInsert()
+  win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
   
   # TODO: What if I remove the tab, while this is happening, segfault because
   # sourceview is gone? The likelihood of this happening is probably very unlikely
@@ -315,26 +315,26 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
     if insertLoc.width <= 0: insertLoc.width = 1
     let inside = intersect(addr(rect), addr(insertLoc), nil)
     if not inside:
-      sv.scrollToMark(insertMark, 0.25, False, 0.0, 0.0)
+      sv.scrollToMark(insertMark, 0.25, false, 0.0, 0.0)
       return true
   
-  discard gIdleAdd(idleConfirmScroll, win.Tabs[current].sourceview)
+  discard gIdleAdd(idleConfirmScroll, win.tabs[current].sourceview)
 
 proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   var current = -1
   if tabIndex != -1: current = tabIndex
-  else: current = win.SourceViewTabs.getCurrentPage()
+  else: current = win.sourceViewTabs.getCurrentPage()
 
-  var mark = win.Tabs[current].buffer.getInsert()
-  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, False, 0.0, 0.0)
+  var mark = win.tabs[current].buffer.getInsert()
+  win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
 
 proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
-  for i in 0..win.Tabs.len()-1:
+  for i in 0..win.tabs.len()-1:
     if absolute:
-      if win.Tabs[i].filename == filename: 
+      if win.tabs[i].filename == filename: 
         return i
     else:
-      if win.Tabs[i].filename.extractFilename == filename:
+      if win.tabs[i].filename.extractFilename == filename:
         return i 
       elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
         return i
@@ -358,7 +358,7 @@ proc moveToEndLine*(iter: PTextIter) =
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
                       expand = false, foregroundColorColumn: gint = -1, visible = true) =
   ## Creates a new Text column.
-  var c = TreeViewColumnNew()
+  var c = treeViewColumnNew()
   var renderer = cellRendererTextNew()
   
   c.columnSetTitle(title)
@@ -373,7 +373,7 @@ proc createTextColumn*(tv: PTreeView, title: string, column: int,
   doAssert tv.appendColumn(c) == column+1
 
 # -- Useful ListStore functions
-proc add*(ls: PListStore, val: String, col = 0) =
+proc add*(ls: PListStore, val: string, col = 0) =
   var iter: TTreeIter
   ls.append(addr(iter))
   ls.set(addr(iter), col, val, -1)
@@ -391,7 +391,7 @@ proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup,
     result = menu_item_new(label)
   
   result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
-  ToolsMenu.append(result)
+  toolsMenu.append(result)
   show(result)
   discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
 
@@ -428,7 +428,7 @@ proc forcePresent*(w: PWindow) =
 # -- Others
 
 proc getCurrentTab*(win: var MainWin): int =
-  result = win.sourceViewTabs.GetCurrentPage()
+  result = win.sourceViewTabs.getCurrentPage()
   if result < 0:
     result = 0
 
@@ -514,10 +514,10 @@ proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   var currentPage = pageNum
   if currentPage == -1:
     currentPage = win.getCurrentTab()
-  var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
+  var isHighlighted = win.tabs[currentPage].buffer.getHighlightSyntax()
   if isHighlighted:
-    var SourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
-    if SourceLanguage == nil: return ""
+    var sourceLanguage = win.tabs[currentPage].buffer.getLanguage()
+    if sourceLanguage == nil: return ""
     return $sourceLanguage.getID()
   else:
     return ""
@@ -529,8 +529,8 @@ proc getLanguageName*(win: var MainWin, buffer: PSourceBuffer): string =
   ## returned.
   var isHighlighted = buffer.getHighlightSyntax()
   if isHighlighted:
-    var SourceLanguage = buffer.getLanguage()
-    if SourceLanguage == nil: return "Plain Text"
+    var sourceLanguage = buffer.getLanguage()
+    if sourceLanguage == nil: return "Plain Text"
     return $sourceLanguage.getName()
   else:
     return "Plain Text"
@@ -540,7 +540,7 @@ proc getLanguageName*(win: var MainWin, pageNum: int = -1): string =
   var currentPage = pageNum
   if currentPage == -1:
     currentPage = win.getCurrentTab()
-  return getLanguageName(win, win.Tabs[currentPage].buffer)
+  return getLanguageName(win, win.tabs[currentPage].buffer)
 
 proc getCurrentLanguageComment*(win: var MainWin,
           syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
@@ -555,7 +555,7 @@ proc getCurrentLanguageComment*(win: var MainWin,
       syntax.blockEnd = "\"\"\""
       syntax.line = "#"
     else:
-      var SourceLanguage = win.Tabs[pageNum].buffer.getLanguage()
+      var sourceLanguage = win.tabs[pageNum].buffer.getLanguage()
       var bs = sourceLanguage.getMetadata("block-comment-start")
       var be = sourceLanguage.getMetadata("block-comment-end")
       var lc = sourceLanguage.getMetadata("line-comment-start")
@@ -577,7 +577,7 @@ proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
 
 # -- Compilation-specific
 
-proc GetCmd*(win: var MainWin, cmd, filename: string): string =
+proc getCmd*(win: var MainWin, cmd, filename: string): string =
   ## ``cmd`` specifies the format string. ``findExe(exe)`` is allowed as well
   ## as ``#$``. The ``#$`` is replaced by ``filename``.
   var f = quoteIfContainsWhite(filename)
@@ -586,7 +586,7 @@ proc GetCmd*(win: var MainWin, cmd, filename: string): string =
     ## Otherwise returns ``settings.nimrodPath``.
     if win.globalSettings.nimrodPath == "":
       dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
-      win.globalSettings.nimrodPath = ChooseFileToOpen(win.w, "")
+      win.globalSettings.nimrodPath = chooseFileToOpen(win.w, "")
     result = win.globalSettings.nimrodPath
   
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":

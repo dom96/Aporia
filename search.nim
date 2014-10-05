@@ -115,7 +115,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
   if mode == SearchStyleInsens:
     reOptions = reOptions + {reIgnoreCase}
     newPattern = styleInsensitive(newPattern)
-    isRegex = True  
+    isRegex = true  
     
   var matches: array[0..re.MaxSubpatterns, string]
   var match = (-1, 0)
@@ -125,7 +125,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
     # Loop until there is no match to find the last match.
     # Yeah. I know inefficient, but that's the only way I know how to do this.
     var newMatch = (-1, 0)
-    while True:
+    while true:
       newMatch = findBoundsGen($text, newPattern, isRegex, reOptions, match[1])
       if newMatch != (-1, 0): match = newMatch
       else: break
@@ -142,7 +142,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
       buffer.getIterAtOffset(addr(endMatch), getOffset(addr(iter)) +
           int32(match[1]) + 1)
           
-    return (startMatch, endMatch, True)
+    return (startMatch, endMatch, true)
   else:
     if win.autoSettings.wrapAround and not wrappedAround:
       if forward:
@@ -153,7 +153,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
         buffer.getEndIter(addr(startMatch))
       return findRePeg(forward, addr(startMatch), buffer, pattern, mode, true)
   
-    return (startMatch, endMatch, False)
+    return (startMatch, endMatch, false)
 
 proc findSimple(forward: bool, startIter: PTextIter,
                 buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
@@ -191,7 +191,7 @@ iterator findTerm(buffer: PSourceBuffer, term: string, mode: TSearchEnum): tuple
   else:
     buffer.moveMark(searchPosMark, addr(startIter))
   
-  var found = True
+  var found = true
   var startSearchIter: TTextIter
   var startMatch, endMatch: TTextIter
   var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
@@ -288,11 +288,11 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
-  # True for Next and False for Previous
+  # true for Next and false for Previous
   var pattern = $(getText(win.findEntry)) # Text to search for.
 
   # Get the current tab
-  var currentTab = win.SourceViewTabs.getCurrentPage()
+  var currentTab = win.sourceViewTabs.getCurrentPage()
   if win.globalSettings.searchHighlightAll:
     highlightAll(win[], pattern, true, win.autoSettings.search)
   else:
@@ -302,13 +302,13 @@ proc findText*(forward: bool) =
   # Get the position where the cursor is,
   # Search based on that.
   var startSel, endSel: TTextIter
-  discard win.Tabs[currentTab].buffer.getSelectionBounds(
+  discard win.tabs[currentTab].buffer.getSelectionBounds(
       addr(startsel), addr(endsel))
   
   var startMatch, endMatch: TTextIter
   var matchFound: gboolean = false
   
-  var buffer = win.Tabs[currentTab].buffer
+  var buffer = win.tabs[currentTab].buffer
   var mode = win.autoSettings.search
   
   case mode
@@ -335,8 +335,8 @@ proc findText*(forward: bool) =
   if matchFound:
     buffer.moveMarkByName("insert", addr(startMatch))
     buffer.moveMarkByName("selection_bound", addr(endMatch))
-    discard PTextView(win.Tabs[currentTab].sourceView).
-        scrollToIter(addr(startMatch), 0.2, False, 0.0, 0.0)
+    discard PTextView(win.tabs[currentTab].sourceView).
+        scrollToIter(addr(startMatch), 0.2, false, 0.0, 0.0)
     
     # Reset the findEntry color
     win.findEntry.modifyBase(STATE_NORMAL, nil)
@@ -354,9 +354,9 @@ proc findText*(forward: bool) =
         win.statusbar.setTemp("Wrapped around end of file", UrgNormal, 5000)
   else:
     # Change the findEntry color to red
-    var red: Gdk2.TColor
+    var red: gdk2.TColor
     discard colorParse("#ff6666", addr(red))
-    var white: Gdk2.TColor
+    var white: gdk2.TColor
     discard colorParse("white", addr(white))
     
     win.findEntry.modifyBase(STATE_NORMAL, addr(red))
@@ -365,29 +365,29 @@ proc findText*(forward: bool) =
     # Set the status bar
     win.statusbar.setTemp("Match not found.", UrgError, 5000)
     
-proc replaceAll*(find, replace: cstring): Int =
+proc replaceAll*(find, replace: cstring): int =
   # gedit-document.c, gedit_document_replace_all
   var count = 0
   var startMatch, endMatch: TTextIter
   var replaceLen = len(replace)
 
   # Get the current tab
-  var currentTab = win.SourceViewTabs.getCurrentPage()
-  assert(currentTab <% win.Tabs.len())
+  var currentTab = win.sourceViewTabs.getCurrentPage()
+  assert(currentTab <% win.tabs.len())
 
-  var buffer = win.Tabs[currentTab].buffer
+  var buffer = win.tabs[currentTab].buffer
   
   var iter: TTextIter
   buffer.getStartIter(addr(iter))
   
   # Disable bracket matching and status bar updates - for a speed up
-  win.tempStuff.stopSBUpdates = True
-  buffer.setHighlightMatchingBrackets(False)
+  win.tempStuff.stopSBUpdates = true
+  buffer.setHighlightMatchingBrackets(false)
   
   buffer.beginUserAction()
   
   # Replace all
-  var found = True
+  var found = true
   while found:
     case win.autoSettings.search
     of SearchCaseInsens, SearchCaseSens:
@@ -410,7 +410,7 @@ proc replaceAll*(find, replace: cstring): Int =
   buffer.endUserAction()
   
   # Re-Enable bracket matching and status bar updates
-  win.tempStuff.stopSBUpdates = False
+  win.tempStuff.stopSBUpdates = false
   buffer.setHighlightMatchingBrackets(win.globalSettings.highlightMatchingBrackets)
 
   return count
