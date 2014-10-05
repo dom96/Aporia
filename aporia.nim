@@ -2301,8 +2301,8 @@ proc initSocket() =
       var client: PAsyncSocket
       new(client)
       s.accept(client)
+      #FIXME: threadAnalysis is set to off to work around this anonymous proc not being gc safe
       client.handleRead =
-        #FIXME: threadAnalysis is off set to off to work around anonymous proc not being gc safe
         proc (c: PAsyncSocket) {.closure, gcsafe.} =
           var line = ""
           if c.readLine(line):
