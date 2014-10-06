@@ -390,7 +390,9 @@ proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup,
   else:
     result = menu_item_new(label)
   
-  result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
+  if accelerator_valid(acc, mask):
+    result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
+  
   toolsMenu.append(result)
   show(result)
   discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
