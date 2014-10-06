@@ -25,7 +25,8 @@ proc newHighlightAll*(text: string, forSearch: bool, idleID: int32): THighlightA
   result.isHighlighted = true
   result.text = text
   result.forSearch = forSearch
-  result.idleID = idleID
+  result.idleID = new(int32)
+  result.idleID[] = idleID
 
 proc newNoHighlightAll*(): THighlightAll =
   result.isHighlighted = false
@@ -221,7 +222,13 @@ proc stopHighlightAll*(w: var MainWin, forSearch: bool) =
   if t.highlighted.isHighlighted:
     if not forSearch and w.tabs[current].highlighted.forSearch: return
     
-    discard gSourceRemove(w.tabs[current].highlighted.idleID)
+    var idleID = w.tabs[current].highlighted.idleID
+    
+    if (idleID != nil and idleID[] != 0):
+      discard gSourceRemove(idleID[])
+      # It is a programmer error to remove the same source twice
+      idleID[] = 0
+    
     var startIter, endIter: TTextIter
     w.tabs[current].buffer.getStartIter(addr(startIter))
     w.tabs[current].buffer.getEndIter(addr(endIter))
@@ -254,6 +261,7 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
       buffer: PSourceBuffer
       term: string 
       mode: TSearchEnum
+      idleId: ref int32
       findIter: iterator (buffer: PSourceBuffer, 
                           term: string, mode: TSearchEnum): 
                         tuple[startMatch, endMatch: TTextIter] {.closure.}
@@ -277,13 +285,19 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
     
   proc idleHighlightAllRemove(param: ptr TIdleParam) {.cdecl.} =
     echod("Unreffing highlight.")
-    GCUnref(cast[ref TIdleParam](param))
+    let idleParam = cast[ref TIdleParam](param)
+    # When this function is called the idleID is no longer valid as it signals
+    # that the idle function has already been removed from the main loop
+    if idleParam.idleID != nil:
+      idleParam.idleID[] = 0
+    GCUnref(idleParam)
     GC_fullCollect()
   
   let idleID =
       gIdleAddFull(GPRIORITY_DEFAULT_IDLE, idleHighlightAll,
                    cast[ptr TIdleParam](idleParam), idleHighlightAllRemove)
   w.tabs[current].highlighted = newHighlightAll(term, forSearch, idleID)
+  idleParam.idleID = w.tabs[current].highlighted.idleID
 
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
