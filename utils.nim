@@ -236,7 +236,8 @@ type
     isHighlighted*: bool
     text*: string # What is currently being highlighted in this tab
     forSearch*: bool # Whether highlightedText is done as a result of a search.
-    idleID*: ref int32
+    idleID*: int32
+    idIsInvalid*: ref bool
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
