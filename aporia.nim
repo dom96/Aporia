@@ -1661,17 +1661,23 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
     if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
       var iter: TTextIter
       buffer.getIterAtLine(addr(iter), int32(lineNum)-1)
-      
+
       buffer.moveMarkByName("insert", addr(iter))
       buffer.moveMarkByName("selection_bound", addr(iter))
       discard PTextView(win.tabs[current].sourceView).
           scrollToIter(addr(iter), 0.2, false, 0.0, 0.0)
-      
+
+      # Select line to make it better noticeable
+      var colEndAtLine: TTextIter
+      buffer.getIterAtLine(addr(colEndAtLine), int32(lineNum)-1)
+      moveToEndLine(addr(colEndAtLine))
+      buffer.selectRange(addr(iter), addr(colEndAtLine))  
+
       # Reset entry color.
       win.goLineBar.entry.modifyBase(STATE_NORMAL, nil)
       win.goLineBar.entry.modifyText(STATE_NORMAL, nil)
       return # Success
-  
+
   # Make entry red.
   var red: gdk2.TColor
   discard colorParse("#ff6666", addr(red))
