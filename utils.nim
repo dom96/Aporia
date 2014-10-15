@@ -584,7 +584,7 @@ proc getCmd*(win: var MainWin, cmd, filename: string): string =
   proc promptNimrodPath(win: var MainWin): string =
     ## If ``settings.nimrodPath`` is not set, prompts the user for the nimrod path.
     ## Otherwise returns ``settings.nimrodPath``.
-    if win.globalSettings.nimrodPath == "":
+    if not fileExists(win.globalSettings.nimrodPath):
       dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
       win.globalSettings.nimrodPath = chooseFileToOpen(win.w, "")
     result = win.globalSettings.nimrodPath
