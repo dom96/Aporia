@@ -575,6 +575,15 @@ proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
   win.tabs[tab].buffer.setHighlightSyntax(doHighlight)
   win.tempStuff.commentSyntax = ("", "", "")
 
+proc showYesCancelDialog*(win: ptr MainWin, text: string): int =
+  var dialog = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
+  dialog.setTransientFor(win.w)
+  dialog.setMarkup(text)
+  dialog.addButtons(STOCK_YES, ResponseAccept, STOCK_CANCEL, ResponseCancel, 
+     nil)
+  result = dialog.run()
+  gtk2.destroy(PWidget(dialog))
+  
 # -- Compilation-specific
 
 proc getCmd*(win: var MainWin, cmd, filename: string): string =
