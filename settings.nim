@@ -285,6 +285,9 @@ proc autoIndent_Toggled(button: PToggleButton, user_data: Pgpointer) =
 proc suggestFeature_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.suggestFeature = button.getActive()
 
+proc alwaysWrapSearch_Toggled(button: PToggleButton, user_data: Pgpointer) =
+  win.globalSettings.alwaysWrapSearch = button.getActive()
+  
 proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: Pgpointer) =
   win.globalSettings.showCloseOnAllTabs = button.getActive()
   # Loop through each tab, and change the setting.
@@ -390,6 +393,18 @@ proc initEditor(settingsTabs: PNotebook) =
     G_CALLBACK(suggestFeature_Toggled), nil)
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, false, false, 20)
   suggestFeatureCheckBox.show()
+  
+  # Search alwaysWrapSearch - checkbox
+  var alwaysWrapSearchHBox = hboxNew(false, 0)
+  editorVBox.packStart(alwaysWrapSearchHBox, false, false, 0)
+  alwaysWrapSearchHBox.show()
+  
+  var alwaysWrapSearchCheckBox = checkButtonNew("Always wrap around on search")
+  alwaysWrapSearchCheckBox.setActive(win.globalSettings.alwaysWrapSearch)
+  discard alwaysWrapSearchCheckBox.gSignalConnect("toggled", 
+    G_CALLBACK(alwaysWrapSearch_Toggled), nil)
+  alwaysWrapSearchHBox.packStart(alwaysWrapSearchCheckBox, false, false, 20)
+  alwaysWrapSearchCheckBox.show()
 
 var
   dialog: gtk2.PWindow

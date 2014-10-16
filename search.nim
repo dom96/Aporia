@@ -95,6 +95,8 @@ proc findBoundsGen(text, pattern: string,
   if result[0] == -1 or result[1] == -1: return (-1, 0)
 
 proc findConfirmWrap(forward: bool): bool = 
+  if win.globalSettings.alwaysWrapSearch:
+    return true
   var answer = 0
   if forward:
     answer = win.showYesCancelDialog("Match not found. Restart at the beginning?")
@@ -152,7 +154,7 @@ proc findRePeg(forward: bool, startIter: PTextIter,
           
     return (startMatch, endMatch, true)
   else:
-    if win.autoSettings.wrapAround and not wrappedAround:
+    if not wrappedAround:
       if forward:
         # We are at the end. Restart at the beginning.
         buffer.getStartIter(addr(startMatch))
@@ -181,7 +183,7 @@ proc findSimple(forward: bool, startIter: PTextIter,
         options, addr(startMatch), addr(endMatch), nil)
 
   if not matchFound:
-    if win.autoSettings.wrapAround and not wrappedAround:
+    if not wrappedAround:
       if forward:
         # We are at the end. Restart from beginning.
         buffer.getStartIter(addr(startMatch))

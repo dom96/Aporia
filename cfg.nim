@@ -19,7 +19,6 @@ type
 
 proc defaultAutoSettings*(): TAutoSettings =
   result.search = SearchCaseInsens
-  result.wrapAround = true
   result.winWidth = 800
   result.winHeight = 600
 
@@ -50,6 +49,7 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.singleInstance = true
   result.restoreTabs = true
   result.activateErrorTabOnErrors = false
+  result.alwaysWrapSearch = true
   result.keyCommentLines      = TShortcutKey(keyval: KEY_slash, state: ControlMask)
   result.keyDeleteLine        = TShortcutKey(keyval: KEY_d, state: ControlMask)
   result.keyDuplicateLines    = TShortcutKey(keyval: 0, state: 0)
@@ -114,7 +114,6 @@ proc save(settings: TAutoSettings, win: var MainWin) =
     f.write(confInfo & "\n")
     
     f.writeKeyVal("searchMethod", $int(settings.search))
-    f.writeKeyVal("wrapAround", $settings.wrapAround)
     f.writeKeyVal("winMaximized", $settings.winMaximized)
     f.writeKeyVal("VPanedPos", settings.VPanedPos)
     f.writeKeyVal("winWidth", settings.winWidth)
@@ -176,6 +175,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyVal("restoreTabs", $settings.restoreTabs)
     f.writeKeyVal("activateErrorTabOnErrors", $settings.activateErrorTabOnErrors)
+    f.writeKeyVal("alwaysWrapSearch", $settings.alwaysWrapSearch)
     f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
     f.writeKeyVal("wrapMode",
@@ -323,7 +323,6 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
     of cfgKeyValuePair:
       case normalize(e.key):
       of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
-      of "wraparound": result.wrapAround = isTrue(e.value)
       of "winmaximized": result.winMaximized = isTrue(e.value)
       of "vpanedpos": result.VPanedPos = int32(e.value.parseInt())
       of "bottompanelvisible": result.bottomPanelVisible = isTrue(e.value)
@@ -384,6 +383,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
         result.singleInstancePort = int32(e.value.parseInt())
       of "restoretabs": result.restoreTabs = isTrue(e.value)
       of "activateerrortabonerrors": result.activateErrorTabOnErrors = isTrue(e.value)
+      of "alwayswrapsearch": result.alwaysWrapSearch = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
       of "compilesaveall": result.compileSaveAll = isTrue(e.value)
       of "nimrodcmd": result.nimrodCmd = e.value
