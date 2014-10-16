@@ -238,6 +238,8 @@ type
     forSearch*: bool # Whether highlightedText is done as a result of a search.
     idleID*: int32
 
+var grabFocusOnTextViewIdle = false
+
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
   when not defined(release):
@@ -283,9 +285,11 @@ proc addText*(textView: PTextView, text: string,
       # Yay! With the use of marks; scrolling always occurs!
       textView.scrollToMark(endMark, 0.0, false, 0.0, 1.0)
 
-proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
+proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1, focus = false) =
   ## Uses an idle proc to make sure that the SourceView scrolls. This is quite
   ## effective when the sourceview has just been initialised.
+  ## Also the focus will be set to the text view.
+  grabFocusOnTextViewIdle = focus
   var current = -1
   if tabIndex != -1: current = tabIndex
   else: current = win.sourceViewTabs.getCurrentPage()
@@ -317,16 +321,11 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
     if not inside:
       sv.scrollToMark(insertMark, 0.25, false, 0.0, 0.0)
       return true
+    if grabFocusOnTextViewIdle:
+      sv.grabFocus()
+      grabFocusOnTextViewIdle = false
   
   discard gIdleAdd(idleConfirmScroll, win.tabs[current].sourceview)
-
-proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
-  var current = -1
-  if tabIndex != -1: current = tabIndex
-  else: current = win.sourceViewTabs.getCurrentPage()
-
-  var mark = win.tabs[current].buffer.getInsert()
-  win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
 
 proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
   for i in 0..win.tabs.len()-1:
@@ -354,6 +353,22 @@ proc moveToEndLine*(iter: PTextIter) =
     # to its first char, because there is no more chars on that line.
     iter.setLine(currentLine)
 
+proc goToLine*(win: var MainWin, line: BiggestInt = 0, column = 0, focus = false): bool =
+  var current = win.sourceViewTabs.getCurrentPage()
+  template buffer: expr = win.tabs[current].buffer
+  if line-1 < 0 or line > buffer.getLineCount():
+    return false
+  var iter: TTextIter
+  buffer.getIterAtLineOffset(addr(iter), line.gint, column.gint)
+
+  # Select line to make it better noticeable
+  var endOfLine = iter
+  moveToEndLine(addr(endOfLine))
+  buffer.selectRange(addr(iter), addr(endOfLine))
+  
+  win.forceScrollToInsert(-1, focus)
+  result = true
+  
 # -- Useful TreeView function
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
                       expand = false, foregroundColorColumn: gint = -1, visible = true) =
