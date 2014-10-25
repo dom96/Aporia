@@ -356,16 +356,12 @@ proc moveToEndLine*(iter: PTextIter) =
 proc goToLine*(win: var MainWin, line: BiggestInt = 0, column = 0, focus = false): bool =
   var current = win.sourceViewTabs.getCurrentPage()
   template buffer: expr = win.tabs[current].buffer
-  if line-1 < 0 or line > buffer.getLineCount():
+  if line < 0 or line >= buffer.getLineCount():
     return false
   var iter: TTextIter
   buffer.getIterAtLineOffset(addr(iter), line.gint, column.gint)
-
-  # Select line to make it better noticeable
-  var endOfLine = iter
-  moveToEndLine(addr(endOfLine))
-  buffer.selectRange(addr(iter), addr(endOfLine))
-  
+  buffer.moveMarkByName("insert", addr(iter))
+  buffer.moveMarkByName("selection_bound", addr(iter))
   win.forceScrollToInsert(-1, focus)
   result = true
   

@@ -1638,6 +1638,13 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   win.goLineBar.entry.modifyBase(STATE_NORMAL, addr(red))
   win.goLineBar.entry.modifyText(STATE_NORMAL, addr(white))
 
+# Return pressed
+proc goLine_EnterPressed(ed: PEditable, d: Pgpointer) =
+  var line = win.goLineBar.entry.getText()
+  var lineNum: BiggestInt = -1
+  if parseBiggestInt($line, lineNum) != 0:
+    discard win.goToLine(lineNum - 1, 0, true)
+
 proc goLineClose_clicked(button: PButton, user_data: Pgpointer) = 
   win.goLineBar.bar.hide()
 
@@ -2212,10 +2219,10 @@ proc initGoLineBar(MainBox: PBox) =
   win.goLineBar.entry = entryNew()
   win.goLineBar.bar.packStart(win.goLineBar.entry, false, false, 0)
   discard win.goLineBar.entry.signalConnect("changed", SIGNAL_FUNC(
-                                      goLine_changed), nil)
+                                      goLine_Changed), nil)
   # Go to line also when Return key is pressed:                                    
   discard win.goLineBar.entry.signalConnect("activate", SIGNAL_FUNC(
-                                      goLine_changed), nil)
+                                      goLine_EnterPressed), nil)
   win.goLineBar.entry.show()
   
   # Right side ...
