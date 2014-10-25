@@ -34,6 +34,7 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.indentWidth = 2
   result.showLineNumbers = true
   result.highlightMatchingBrackets = true
+  result.highlightCurrentLine = true
   result.toolBarVisible = true
   result.autoIndent = true
   result.compileSaveAll = false
