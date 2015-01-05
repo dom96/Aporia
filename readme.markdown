@@ -12,7 +12,7 @@ which have not yet made it to a stable release.
 You can build it by running ``nim c aporia`` or by using nimble ``nimble build``.
 
 You can also quickly install it using nimble without the need to clone this repo
-yourself, just execute ``nimble install aporia#head``.
+yourself, just execute ``nimble install aporia@#head``.
 
 ### Compiling from C sources
 If you do not want to get the nim compiler you can still compile Aporia from
