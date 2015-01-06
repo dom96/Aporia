@@ -21,11 +21,13 @@ const
                        '{', '}', '`', '[', ']', ',', ';'} +
                       strutils.Whitespace + {'\t'}
 
-proc newHighlightAll*(text: string, forSearch: bool, idleID: int32): THighlightAll =
+proc newHighlightAll*(text: string, forSearch: bool, idleID: int32,
+                      idIsInvalid: ref bool = new(bool)): THighlightAll =
   result.isHighlighted = true
   result.text = text
   result.forSearch = forSearch
   result.idleID = idleID
+  result.idIsInvalid = idIsInvalid
 
 proc newNoHighlightAll*(): THighlightAll =
   result.isHighlighted = false
@@ -221,7 +223,14 @@ proc stopHighlightAll*(w: var MainWin, forSearch: bool) =
   if t.highlighted.isHighlighted:
     if not forSearch and w.tabs[current].highlighted.forSearch: return
     
-    discard gSourceRemove(w.tabs[current].highlighted.idleID)
+    var idleID = w.tabs[current].highlighted.idleID
+    let idIsInvalid = w.tabs[current].highlighted.idIsInvalid[]
+    
+    if (not idIsInvalid and idleID != 0):
+      discard gSourceRemove(idleID)
+      # It is a programmer error to remove the same source twice
+      idleID = 0
+    
     var startIter, endIter: TTextIter
     w.tabs[current].buffer.getStartIter(addr(startIter))
     w.tabs[current].buffer.getEndIter(addr(endIter))
@@ -254,6 +263,7 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
       buffer: PSourceBuffer
       term: string 
       mode: TSearchEnum
+      idleIdIsInvalid: ref bool
       findIter: iterator (buffer: PSourceBuffer, 
                           term: string, mode: TSearchEnum): 
                         tuple[startMatch, endMatch: TTextIter] {.closure.}
@@ -263,6 +273,10 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
   idleParam.term = term
   idleParam.mode = mode
   idleParam.findIter = findTerm
+  # note: we must create a new bool each time so that idleHighlightAllRemove
+  # doesn't clobber the current value in w.tabs[current].highlighted, i.e it 
+  # just clobbers a stale reference
+  idleParam.idleIdIsInvalid = new(bool)
   GCRef(idleParam) # Make sure `idleParam` is not deallocated by the GC.
   
   discard w.tabs[current].buffer.createTag(HighlightTagName,
@@ -277,13 +291,17 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
     
   proc idleHighlightAllRemove(param: ptr TIdleParam) {.cdecl.} =
     echod("Unreffing highlight.")
-    GCUnref(cast[ref TIdleParam](param))
+    let idleParam = cast[ref TIdleParam](param)
+    # When this function is called the idleID is no longer valid as it signals
+    # that the idle function has already been removed from the main loop
+    idleParam.idleIdIsInvalid[] = true
+    GCUnref(idleParam)
     GC_fullCollect()
   
   let idleID =
       gIdleAddFull(GPRIORITY_DEFAULT_IDLE, idleHighlightAll,
                    cast[ptr TIdleParam](idleParam), idleHighlightAllRemove)
-  w.tabs[current].highlighted = newHighlightAll(term, forSearch, idleID)
+  w.tabs[current].highlighted = newHighlightAll(term, forSearch, idleID, idleParam.idleIdIsInvalid)
 
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
