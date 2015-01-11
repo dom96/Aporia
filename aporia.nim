@@ -986,7 +986,7 @@ proc undo(menuItem: PMenuItem, user_data: pointer) =
     win.tabs[current].buffer.undo()
   else:
     win.statusbar.setTemp("Nothing to undo.", UrgError, 5000)
-  win.scrollToInsert()
+  win.forceScrollToInsert()
   
 proc redo(menuItem: PMenuItem, user_data: pointer) =
   var current = win.sourceViewTabs.getCurrentPage()
@@ -994,7 +994,7 @@ proc redo(menuItem: PMenuItem, user_data: pointer) =
     win.tabs[current].buffer.redo()
   else:
     win.statusbar.setTemp("Nothing to redo.", UrgError, 5000)
-  win.scrollToInsert()
+  win.forceScrollToInsert()
 
 proc setFindField() =
   # Get the selected text, and set the findEntry to it.
@@ -1508,46 +1508,13 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
     return
   
   # Move cursor to where the error is.
-  var line = item.line.parseInt-1
-  var insertIndex = int32(item.column.parseInt)-1
-  var selectionBound = int32(item.column.parseInt)
-  if insertIndex < 0:
-    insertIndex = 0
-    selectionBound = 1
-  
-  # Validate that this line/col combo is not outside bounds
-  var endIter: TTextIter
-  win.tabs[existingTab].buffer.getEndIter(addr(endIter))
-  let lastLine = getLine(addr(endIter))
-  if line > lastLine:
-    line = lastLine
-  
-  var colEndAtLine: TTextIter
-  win.tabs[existingTab].buffer.getIterAtLine(addr(colEndAtLine), line.gint)
-  moveToEndLine(addr(colEndAtLine))
-  let lastColumnAtLine = getLineOffset(addr(colEndAtLine))
-  if selectionBound > lastColumnAtLine:
-    win.statusbar.setTemp("Line " & $(line+1) & " and column " & $selectionBound &
+  var line = item.line.parseInt - 1
+  var column = item.column.parseInt
+  if not win.goToLine(line, column, true):
+    win.statusbar.setTemp("Line " & $(line+1) & " and column " & $(column+1) &
                           " is outside the bounds of the available text.",
                           UrgError, 5000)
-    return
-  
-  var iter: TTextIter
-  var iterPlus1: TTextIter 
-  win.tabs[existingTab].buffer.getIterAtLineOffset(addr(iter),
-      line.int32, insertIndex)
-  win.tabs[existingTab].buffer.getIterAtLineOffset(addr(iterPlus1),
-      line.int32, selectionBound)
-  
-  win.tabs[existingTab].buffer.selectRange(addr(iter), addr(iterPlus1))
-  
-  # TODO: This should be getting focus, but as usual it's not... FIXME
-  # TODO: This can perhaps be done by providing a 'initialised' signal, once
-  # the scrolling occurs ... look down.
-  win.tabs[existingTab].sourceView.grabFocus()
-
-  win.forceScrollToInsert(int32(existingTab))
-
+                          
 # -- FindBar
 
 proc nextBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(true)
@@ -1655,23 +1622,13 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var line = win.goLineBar.entry.getText()
   var lineNum: BiggestInt = -1
   if parseBiggestInt($line, lineNum) != 0:
-    # Get current tab
-    var current = win.sourceViewTabs.getCurrentPage()
-    template buffer: expr = win.tabs[current].buffer
-    if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
-      var iter: TTextIter
-      buffer.getIterAtLine(addr(iter), int32(lineNum)-1)
-      
-      buffer.moveMarkByName("insert", addr(iter))
-      buffer.moveMarkByName("selection_bound", addr(iter))
-      discard PTextView(win.tabs[current].sourceView).
-          scrollToIter(addr(iter), 0.2, false, 0.0, 0.0)
-      
+
+    if win.goToLine(lineNum - 1):
       # Reset entry color.
       win.goLineBar.entry.modifyBase(STATE_NORMAL, nil)
       win.goLineBar.entry.modifyText(STATE_NORMAL, nil)
       return # Success
-  
+
   # Make entry red.
   var red: gdk2.TColor
   discard colorParse("#ff6666", addr(red))
@@ -1680,6 +1637,13 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   
   win.goLineBar.entry.modifyBase(STATE_NORMAL, addr(red))
   win.goLineBar.entry.modifyText(STATE_NORMAL, addr(white))
+
+# Return pressed
+proc goLine_EnterPressed(ed: PEditable, d: Pgpointer) =
+  var line = win.goLineBar.entry.getText()
+  var lineNum: BiggestInt = -1
+  if parseBiggestInt($line, lineNum) != 0:
+    discard win.goToLine(lineNum - 1, 0, true)
 
 proc goLineClose_clicked(button: PButton, user_data: Pgpointer) = 
   win.goLineBar.bar.hide()
@@ -2255,10 +2219,10 @@ proc initGoLineBar(MainBox: PBox) =
   win.goLineBar.entry = entryNew()
   win.goLineBar.bar.packStart(win.goLineBar.entry, false, false, 0)
   discard win.goLineBar.entry.signalConnect("changed", SIGNAL_FUNC(
-                                      goLine_changed), nil)
+                                      goLine_Changed), nil)
   # Go to line also when Return key is pressed:                                    
   discard win.goLineBar.entry.signalConnect("activate", SIGNAL_FUNC(
-                                      goLine_changed), nil)
+                                      goLine_EnterPressed), nil)
   win.goLineBar.entry.show()
   
   # Right side ...
