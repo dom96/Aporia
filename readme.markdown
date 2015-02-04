@@ -1,21 +1,21 @@
 # Aporia
-Aporia is an IDE for the Nim programming language. Aporia uses GTK as the 
+Aporia is an IDE for the Nimrod programming language. Aporia uses GTK as the 
 default toolkit, and the gtksourceview for the text editor component.
 
-![Aporia on Windows 7](https://github.com/nim-lang/Aporia/raw/master/screenshots/windows.png "Aporia on Windows 7")
+![Aporia on Windows 7](https://github.com/nimrod-code/Aporia/raw/master/screenshots/windows.png "Aporia on Windows 7")
 
 ## Compiling
-To compile Aporia you need the latest version of the nim compiler, preferably
+To compile Aporia you need the latest version of the Nimrod compiler, preferably
 the unstable release from github. Aporia sometimes relies on bug fixes 
 which have not yet made it to a stable release.
 
-You can build it by running ``nim c aporia`` or by using nimble ``nimble build``.
+You can build it by running ``nimrod c aporia`` or by using babel ``babel build``.
 
-You can also quickly install it using nimble without the need to clone this repo
-yourself, just execute ``nimble install aporia@#head``.
+You can also quickly install it using babel without the need to clone this repo
+yourself, just execute ``babel install aporia#head``.
 
 ### Compiling from C sources
-If you do not want to get the nim compiler you can still compile Aporia from
+If you do not want to get the nimrod compiler you can still compile Aporia from
 the generated C sources, it's as simple as executing the ``build.sh`` script
 (or ``build.bat`` on Windows). You can then also use ``install.sh`` to install
 Aporia.
@@ -49,7 +49,7 @@ GtkSourceView depends on libxml2-2. This should be downloaded from
 And the contents of it should be copied the same 'bin' directory as GtkSourceView above.
 The zip you are looking for is usually called ``libxml2_2.X.X-1_win32.zip``
 #### pcre
-The dll for this can be found in nim's repo, in the ``"dist"`` directory. Just
+The dll for this can be found in Nimrod's repo, in the ``"dist"`` directory. Just
 copy it into aporia's directory or somewhere into your PATH.
 #### Microsoft Visual C++ 2010 Redistributable Package (*optional*)
 If you are experiencing a ``MSVC100.dll cannot be found`` then you may need to install
@@ -74,5 +74,5 @@ the macports libraries when invoking aporia:
 If running now ``aporia`` tells you about a missing dynamic library,
 dependencies might have changed and you could need to ``port install`` another
 package (tell us this is broken [creating an
-issue](https://github.com/nim-lang/Aporia/issues) and we will update the
+issue](https://github.com/nimrod-code/Aporia/issues) and we will update the
 documentation).

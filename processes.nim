@@ -5,7 +5,7 @@
 ## This module contains functions which deal with running processes, such as the Nimrod process.
 ## There are also some functions for gathering errors as given by the nimrod compiler and putting them into the error list.
 
-import pegs, times, osproc, streams, parseutils, strutils, re, os
+import pegs, times, osproc, streams, parseutils, strutils, re
 import gtk2, glib2
 import utils, CustomStatusBar
 
@@ -36,35 +36,23 @@ proc clearErrors*(win: var MainWin) =
   cast[PListStore](TreeModel).clear()
   win.tempStuff.errorList = @[]
 
-proc addError*(win: var MainWin, error: TError) =
-  # Make the file path a bit shorter, so it's more readable
-  var fileShort = error.file
-  var mainDir = win.tabs[win.sourceViewTabs.getCurrentPage()].filename
-  var i = mainDir.rfind($os.DirSep)
-  if i > 0 and error.file.startsWith(mainDir.substr(0, i)):
-     fileShort = "..." & fileShort.substr(i) 
-               
+proc addError*(win: var MainWin, theType: TErrorType, desc,
+               file, line, col: string) =
   var ls = cast[PListStore](win.errorListWidget.getModel())
   var iter: TTreeIter
   ls.append(addr(iter))
+  ls.set(addr(iter), 0, $theType, 1, desc, 2, file, 3, line, 4, col, -1)
   
-  if error.kind == TETError: 
-    ls.set(addr(iter), 0, fileShort, 1, error.line, 2, error.column, 3, $error.kind, 4, error.desc, 5, "red", -1)
-  else:
-    ls.set(addr(iter), 0, fileShort, 1, error.line, 2, error.column, 3, $error.kind, 4, error.desc, 5, nil, -1)
-  
-  # Scroll to last error
-  var treepath = win.errorListWidget.getModel().get_path(addr(iter));
-  win.errorListWidget.scrollToCell(treepath, nil, false, 0, 0)
-  
-  # Activate "Error list" tab
-  if win.globalSettings.activateErrorTabOnErrors:
-    win.bottomPanelTabs.setCurrentPage(1)
-  
-  win.tempStuff.errorList.add(error)
+  var newErr: TError
+  newErr.kind = theType
+  newErr.desc = desc
+  newErr.file = file
+  newErr.line = line
+  newErr.column = col
+  win.tempStuff.errorList.add(newErr)
 
 proc parseError(err: string, 
-            res: var TError) =
+            res: var tuple[theType: TErrorType, desc, file, line, col: string]) =
   ## Parses a line like:
   ##   ``a12.nim(1, 3) Error: undeclared identifier: 'asd'``
   ##
@@ -96,11 +84,11 @@ proc parseError(err: string,
   ## Error: execution of an external program failed
   var i = 0
   if err.startsWith("Error: "):
-    res.kind = TETError
+    res.theType = TETError
     res.desc = err[7 .. -1]
     res.file = ""
     res.line = ""
-    res.column = ""
+    res.col = ""
     return
     
   res.file = ""
@@ -112,19 +100,19 @@ proc parseError(err: string,
   res.line = $lineInt
   inc(i) # Skip ,
   i += skipWhitespace(err, i)
-  res.column = ""
+  res.col = ""
   var colInt = -1
   i += parseInt(err, colInt, i)
-  res.column = $colInt
+  res.col = $colInt
   inc(i) # Skip )
   i += skipWhitespace(err, i)
   var theType = ""
   i += parseUntil(err, theType, ':', i)
   case normalize(theType)
   of "error", "info":
-    res.kind = TETError
+    res.theType = TETError
   of "hint", "warning":
-    res.kind = TETWarning
+    res.theType = TETWarning
   else:
     echod(theType)
     assert(false)
@@ -139,10 +127,10 @@ proc printProcOutput(win: var MainWin, line: string) =
   ## should be received as one continuous message.
   echod("Printing: ", line.repr)
   template paErr(): stmt =
-    var parseRes: TError
+    var parseRes: tuple[theType: TErrorType, desc, file, line, col: string]
     parseError(line, parseRes)
-       
-    win.addError(parseRes)
+    win.addError(parseRes.theType, parseRes.desc,
+             parseRes.file, parseRes.line, parseRes.col)
 
   # Colors
   var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
@@ -155,19 +143,19 @@ proc printProcOutput(win: var MainWin, line: string) =
   case win.tempStuff.currentExec.mode:
   of ExecNimrod:
     if line =~ pegLineError / pegOtherError / pegLineInfo:
-      win.outputTextView.addText(line & "\l", errorTag)
+      win.outputTextView.addText(line & "\n", errorTag)
       paErr()
       win.tempStuff.compileSuccess = false
     elif line =~ pegSuccess:
-      win.outputTextView.addText(line & "\l", successTag)
+      win.outputTextView.addText(line & "\n", successTag)
       win.tempStuff.compileSuccess = true
     elif line =~ pegLineWarning:
-      win.outputTextView.addText(line & "\l", warningTag)
+      win.outputTextView.addText(line & "\n", warningTag)
       paErr()
     else:
-      win.outputTextView.addText(line & "\l", normalTag)
+      win.outputTextView.addText(line & "\n", normalTag)
   of ExecRun, ExecCustom:
-    win.outputTextView.addText(line & "\l", normalTag)
+    win.outputTextView.addText(line & "\n", normalTag)
 
 proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
   if event.line == "" or event.line.startsWith(pegSuccess) or
@@ -184,7 +172,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
     if not win.tempStuff.errorMsgStarted:
       #echod(2.1)
       win.tempStuff.errorMsgStarted = true
-      win.tempStuff.compilationErrorBuffer.add(event.line & "\l")
+      win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
     elif win.tempStuff.compilationErrorBuffer != "":
       #echod(2.2)
       win.printProcOutput(win.tempStuff.compilationErrorBuffer.strip())
@@ -196,7 +184,7 @@ proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
   else:
     #echod(3)
     if win.tempStuff.errorMsgStarted:
-      win.tempStuff.compilationErrorBuffer.add(event.line & "\l")
+      win.tempStuff.compilationErrorBuffer.add(event.line & "\n")
     else:
       win.printProcOutput(event.line)
 
@@ -240,12 +228,10 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
           
             if event.exitCode == QuitSuccess:
               win.outputTextView.addText("> Process terminated with exit code " & 
-                                               $event.exitCode & "\l", successTag)
-              # Activate "Output" tab, after successful compilation
-              win.bottomPanelTabs.setCurrentPage(0)    
+                                               $event.exitCode & "\n", successTag)
             else:
               win.outputTextView.addText("> Process terminated with exit code " & 
-                                               $event.exitCode & "\l", errorTag)
+                                               $event.exitCode & "\n", errorTag)
           
           
           let runAfter = win.tempStuff.currentExec.runAfter
@@ -284,7 +270,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   # Output
   if exec.output:
     var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
-    win.outputTextView.addText("> " & exec.command & "\l", normalTag)
+    win.outputTextView.addText("> " & exec.command & "\n", normalTag)
     
   # Add a function which will be called when the UI is idle.
   win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, addr(win))

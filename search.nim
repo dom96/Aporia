@@ -217,27 +217,27 @@ proc stopHighlightAll*(w: var MainWin, forSearch: bool) =
   ## haven't yet been found cancels the idle proc job (resets the already
   ## highlighted terms)
   let current = getCurrentTab(w)
-  let t = w.tabs[current]
+  let t = w.Tabs[current]
   if t.highlighted.isHighlighted:
-    if not forSearch and w.tabs[current].highlighted.forSearch: return
+    if not forSearch and w.Tabs[current].highlighted.forSearch: return
     
-    discard gSourceRemove(w.tabs[current].highlighted.idleID)
+    discard gSourceRemove(w.Tabs[current].highlighted.idleID)
     var startIter, endIter: TTextIter
-    w.tabs[current].buffer.getStartIter(addr(startIter))
-    w.tabs[current].buffer.getEndIter(addr(endIter))
-    w.tabs[current].buffer.removeTagByName(HighlightTagName, addr(startIter), addr(endIter))
-    doAssert w.tabs[current].buffer.removeTag(HighlightTagName)
-    w.tabs[current].highlighted = newNoHighlightAll()
+    w.Tabs[current].buffer.getStartIter(addr(startIter))
+    w.Tabs[current].buffer.getEndIter(addr(endIter))
+    w.Tabs[current].buffer.removeTagByName(HighlightTagName, addr(startIter), addr(endIter))
+    doAssert w.Tabs[current].buffer.removeTag(HighlightTagName)
+    w.Tabs[current].highlighted = newNoHighlightAll()
 
 proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchCaseInsens) =
   ## Asynchronously finds all occurrences of ``term`` in the current tab, and
   ## highlights them.
   var current = getCurrentTab(w)
-  if w.tabs[current].highlighted.isHighlighted:
-    if not forSearch and w.tabs[current].highlighted.forSearch:
+  if w.Tabs[current].highlighted.isHighlighted:
+    if not forSearch and w.Tabs[current].highlighted.forSearch:
       return
   
-  if w.tabs[current].highlighted.text == term:
+  if w.Tabs[current].highlighted.text == term:
     ## This is already highlighted.
     return
   
@@ -259,13 +259,13 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
                         tuple[startMatch, endMatch: TTextIter] {.closure.}
     
   var idleParam: ref TIdleParam; new(idleParam)
-  idleParam.buffer = w.tabs[current].buffer
+  idleParam.buffer = w.Tabs[current].buffer
   idleParam.term = term
   idleParam.mode = mode
   idleParam.findIter = findTerm
   GCRef(idleParam) # Make sure `idleParam` is not deallocated by the GC.
   
-  discard w.tabs[current].buffer.createTag(HighlightTagName,
+  discard w.Tabs[current].buffer.createTag(HighlightTagName,
                                            "background", "#F28A13",
                                            "foreground", "#ffffff", nil)
   
@@ -283,32 +283,32 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
   let idleID =
       gIdleAddFull(GPRIORITY_DEFAULT_IDLE, idleHighlightAll,
                    cast[ptr TIdleParam](idleParam), idleHighlightAllRemove)
-  w.tabs[current].highlighted = newHighlightAll(term, forSearch, idleID)
+  w.Tabs[current].highlighted = newHighlightAll(term, forSearch, idleID)
 
 proc findText*(forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
-  # true for Next and false for Previous
+  # True for Next and False for Previous
   var pattern = $(getText(win.findEntry)) # Text to search for.
 
   # Get the current tab
-  var currentTab = win.sourceViewTabs.getCurrentPage()
+  var currentTab = win.SourceViewTabs.getCurrentPage()
   if win.globalSettings.searchHighlightAll:
     highlightAll(win[], pattern, true, win.autoSettings.search)
   else:
     # Stop it from highlighting due to selection.
-    win.tabs[currentTab].highlighted = newHighlightAll("", true, -1)
+    win.Tabs[currentTab].highlighted = newHighlightAll("", true, -1)
   
   # Get the position where the cursor is,
   # Search based on that.
   var startSel, endSel: TTextIter
-  discard win.tabs[currentTab].buffer.getSelectionBounds(
+  discard win.Tabs[currentTab].buffer.getSelectionBounds(
       addr(startsel), addr(endsel))
   
   var startMatch, endMatch: TTextIter
   var matchFound: gboolean = false
   
-  var buffer = win.tabs[currentTab].buffer
+  var buffer = win.Tabs[currentTab].buffer
   var mode = win.autoSettings.search
   
   case mode
@@ -335,7 +335,7 @@ proc findText*(forward: bool) =
   if matchFound:
     buffer.moveMarkByName("insert", addr(startMatch))
     buffer.moveMarkByName("selection_bound", addr(endMatch))
-    discard PTextView(win.tabs[currentTab].sourceView).
+    discard PTextView(win.Tabs[currentTab].sourceView).
         scrollToIter(addr(startMatch), 0.2, false, 0.0, 0.0)
     
     # Reset the findEntry color
@@ -372,10 +372,10 @@ proc replaceAll*(find, replace: cstring): int =
   var replaceLen = len(replace)
 
   # Get the current tab
-  var currentTab = win.sourceViewTabs.getCurrentPage()
-  assert(currentTab <% win.tabs.len())
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  assert(currentTab <% win.Tabs.len())
 
-  var buffer = win.tabs[currentTab].buffer
+  var buffer = win.Tabs[currentTab].buffer
   
   var iter: TTextIter
   buffer.getStartIter(addr(iter))
@@ -414,8 +414,4 @@ proc replaceAll*(find, replace: cstring): int =
   buffer.setHighlightMatchingBrackets(win.globalSettings.highlightMatchingBrackets)
 
   return count
-  
-  
-  
-  
-  
+

@@ -7,13 +7,11 @@
 #    distribution, for details about the copyright.
 #
 
-# Stdlib imports:
-import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
+import gtk2, gtksourceview, glib2, osproc, streams, AboutDialog, asyncio, strutils
 import tables, os, dialogs, pegs
-from gdk2 import TRectangle, intersect, TColor, colorParse
-# Local imports:
+
 from CustomStatusBar import PCustomStatusBar, TStatusID
-import AboutDialog, ShortcutUtils
+from gdk2 import TRectangle, intersect
 
 type
   TAutoSettings* = object # Settings which should not be set by the user manually
@@ -46,7 +44,6 @@ type
     toolBarVisible*: bool # Whether the top panel is shown
     suggestFeature*: bool # Whether the suggest feature is enabled
     compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
-    compileSaveAll*: bool # Whether compiling will save all opened unsaved files
     nimrodCmd*: string  # command template to use to exec the Nimrod compiler
     customCmd1*: string # command template to use to exec a custom command
     customCmd2*: string # command template to use to exec a custom command
@@ -54,39 +51,7 @@ type
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
     nimrodPath*: string # Path to the nimrod compiler
-    wrapMode*: gtk2.TWrapMode # source view wrap mode.
-    scrollPastBottom*: bool # Whether to scroll past bottom.
-    singleInstance*: bool # Whether the program runs as single instance.
-    restoreTabs*: bool    # Whether the program loads the tabs from the last session
-    activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
-    keyCommentLines*:      TShortcutKey
-    keyDeleteLine*:        TShortcutKey 
-    keyDuplicateLines*:    TShortcutKey 
-    keyQuit*:              TShortcutKey 
-    keyNewFile*:           TShortcutKey 
-    keyOpenFile*:          TShortcutKey 
-    keySaveFile*:          TShortcutKey 
-    keySaveFileAs*:        TShortcutKey 
-    keySaveAll*:           TShortcutKey
-    keyCloseCurrentTab*:   TShortcutKey 
-    keyCloseAllTabs*:      TShortcutKey
-    keyFind*:              TShortcutKey
-    keyReplace*:           TShortcutKey
-    keyFindNext*:          TShortcutKey
-    keyFindPrevious*:      TShortcutKey
-    keyGoToLine*:          TShortcutKey
-    keyGoToDef*:           TShortcutKey
-    keyToggleBottomPanel*: TShortcutKey
-    keyCompileCurrent*:    TShortcutKey
-    keyCompileRunCurrent*: TShortcutKey
-    keyCompileProject*:    TShortcutKey
-    keyCompileRunProject*: TShortcutKey
-    keyStopProcess*:       TShortcutKey
-    keyRunCustomCommand1*: TShortcutKey
-    keyRunCustomCommand2*: TShortcutKey
-    keyRunCustomCommand3*: TShortcutKey
-    keyRunCheck*:          TShortcutKey
-    
+    wrapMode*: TWrapMode # source view wrap mode.
   
   MainWin* = object
     # Widgets
@@ -94,7 +59,7 @@ type
     suggest*: TSuggestDialog
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
-    sourceViewTabs*: PNotebook # Tabs which hold the sourceView
+    SourceViewTabs*: PNotebook # Tabs which hold the sourceView
     statusBar*: PCustomStatusBar
     
     infobar*: PInfoBar ## For encoding selection
@@ -119,7 +84,7 @@ type
     viewToolBarMenuItem*: PMenuItem # view menu
     viewBottomPanelMenuItem*: PMenuItem # view menu
 
-    tabs*: seq[Tab] # Other
+    Tabs*: seq[Tab] # Other
     
     tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
     
@@ -136,7 +101,7 @@ type
     shown*: bool
     gotAll*: bool # Whether all suggest items have been read.
     currentFilter*: string
-    tooltip*: gtk2.PWindow
+    tooltip*: PWindow
     tooltipLabel*: PLabel
   
   TExecMode* = enum
@@ -202,11 +167,10 @@ type
     sourceView*: PSourceView
     label*: PLabel
     closeBtn*: PButton # This is so that the close btn is only shown on selected tabs.
+    saved*: bool
     filename*: string
     highlighted*: THighlightAll
-    spbInfo*: tuple[lastUpper, value: float] # Scroll past bottom info
-    lineEnding*: TLineEnding
-
+    
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string
     line*, col*: int32
@@ -228,9 +192,6 @@ type
   TEncodingsAvailable* = enum
     UTF8 = "UTF-8", ISO88591 = "ISO-8859-1", GB2312 = "GB2312",
     Windows1251 = "Windows-1251", UTF16BE = "UTF-16BE", UTF16LE = "UTF-16LE"
-
-  TLineEnding* = enum
-    leAuto = "Unknown", leLF = "LF", leCR = "CR", leCRLF = "CRLF"
 
   THighlightAll* = object
     isHighlighted*: bool
@@ -288,10 +249,10 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   ## effective when the sourceview has just been initialised.
   var current = -1
   if tabIndex != -1: current = tabIndex
-  else: current = win.sourceViewTabs.getCurrentPage()
+  else: current = win.SourceViewTabs.getCurrentPage()
 
-  var mark = win.tabs[current].buffer.getInsert()
-  win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
+  var mark = win.Tabs[current].buffer.getInsert()
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
   
   # TODO: What if I remove the tab, while this is happening, segfault because
   # sourceview is gone? The likelihood of this happening is probably very unlikely
@@ -304,10 +265,10 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
     var insertMark = buff.getInsert()
     var insertIter: TTextIter
     buff.getIterAtMark(addr(insertIter), insertMark)
-    var insertLoc: gdk2.TRectangle
+    var insertLoc: TRectangle
     sv.getIterLocation(addr(insertIter), addr(insertLoc))
     
-    var rect: gdk2.TRectangle
+    var rect: TRectangle
     sv.getVisibleRect(addr(rect))
     
     # Now check whether insert iter is inside the visible rect.
@@ -318,25 +279,25 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
       sv.scrollToMark(insertMark, 0.25, false, 0.0, 0.0)
       return true
   
-  discard gIdleAdd(idleConfirmScroll, win.tabs[current].sourceview)
+  discard gIdleAdd(idleConfirmScroll, win.Tabs[current].sourceview)
 
 proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
   var current = -1
   if tabIndex != -1: current = tabIndex
-  else: current = win.sourceViewTabs.getCurrentPage()
+  else: current = win.SourceViewTabs.getCurrentPage()
 
-  var mark = win.tabs[current].buffer.getInsert()
-  win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
+  var mark = win.Tabs[current].buffer.getInsert()
+  win.Tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
 
 proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
-  for i in 0..win.tabs.len()-1:
+  for i in 0..win.Tabs.len()-1:
     if absolute:
-      if win.tabs[i].filename == filename: 
+      if win.Tabs[i].filename == filename: 
         return i
     else:
-      if win.tabs[i].filename.extractFilename == filename:
+      if win.Tabs[i].filename.extractFilename == filename:
         return i 
-      elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
+      elif win.Tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
         return i
 
   return -1
@@ -356,20 +317,15 @@ proc moveToEndLine*(iter: PTextIter) =
 
 # -- Useful TreeView function
 proc createTextColumn*(tv: PTreeView, title: string, column: int,
-                      expand = false, foregroundColorColumn: gint = -1, visible = true) =
+                      expand = false, resizable = true) =
   ## Creates a new Text column.
   var c = treeViewColumnNew()
   var renderer = cellRendererTextNew()
-  
   c.columnSetTitle(title)
   c.columnPackStart(renderer, expand)
   c.columnSetExpand(expand)
-  c.columnSetResizable(true)
-  c.columnSetVisible(visible)
-
-  c.column_add_attribute(renderer, "text", column.gint) 
-  c.column_add_attribute(renderer, "foreground", foregroundColorColumn)
-   
+  c.columnSetResizable(resizable)
+  c.columnSetAttributes(renderer, "text", column, nil)
   doAssert tv.appendColumn(c) == column+1
 
 # -- Useful ListStore functions
@@ -428,7 +384,7 @@ proc forcePresent*(w: PWindow) =
 # -- Others
 
 proc getCurrentTab*(win: var MainWin): int =
-  result = win.sourceViewTabs.getCurrentPage()
+  result = win.SourceViewTabs.getCurrentPage()
   if result < 0:
     result = 0
 
@@ -452,60 +408,6 @@ proc isTemporary*(t: Tab): bool =
   ## Determines whether ``t`` is saved in /tmp
   return t.filename.startsWith(getTempDir())
 
-proc saved*(t: Tab): bool =
-  ## Determines Tab's saved state,
-  assert(not t.buffer.isNil)
-  return not t.buffer.getModified()
-
-proc `saved=`*(t: Tab, b: bool) =
-  assert(not t.buffer.isNil)
-  t.buffer.setModified(not b)
-
-proc detectLineEndings*(text: string): TLineEnding =
-  var i = 0
-  while true:
-    case text[i]
-    of '\L':
-      return leLF
-    of '\c':
-      if text[i + 1] == '\L': return leCRLF
-      else: return leCR
-    else:
-      if text[i] == '\0': return leAuto
-    i.inc
-
-proc srepr(le: TLineEnding, auto: string): string =
-  case le
-  of leLF: "\L"
-  of leCR: "\C"
-  of leCRLF: "\c\L"
-  of leAuto: auto
-
-proc normalize*(le: TLineEnding, text: string): string =
-  result = ""
-  var i = 0
-  while true:
-    case text[i]
-    of '\L':
-      result.add(le.srepr("\L"))
-    of '\C':
-      if text[i + 1] == '\L':
-        result.add(le.srepr("\c\L"))
-        i.inc
-      else:
-        result.add(le.srepr("\c"))
-    of '\0': return
-    else:
-      result.add text[i]
-
-    i.inc
-
-proc addExtraNL*(le: TLineEnding, text: var string) =
-  const defaultLE = "\L"
-  let sle = srepr(le, defaultLE)
-  if not text.endswith(sle):
-    text.add(sle)
-
 # -- Programming Language handling
 proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   ## Returns the current language ID.
@@ -514,9 +416,9 @@ proc getCurrentLanguage*(win: var MainWin, pageNum: int = -1): string =
   var currentPage = pageNum
   if currentPage == -1:
     currentPage = win.getCurrentTab()
-  var isHighlighted = win.tabs[currentPage].buffer.getHighlightSyntax()
+  var isHighlighted = win.Tabs[currentPage].buffer.getHighlightSyntax()
   if isHighlighted:
-    var sourceLanguage = win.tabs[currentPage].buffer.getLanguage()
+    var sourceLanguage = win.Tabs[currentPage].buffer.getLanguage()
     if sourceLanguage == nil: return ""
     return $sourceLanguage.getID()
   else:
@@ -540,7 +442,7 @@ proc getLanguageName*(win: var MainWin, pageNum: int = -1): string =
   var currentPage = pageNum
   if currentPage == -1:
     currentPage = win.getCurrentTab()
-  return getLanguageName(win, win.tabs[currentPage].buffer)
+  return getLanguageName(win, win.Tabs[currentPage].buffer)
 
 proc getCurrentLanguageComment*(win: var MainWin,
           syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
@@ -555,7 +457,7 @@ proc getCurrentLanguageComment*(win: var MainWin,
       syntax.blockEnd = "\"\"\""
       syntax.line = "#"
     else:
-      var sourceLanguage = win.tabs[pageNum].buffer.getLanguage()
+      var sourceLanguage = win.Tabs[pageNum].buffer.getLanguage()
       var bs = sourceLanguage.getMetadata("block-comment-start")
       var be = sourceLanguage.getMetadata("block-comment-end")
       var lc = sourceLanguage.getMetadata("line-comment-start")
@@ -568,23 +470,23 @@ proc getCurrentLanguageComment*(win: var MainWin,
     syntax.line = ""
 
 proc setLanguage*(win: var MainWin, tab: int, lang: PSourceLanguage) =
-  win.tabs[tab].buffer.setLanguage(lang)
+  win.Tabs[tab].buffer.setLanguage(lang)
   getCurrentLanguageComment(win, win.tempStuff.commentSyntax, tab) 
 
 proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
-  win.tabs[tab].buffer.setHighlightSyntax(doHighlight)
+  win.Tabs[tab].buffer.setHighlightSyntax(doHighlight)
   win.tempStuff.commentSyntax = ("", "", "")
 
 # -- Compilation-specific
 
-proc getCmd*(win: var MainWin, cmd, filename: string): string =
+proc GetCmd*(win: var MainWin, cmd, filename: string): string =
   ## ``cmd`` specifies the format string. ``findExe(exe)`` is allowed as well
   ## as ``#$``. The ``#$`` is replaced by ``filename``.
   var f = quoteIfContainsWhite(filename)
   proc promptNimrodPath(win: var MainWin): string =
     ## If ``settings.nimrodPath`` is not set, prompts the user for the nimrod path.
     ## Otherwise returns ``settings.nimrodPath``.
-    if not fileExists(win.globalSettings.nimrodPath):
+    if win.globalSettings.nimrodPath == "":
       dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
       win.globalSettings.nimrodPath = chooseFileToOpen(win.w, "")
     result = win.globalSettings.nimrodPath
@@ -598,8 +500,3 @@ proc getCmd*(win: var MainWin, cmd, filename: string): string =
     result = exe & " " & matches[1] % f
   else:
     result = cmd % f
-
-when isMainModule:
-  assert detectLineEndings("asfasfa\c\Lasfasf") == leCRLF
-  assert detectLineEndings("asfasfa\casas") == leCR
-  assert detectLineEndings("asfasfa\Lasas") == leLF

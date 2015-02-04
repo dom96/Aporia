@@ -7,8 +7,8 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, gdk2, glib2, pango, os, tables
-import gtksourceview, utils, ShortcutUtils
+import gtk2, gdk2, glib2, pango, os
+import gtksourceview, utils
 
 {.push callConv:cdecl.}
 
@@ -50,7 +50,7 @@ proc addSchemes(schemeTree: PTreeView, schemeModel: PListStore) =
     if schemes[i] == win.globalSettings.colorSchemeID:
       schemeTree.getSelection.selectIter(addr(iter))
 
-proc schemesTreeView_onChanged(selection: PGObject, user_data: Pgpointer) =
+proc schemesTreeView_onChanged(selection: PGObject, user_data: PGpointer) =
   var iter: TTreeIter
   var model: PTreeModel
   var value: cstring
@@ -62,7 +62,7 @@ proc schemesTreeView_onChanged(selection: PGObject, user_data: Pgpointer) =
     var schemeMan = schemeManagerGetDefault()
     win.scheme = schemeMan.getScheme(value)
     # Loop through each tab, and set the scheme
-    for i in items(win.tabs):
+    for i in items(win.Tabs):
       i.buffer.setScheme(win.scheme)
       
 proc fontDialog_OK(widget: PWidget, user_data: PFontSelectionDialog) =
@@ -77,9 +77,9 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
   fontDialog.setTransientFor(win.w)
   discard fontDialog.dialogSetFontName(win.globalSettings.font)
   
-  discard fontDialog.okButton.gSignalConnect("clicked", 
+  discard fontDialog.okButton.gsignalConnect("clicked", 
       G_CALLBACK(fontDialog_OK), fontDialog)
-  discard fontDialog.cancelButton.gSignalConnect("clicked", 
+  discard fontDialog.cancelButton.gsignalConnect("clicked", 
       G_CALLBACK(fontDialog_Canc), fontDialog)
   
   # This will wait until the user responds(clicks the OK or Cancel button)
@@ -89,7 +89,7 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
     win.globalSettings.font = $fontDialog.dialogGetFontName()
     userData.setText(fontDialog.dialogGetFontName())
     # Loop through each tab, and change the font
-    for i in items(win.tabs):
+    for i in items(win.Tabs):
       var font = fontDescriptionFromString(win.globalSettings.font)
       i.sourceView.modifyFont(font)
     
@@ -112,51 +112,14 @@ proc addTextEdit(parent: PVBox, labelText, value: string): PEntry =
   
   var entry = entryNew()
   entry.setEditable(true)
-  entry.setWidthChars(40)
   entry.setText(value)
   entryHBox.packStart(entry, false, false, 20)
   entry.show()
   result = entry
 
 var
-  # General:
-  singleInstanceCheckBox: PCheckButton
-  restoreTabsCheckBox: PCheckButton
-  compileSaveAllCheckBox: PCheckButton
-  showCloseOnAllTabsCheckBox: PCheckButton
-  activateErrorTabOnErrorsCheckBox: PCheckButton
-  # Shortcuts:
-  keyCommentLinesEdit: PEntry
-  keyDeleteLineEdit: PEntry
-  keyDuplicateLinesEdit: PEntry
-  keyQuitEdit: PEntry
-  keyNewFileEdit: PEntry
-  keyOpenFileEdit: PEntry
-  keySaveFileEdit: PEntry
-  keySaveFileAsEdit: PEntry
-  keySaveAllEdit: PEntry
-  keyCloseCurrentTabEdit: PEntry
-  keyCloseAllTabsEdit: PEntry
-  keyFindEdit: PEntry
-  keyReplaceEdit: PEntry
-  keyFindNextEdit: PEntry
-  keyFindPreviousEdit: PEntry
-  keyGoToLineEdit: PEntry
-  keyGoToDefEdit: PEntry
-  keyToggleBottomPanelEdit: PEntry
-  keyCompileCurrentEdit: PEntry
-  keyCompileRunCurrentEdit: PEntry
-  keyCompileProjectEdit: PEntry
-  keyCompileRunProjectEdit: PEntry
-  keyStopProcessEdit: PEntry
-  keyRunCustomCommand1Edit: PEntry
-  keyRunCustomCommand2Edit: PEntry
-  keyRunCustomCommand3Edit: PEntry
-  keyRunCheckEdit: PEntry 
-  
-  # Tools:
   nimrodEdit, custom1Edit, custom2Edit, custom3Edit: PEntry
-  
+
 proc initTools(settingsTabs: PNotebook) =
   var t = vboxNew(false, 5)
   discard settingsTabs.appendPage(t, labelNew("Tools"))
@@ -197,7 +160,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   
   # Change font button
   var fontChangeBtn = buttonNew("Change Font")
-  discard fontChangeBtn.gSignalConnect("clicked", 
+  discard fontChangeBtn.gsignalConnect("clicked", 
     G_CALLBACK(fontChangeBtn_Clicked), fontEntry)
   fontEntryHBox.packEnd(fontChangeBtn, false, false, 10)
   fontChangeBtn.show()
@@ -220,7 +183,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   var schemeTree = treeviewNew()
   schemeTree.setHeadersVisible(false) # Make the headers invisible
   var selection = schemeTree.getSelection()
-  discard selection.gSignalConnect("changed", 
+  discard selection.gsignalConnect("changed", 
     G_CALLBACK(schemesTreeView_onChanged), nil)
   var schemeTreeScrolled = scrolledWindowNew(nil, nil)
   # Make the scrollbars invisible by default
@@ -244,58 +207,58 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTree.addSchemes(schemeModel)
 
 # -- Editor settings
-proc showLineNums_Toggled(button: PToggleButton, user_data: Pgpointer) =
+proc showLineNums_Toggled(button: PToggleButton, user_data: PGpointer) =
   win.globalSettings.showLineNumbers = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.tabs):
+  for i in items(win.Tabs):
     i.sourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
     
-proc hlCurrLine_Toggled(button: PToggleButton, user_data: Pgpointer) =
+proc hlCurrLine_Toggled(button: PToggleButton, user_data: PGpointer) =
   win.globalSettings.highlightCurrentLine = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.tabs):
+  for i in items(win.Tabs):
     i.sourceView.setHighlightCurrentLine(
         win.globalSettings.highlightCurrentLine)
     
-proc showMargin_Toggled(button: PToggleButton, user_data: Pgpointer) =
+proc showMargin_Toggled(button: PToggleButton, user_data: PGpointer) =
   win.globalSettings.rightMargin = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.tabs):
+  for i in items(win.Tabs):
     i.sourceView.setShowRightMargin(win.globalSettings.rightMargin)
 
-proc brackMatch_Toggled(button: PToggleButton, user_data: Pgpointer) =
+proc brackMatch_Toggled(button: PToggleButton, user_data: PGpointer) =
   win.globalSettings.highlightMatchingBrackets = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.tabs):
+  for i in items(win.Tabs):
     i.buffer.setHighlightMatchingBrackets(
         win.globalSettings.highlightMatchingBrackets)
 
-proc indentWidth_changed(spinbtn: PSpinButton, user_data: Pgpointer) =
+proc indentWidth_changed(spinbtn: PSpinButton, user_data: PGpointer) =
   win.globalSettings.indentWidth = int32(spinbtn.getValue())
   # Loop through each tab, and change the setting.
-  for i in items(win.tabs):
+  for i in items(win.Tabs):
     i.sourceView.setIndentWidth(win.globalSettings.indentWidth)
   
-proc autoIndent_Toggled(button: PToggleButton, user_data: Pgpointer) =
+proc autoIndent_Toggled(button: PToggleButton, user_data: PGpointer) =
   win.globalSettings.autoIndent = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in items(win.tabs):
+  for i in items(win.Tabs):
     i.sourceView.setAutoIndent(win.globalSettings.autoIndent)
 
-proc suggestFeature_Toggled(button: PToggleButton, user_data: Pgpointer) =
+proc suggestFeature_Toggled(button: PToggleButton, user_data: PGpointer) =
   win.globalSettings.suggestFeature = button.getActive()
 
-proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: Pgpointer) =
+proc showCloseOnAllTabs_Toggled(button: PToggleButton, user_data: PGpointer) =
   win.globalSettings.showCloseOnAllTabs = button.getActive()
   # Loop through each tab, and change the setting.
-  for i in 0..len(win.tabs)-1:
+  for i in 0..len(win.Tabs)-1:
     if win.globalSettings.showCloseOnAllTabs:
-      win.tabs[i].closeBtn.show()
+      win.Tabs[i].closeBtn.show()
     else:
-      if i == win.sourceViewTabs.getCurrentPage():
-        win.tabs[i].closeBtn.show()
+      if i == win.SourceViewTabs.getCurrentPage():
+        win.Tabs[i].closeBtn.show()
       else:
-        win.tabs[i].closeBtn.hide()
+        win.Tabs[i].closeBtn.hide()
 
 proc initEditor(settingsTabs: PNotebook) =
   var editorLabel = labelNew("Editor")
@@ -314,7 +277,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var indentWidthSpinButton = spinButtonNew(1.0, 24.0, 1.0)
   indentWidthSpinButton.setValue(win.globalSettings.indentWidth.toFloat())
-  discard indentWidthSpinButton.gSignalConnect("value-changed", 
+  discard indentWidthSpinButton.gsignalConnect("value-changed", 
     G_CALLBACK(indentWidth_changed), nil)
   indentWidthHBox.packStart(indentWidthSpinButton, false, false, 0)
   indentWidthSpinButton.show()
@@ -326,7 +289,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var showLineNumsCheckBox = checkButtonNew("Show line numbers")
   showLineNumsCheckBox.setActive(win.globalSettings.showLineNumbers)
-  discard showLineNumsCheckBox.gSignalConnect("toggled", 
+  discard showLineNumsCheckBox.gsignalConnect("toggled", 
     G_CALLBACK(showLineNums_Toggled), nil)
   showLineNumsHBox.packStart(showLineNumsCheckBox, false, false, 20)
   showLineNumsCheckBox.show()
@@ -338,7 +301,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var hlCurrLineCheckBox = checkButtonNew("Highlight selected line")
   hlCurrLineCheckBox.setActive(win.globalSettings.highlightCurrentLine)
-  discard hlCurrLineCheckBox.gSignalConnect("toggled", 
+  discard hlCurrLineCheckBox.gsignalConnect("toggled", 
     G_CALLBACK(hlCurrLine_Toggled), nil)
   hlCurrLineHBox.packStart(hlCurrLineCheckBox, false, false, 20)
   hlCurrLineCheckBox.show()
@@ -350,7 +313,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var showMarginCheckBox = checkButtonNew("Show right margin")
   showMarginCheckBox.setActive(win.globalSettings.rightMargin)
-  discard showMarginCheckBox.gSignalConnect("toggled", 
+  discard showMarginCheckBox.gsignalConnect("toggled", 
     G_CALLBACK(showMargin_Toggled), nil)
   showMarginHBox.packStart(showMarginCheckBox, false, false, 20)
   showMarginCheckBox.show()
@@ -362,7 +325,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var brackMatchCheckBox = checkButtonNew("Enable bracket matching")
   brackMatchCheckBox.setActive(win.globalSettings.highlightMatchingBrackets)
-  discard brackMatchCheckBox.gSignalConnect("toggled", 
+  discard brackMatchCheckBox.gsignalConnect("toggled", 
     G_CALLBACK(brackMatch_Toggled), nil)
   brackMatchHBox.packStart(brackMatchCheckBox, false, false, 20)
   brackMatchCheckBox.show()
@@ -374,7 +337,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var autoIndentCheckBox = checkButtonNew("Enable auto indent")
   autoIndentCheckBox.setActive(win.globalSettings.autoIndent)
-  discard autoIndentCheckBox.gSignalConnect("toggled", 
+  discard autoIndentCheckBox.gsignalConnect("toggled", 
     G_CALLBACK(autoIndent_Toggled), nil)
   autoIndentHBox.packStart(autoIndentCheckBox, false, false, 20)
   autoIndentCheckBox.show()
@@ -386,205 +349,44 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature")
   suggestFeatureCheckBox.setActive(win.globalSettings.suggestFeature)
-  discard suggestFeatureCheckBox.gSignalConnect("toggled", 
+  discard suggestFeatureCheckBox.gsignalConnect("toggled", 
     G_CALLBACK(suggestFeature_Toggled), nil)
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, false, false, 20)
   suggestFeatureCheckBox.show()
 
+  # show close button on all tabs - checkbox
+  var showCloseOnAllTabsHBox = hboxNew(false, 0)
+  editorVBox.packStart(showCloseOnAllTabsHBox, false, false, 0)
+  showCloseOnAllTabsHBox.show()
+  
+  var showCloseOnAllTabsCheckBox = checkButtonNew("Show close button on all tabs")
+  showCloseOnAllTabsCheckBox.setActive(win.globalSettings.showCloseOnAllTabs)
+  discard showCloseOnAllTabsCheckBox.gsignalConnect("toggled", 
+    G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
+  showCloseOnAllTabsHBox.packStart(showCloseOnAllTabsCheckBox, false, false, 20)
+  showCloseOnAllTabsCheckBox.show()
+
 var
   dialog: gtk2.PWindow
-  
-proc closeDialog(widget: PWidget, user_data: Pgpointer) =
-  # General:
-  win.globalSettings.restoreTabs = restoreTabsCheckBox.getActive()
-  win.globalSettings.singleInstance = singleInstanceCheckBox.getActive()
-  win.globalSettings.compileSaveAll = compileSaveAllCheckBox.getActive()
-  win.globalSettings.activateErrorTabOnErrors = activateErrorTabOnErrorsCheckBox.getActive()
-  
-  # Shortcuts:
-  win.globalSettings.keyQuit = StrToKey($keyQuitEdit.getText())
-  win.globalSettings.keyCommentLines = StrToKey($keyCommentLinesEdit.getText())
-  win.globalSettings.keyDeleteLine = StrToKey($keyDeleteLineEdit.getText())
-  win.globalSettings.keyDuplicateLines = StrToKey($keyDuplicateLinesEdit.getText())
-  win.globalSettings.keyNewFile = StrToKey($keyNewFileEdit.getText())
-  win.globalSettings.keyOpenFile = StrToKey($keyOpenFileEdit.getText())
-  win.globalSettings.keySaveFile = StrToKey($keySaveFileEdit.getText())
-  win.globalSettings.keySaveFileAs = StrToKey($keySaveFileAsEdit.getText())
-  win.globalSettings.keySaveAll = StrToKey($keySaveAllEdit.getText())
-  win.globalSettings.keyCloseCurrentTab = StrToKey($keyCloseCurrentTabEdit.getText())
-  win.globalSettings.keyCloseAllTabs = StrToKey($keyCloseAllTabsEdit.getText())
-  win.globalSettings.keyFind = StrToKey($keyFindEdit.getText())
-  win.globalSettings.keyReplace = StrToKey($keyReplaceEdit.getText())
-  win.globalSettings.keyFindNext = StrToKey($keyFindNextEdit.getText())
-  win.globalSettings.keyFindPrevious = StrToKey($keyFindPreviousEdit.getText())
-  win.globalSettings.keyGoToLine = StrToKey($keyGoToLineEdit.getText())
-  win.globalSettings.keyGoToDef = StrToKey($keyGoToDefEdit.getText())
-  win.globalSettings.keyToggleBottomPanel = StrToKey($keyToggleBottomPanelEdit.getText())
-  win.globalSettings.keyCompileCurrent = StrToKey($keyCompileCurrentEdit.getText())
-  win.globalSettings.keyCompileRunCurrent = StrToKey($keyCompileRunCurrentEdit.getText())
-  win.globalSettings.keyCompileProject = StrToKey($keyCompileProjectEdit.getText())
-  win.globalSettings.keyCompileRunProject = StrToKey($keyCompileRunProjectEdit.getText())
-  win.globalSettings.keyStopProcess = StrToKey($keyStopProcessEdit.getText())
-  win.globalSettings.keyRunCustomCommand1 = StrToKey($keyRunCustomCommand1Edit.getText())
-  win.globalSettings.keyRunCustomCommand2 = StrToKey($keyRunCustomCommand2Edit.getText())
-  win.globalSettings.keyRunCustomCommand3 = StrToKey($keyRunCustomCommand3Edit.getText())
-  win.globalSettings.keyRunCheck = StrToKey($keyRunCheckEdit.getText())
-    
-  # Tools:
+
+proc closeDialog(widget: PWidget, user_data: PGpointer) =
   win.globalSettings.nimrodCmd = $nimrodEdit.getText()
   win.globalSettings.customCmd1 = $custom1Edit.getText()
   win.globalSettings.customCmd2 = $custom2Edit.getText()
   win.globalSettings.customCmd3 = $custom3Edit.getText()
-  
+
   gtk2.PObject(dialog).destroy()
-  
-proc addCheckBox(parent: PVBox, labelText: string, value: bool): PCheckButton = 
-  var Box = hboxNew(false, 0)
-  parent.packStart(Box, false, false, 0)
-  Box.show()
-  var CheckBox = checkButtonNew(labelText)
-  CheckBox.setActive(value)
-  Box.packStart(CheckBox, false, false, 20)
-  CheckBox.show()
-  result = CheckBox
-  
-proc initGeneral(settingsTabs: PNotebook) =
-  var box = vboxNew(false, 5)
-  discard settingsTabs.appendPage(box, labelNew("General"))
-  box.show()
-  
-  singleInstanceCheckBox = addCheckBox(box, "Single instance", win.globalSettings.singleInstance)
-  
-  restoreTabsCheckBox = addCheckBox(box, "Restore tabs on load", win.globalSettings.restoreTabs)
-  
-  compileSaveAllCheckBox = addCheckBox(box, "Save all on compile", win.globalSettings.compileSaveAll)
-  
-  activateErrorTabOnErrorsCheckBox = addCheckBox(box, "Activate Error list tab on errors", win.globalSettings.activateErrorTabOnErrors)
-  
-  showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
-  discard showCloseOnAllTabsCheckBox.gSignalConnect("toggled", 
-    G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
 
-proc removeDuplicateShortcut(entrySender: PEntry, entryToCheck: PEntry) = 
-  if entrySender != entryToCheck and $entrySender.getText() == $entryToCheck.getText():
-    entryToCheck.setText("")
-    
-proc entryKeyRelease(entry: PEntry, EventKey: PEventKey) {.cdecl.} =
-  if EventKey.keyval == KEY_Delete:
-    entry.setText("")
-  elif EventKey.keyval < 65505:
-    entry.setText(KeyToStr(TShortcutKey(keyval: EventKey.keyval, state: EventKey.state)))
-    removeDuplicateShortcut(entry, keyCommentLinesEdit)
-    removeDuplicateShortcut(entry, keyDeleteLineEdit)
-    removeDuplicateShortcut(entry, keyDuplicateLinesEdit)
-    removeDuplicateShortcut(entry, keyQuitEdit)
-    removeDuplicateShortcut(entry, keyNewFileEdit)
-    removeDuplicateShortcut(entry, keyOpenFileEdit)
-    removeDuplicateShortcut(entry, keySaveFileEdit)
-    removeDuplicateShortcut(entry, keySaveFileAsEdit)
-    removeDuplicateShortcut(entry, keySaveAllEdit)
-    removeDuplicateShortcut(entry, keyCloseCurrentTabEdit)
-    removeDuplicateShortcut(entry, keyCloseAllTabsEdit)
-    removeDuplicateShortcut(entry, keyFindEdit)
-    removeDuplicateShortcut(entry, keyReplaceEdit)
-    removeDuplicateShortcut(entry, keyFindNextEdit)
-    removeDuplicateShortcut(entry, keyFindPreviousEdit)
-    removeDuplicateShortcut(entry, keyGoToLineEdit)
-    removeDuplicateShortcut(entry, keyGoToDefEdit)
-    removeDuplicateShortcut(entry, keyToggleBottomPanelEdit)
-    removeDuplicateShortcut(entry, keyCompileCurrentEdit)
-    removeDuplicateShortcut(entry, keyCompileRunCurrentEdit)
-    removeDuplicateShortcut(entry, keyCompileProjectEdit)
-    removeDuplicateShortcut(entry, keyCompileRunProjectEdit)
-    removeDuplicateShortcut(entry, keyStopProcessEdit)
-    removeDuplicateShortcut(entry, keyRunCustomCommand1Edit)
-    removeDuplicateShortcut(entry, keyRunCustomCommand2Edit)
-    removeDuplicateShortcut(entry, keyRunCustomCommand3Edit)
-    removeDuplicateShortcut(entry, keyRunCheckEdit)
-        
-proc addKeyEdit(parent: PVBox, labelText: string, key: TShortcutKey): PEntry = 
-  var HBox = hboxNew(false, 0)
-  parent.packStart(HBox, false, false, 0)
-  HBox.show()
- 
-  var Label = labelNew(labelText)
-  Label.setWidthChars(27)
-  Label.setAlignment(0, 0.5) 
-  HBox.packStart(Label, false, false, 5)
-  Label.show()
-    
-  var entry = entryNew()
-  entry.setEditable(false)
-  entry.setWidthChars(16)
-  entry.setText(KeyToStr(key))
-  discard entry.signalConnect("key-release-event", SIGNAL_FUNC(entryKeyRelease), nil)
-  HBox.packStart(entry, false, false, 5)
-  entry.show()
-  result = entry
-  
-proc initShortcuts(settingsTabs: PNotebook) =
-  var VBox = vboxNew(false, 5)
-  discard settingsTabs.appendPage(VBox, labelNew("Shortcuts"))
-  VBox.show()
-  
-  var HBox = hboxNew(false, 30)
-  VBox.packStart(HBox, false, false, 5)
-  HBox.show()
-
-  var hint = labelNew("Use the Delete button to clear a shortcut. Changes will be active after restart")
-  hint.setAlignment(0, 0.5) 
-  hint.show()
-  var Box2 = hboxNew(false, 0)
-  VBox.packStart(Box2, false, false, 0)
-  Box2.show()
-  Box2.packStart(hint, false, false, 10)
-    
-  VBox = vboxNew(false, 5)
-  HBox.packStart(VBox, false, false, 5)
-  VBox.show()
-  
-  keyCommentLinesEdit = addKeyEdit(VBox, "Comment lines", win.globalSettings.keyCommentLines)
-  keyDeleteLineEdit = addKeyEdit(VBox, "Delete line", win.globalSettings.keyDeleteLine)
-  keyDuplicateLinesEdit = addKeyEdit(VBox, "Duplicate lines", win.globalSettings.keyDuplicateLines)
-  keyNewFileEdit = addKeyEdit(VBox, "New file", win.globalSettings.keyNewFile)
-  keyOpenFileEdit = addKeyEdit(VBox, "Open file", win.globalSettings.keyOpenFile)
-  keySaveFileEdit = addKeyEdit(VBox, "Save file", win.globalSettings.keySaveFile)
-  keySaveFileAsEdit = addKeyEdit(VBox, "Save file as", win.globalSettings.keySaveFileAs)
-  keySaveAllEdit = addKeyEdit(VBox, "Save all", win.globalSettings.keySaveAll)
-  keyCloseCurrentTabEdit = addKeyEdit(VBox, "Close current tab", win.globalSettings.keyCloseCurrentTab)
-  keyCloseAllTabsEdit = addKeyEdit(VBox, "Close all tabs", win.globalSettings.keyCloseAllTabs)
-  keyFindEdit = addKeyEdit(VBox, "Find", win.globalSettings.keyFind)
-  keyReplaceEdit = addKeyEdit(VBox, "Find and replace", win.globalSettings.keyReplace)
-  keyFindNextEdit = addKeyEdit(VBox, "Find next", win.globalSettings.keyFindNext)
-  keyFindPreviousEdit = addKeyEdit(VBox, "Find previous", win.globalSettings.keyFindPrevious)
- 
-  VBox = vboxNew(false, 5)
-  HBox.packStart(VBox, false, false, 5)
-  VBox.show()
-
-  keyGoToLineEdit = addKeyEdit(VBox, "Go to line", win.globalSettings.keyGoToLine)
-  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", win.globalSettings.keyGoToDef)   
-  keyQuitEdit = addKeyEdit(VBox, "Quit", win.globalSettings.keyQuit)
-  keyToggleBottomPanelEdit = addKeyEdit(VBox, "Show/hide bottom panel", win.globalSettings.keyToggleBottomPanel)
-  keyCompileCurrentEdit = addKeyEdit(VBox, "Compile current file", win.globalSettings.keyCompileCurrent)
-  keyCompileRunCurrentEdit = addKeyEdit(VBox, "Compile & run current file", win.globalSettings.keyCompileRunCurrent)
-  keyCompileProjectEdit = addKeyEdit(VBox, "Compile project", win.globalSettings.keyCompileProject)
-  keyCompileRunProjectEdit = addKeyEdit(VBox, "Compile & run project", win.globalSettings.keyCompileRunProject)
-  keyStopProcessEdit = addKeyEdit(VBox, "Terminate running process", win.globalSettings.keyStopProcess)
-  keyRunCustomCommand1Edit = addKeyEdit(VBox, "Run custom command 1", win.globalSettings.keyRunCustomCommand1)
-  keyRunCustomCommand2Edit = addKeyEdit(VBox, "Run custom command 2", win.globalSettings.keyRunCustomCommand2)
-  keyRunCustomCommand3Edit = addKeyEdit(VBox, "Run custom command 3", win.globalSettings.keyRunCustomCommand3)
-  keyRunCheckEdit = addKeyEdit(VBox, "Check", win.globalSettings.keyRunCheck)
-          
 proc showSettings*(aWin: var utils.MainWin) =
   win = addr(aWin)  # This has to be a pointer
                     # Because i need the settings to be changed
                     # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
-  dialog.setDefaultSize(740, 530)
-  dialog.setSizeRequest(740, 530)
+  dialog.setDefaultSize(330, 400)
+  dialog.setSizeRequest(330, 400)
   dialog.setTransientFor(win.w)
+  dialog.setResizable(false)
   dialog.setTitle("Settings")
   dialog.setTypeHint(WINDOW_TYPE_HINT_DIALOG)
 
@@ -614,7 +416,7 @@ proc showSettings*(aWin: var utils.MainWin) =
   bottomHBox.show()
   
   var closeBtn = buttonNewWithMnemonic("_Close")
-  discard closeBtn.gSignalConnect("clicked", 
+  discard closeBtn.gsignalConnect("clicked", 
     G_CALLBACK(closeDialog), nil)
   bottomHBox.packEnd(closeBtn, false, false, 10)
   # Change the size of the close button
@@ -623,10 +425,8 @@ proc showSettings*(aWin: var utils.MainWin) =
   closeBtn.set_size_request(rq1.width + 10, rq1.height + 4)
   closeBtn.show()
   
-  initGeneral(settingsTabs)
   initEditor(settingsTabs)
   initFontsColors(settingsTabs)
-  initShortcuts(settingsTabs)
   initTools(settingsTabs)
   
   dialog.show()

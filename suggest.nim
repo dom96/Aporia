@@ -46,8 +46,7 @@ proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
     markup = "<i>$1 - $2</i>" % [escapePango(item.nmName), item.nimType]
   win.addSuggestItem(item.nmName, markup, item.nimType)
 
-proc getIterGlobalCoords(iter: PTextIter, tab: Tab):
-    tuple[x, y: int32] =
+proc getIterGlobalCoords(iter: PTextIter, tab: Tab): tuple[x, y: int32] =
   # Calculate the location of the suggest dialog.
   var iterLoc: TRectangle
   tab.sourceView.getIterLocation(iter, addr(iterLoc))
@@ -75,8 +74,8 @@ proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
   win.suggest.dialog.move(x, y)
 
 proc doMoveSuggest*(win: var MainWin) =
-  var current = win.sourceViewTabs.getCurrentPage()
-  var tab     = win.tabs[current]
+  var current = win.SourceViewTabs.getCurrentPage()
+  var tab     = win.Tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
@@ -131,8 +130,8 @@ proc hide*(suggest: var TSuggestDialog) =
 
 proc getFilter(win: var MainWin): string =
   # Get text before the cursor, up to a dot.
-  var current = win.sourceViewTabs.getCurrentPage()
-  var tab     = win.tabs[current]
+  var current = win.SourceViewTabs.getCurrentPage()
+  var tab     = win.Tabs[current]
   var cursor: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
@@ -173,7 +172,7 @@ proc filterSuggest*(win: var MainWin) =
 
 proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
                      line, column: int) =
-  let sugCmd = win.getCmd("$findExe(nimrod)", "") & 
+  let sugCmd = win.GetCmd("$findExe(nimrod)", "") & 
         " idetools --path:$4 --track:$1,$2,$3 --suggest $5" % 
         [file, $(line+1), $column, addToPath,
          if projectFile != "": projectFile else: file]
@@ -204,8 +203,7 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
     # Kill the current suggest process:
     try:
       win.tempStuff.execProcess.terminate()
-    except EOS: 
-      discard # fail may occur if process exited already
+    except EOS: nil # fail may occur if process exited already
     win.tempStuff.execProcess.close()
   else:
     # Run now!
@@ -244,7 +242,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     # Save tabs that are in the same directory as the file
     # being suggested to /tmp/aporia/suggest
     var alreadySaved: seq[string] = @[]
-    for t in items(win.tabs):
+    for t in items(win.Tabs):
       if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
         var f: TFile
         var fileSplit = splitFile(t.filename)
@@ -275,6 +273,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     # activated to /tmp/aporia/suggest.
     for nimfile in walkFiles(tab.filename.splitFile.dir / "*.nim"):
       if nimfile notin alreadySaved:
+        var f: TFile
         var fileSplit = splitFile(nimfile)
         echod("Copying ", prefixDir / fileSplit.name & fileSplit.ext)
         copyFile(nimfile, prefixDir / fileSplit.name & fileSplit.ext)
@@ -320,7 +319,7 @@ proc asyncGetDef*(win: var MainWin, file: string,
                   line, column: int,
     onSugLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.},
     onSugExit: proc (win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.}): string =
-  let sugCmd = win.getCmd("$findExe(nimrod)", "") & 
+  let sugCmd = win.GetCmd("$findExe(nimrod)", "") & 
         " idetools --path:$4 --track:$1,$2,$3 --def $1" % 
         [file, $(line+1), $column, getTempDir()]
   
@@ -335,8 +334,8 @@ proc asyncGetDef*(win: var MainWin, file: string,
   return ""
 
 proc doSuggest*(win: var MainWin) =
-  var current = win.sourceViewTabs.getCurrentPage()
-  var tab     = win.tabs[current]
+  var current = win.SourceViewTabs.getCurrentPage()
+  var tab     = win.Tabs[current]
   var start: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
@@ -351,8 +350,8 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
     name = name[win.suggest.currentFilter.len() .. -1]
   
   # We have the name of the item. Now insert it into the TextBuffer.
-  var currentTab = win.sourceViewTabs.getCurrentPage()
-  win.tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
+  var currentTab = win.SourceViewTabs.getCurrentPage()
+  win.Tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
   
   # Now hide the suggest dialog and clear the items.
   win.suggest.hide()
@@ -409,7 +408,7 @@ proc rstToPango(r: PRstNode, result: var string) =
   of rnCodeBlock:
     result.add("\n")
     assert r.sons[0].kind == rnDirArg
-    #let lang = r.sons[0].sons[0].text
+    let lang = r.sons[0].sons[0].text
     assert r.sons[1] == nil
     assert r.sons[2].kind == rnLiteralBlock
     # TODO: Highlighting?
@@ -467,8 +466,8 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
   var TreeModel: PTreeModel
   if selection.getSelected(addr(TreeModel), addr(selectedIter)):
     # Get current tab(For tooltip)
-    var current = win.sourceViewTabs.getCurrentPage()
-    var tab     = win.tabs[current]
+    var current = win.SourceViewTabs.getCurrentPage()
+    var tab     = win.Tabs[current]
     var selectedPath = TreeModel.getPath(addr(selectedIter))
     var index = selectedPath.getIndices()[]
     if win.suggest.items.len() > index:
@@ -477,9 +476,9 @@ proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl
 
 proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
   win.w.present()
-  var current = win.sourceViewTabs.getCurrentPage()
-  win.tabs[current].sourceView.grabFocus()
-  assert(win.tabs[current].sourceView.isFocus())
+  var current = win.SourceViewTabs.getCurrentPage()
+  win.Tabs[current].sourceView.grabFocus()
+  assert(win.Tabs[current].sourceView.isFocus())
 
 # -- GUI
 proc createSuggestDialog*(win: var MainWin) =
@@ -572,10 +571,4 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.tooltipLabel.setLineWrap(true)
   tpHBox.packStart(win.suggest.tooltipLabel, false, false, 5)
   win.suggest.tooltipLabel.show()
-  
-
-
-
-
-
 
