@@ -5,6 +5,9 @@
 
 import tables, strutils, glib2
 
+const
+  KEY_unset* = 0.guint
+
 type
   TShortcutKey* = object
     keyval*: guint  

@@ -10,7 +10,7 @@
 # Stdlib imports:
 import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
 import tables, os, dialogs, pegs
-from gdk2 import TRectangle, intersect, TColor, colorParse
+from gdk2 import TRectangle, intersect, TColor, colorParse, TModifierType
 # Local imports:
 from CustomStatusBar import PCustomStatusBar, TStatusID
 import AboutDialog, ShortcutUtils
@@ -380,9 +380,9 @@ proc add*(ls: PListStore, val: string, col = 0) =
 
 # -- Useful Menu functions
 proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup, 
-                         label: string, acc: gint,
+                         label: string, acc: guint,
                          action: proc (i: PMenuItem, p: pointer) {.cdecl.},
-                         mask: gint = 0,
+                         mask: TModifierType = accelerator_get_default_mod_mask(),
                          stockid: string = "") = 
   var result: PMenuItem
   if stockid != "":
@@ -390,7 +390,9 @@ proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup,
   else:
     result = menu_item_new(label)
   
-  result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
+  if accelerator_valid(acc, mask):
+    result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
+  
   toolsMenu.append(result)
   show(result)
   discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
