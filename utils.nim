@@ -240,7 +240,7 @@ type
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =
-  when not defined(release):
+  when not defined(release) and system.appType != "gui":
     for i in items(s): stdout.write(i)
     echo()
 
