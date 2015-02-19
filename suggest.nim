@@ -46,8 +46,7 @@ proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
     markup = "<i>$1 - $2</i>" % [escapePango(item.nmName), item.nimType]
   win.addSuggestItem(item.nmName, markup, item.nimType)
 
-proc getIterGlobalCoords(iter: PTextIter, tab: Tab):
-    tuple[x, y: int32] =
+proc getIterGlobalCoords(iter: PTextIter, tab: Tab): tuple[x, y: int32] =
   # Calculate the location of the suggest dialog.
   var iterLoc: TRectangle
   tab.sourceView.getIterLocation(iter, addr(iterLoc))
@@ -105,9 +104,9 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
     result = true
 
 proc clear*(suggest: var TSuggestDialog) =
-  var TreeModel = suggest.treeView.getModel()
-  # TODO: Why do I have to cast it? Why can't I just do PListStore(TreeModel)?
-  cast[PListStore](TreeModel).clear()
+  var treeModel = suggest.treeView.getModel()
+  # TODO: Why do I have to cast it? Why can't I just do PListStore(treeModel)?
+  cast[PListStore](treeModel).clear()
   suggest.items = @[]
   suggest.allItems = @[]
 
@@ -456,13 +455,13 @@ proc showTooltip*(win: var MainWin, tab: Tab, item: TSuggestItem,
   assert(tab.sourceView.isFocus())
 
 # -- Signals
-proc TreeView_RowActivated(tv: PTreeView, path: PTreePath, 
+proc treeView_RowActivated(tv: PTreeView, path: PTreePath, 
             column: PTreeViewColumn, win: ptr MainWin) {.cdecl.} =
   var index = path.getIndices()[]
   if win.suggest.items.len() > index:
     win[].insertSuggestItem(index)
 
-proc TreeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl.} =
+proc treeView_SelectChanged(selection: PTreeSelection, win: ptr MainWin) {.cdecl.} =
   var selectedIter: TTreeIter
   var TreeModel: PTreeModel
   if selection.getSelected(addr(TreeModel), addr(selectedIter)):
@@ -523,11 +522,11 @@ proc createSuggestDialog*(win: var MainWin) =
   scrollWindow.add(win.suggest.treeView)
   
   discard win.suggest.treeView.signalConnect("row-activated",
-              SIGNAL_FUNC(TreeView_RowActivated), addr(win))
+              SIGNAL_FUNC(treeView_RowActivated), addr(win))
               
   var selection = win.suggest.treeview.getSelection()
   discard selection.gsignalConnect("changed",
-              GCallback(TreeView_SelectChanged), addr(win))
+              GCallback(treeView_SelectChanged), addr(win))
   
   var textRenderer = cellRendererTextNew()
   # Renderer is number 0. That's why we count from 1.
@@ -572,10 +571,3 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.tooltipLabel.setLineWrap(true)
   tpHBox.packStart(win.suggest.tooltipLabel, false, false, 5)
   win.suggest.tooltipLabel.show()
-  
-
-
-
-
-
-

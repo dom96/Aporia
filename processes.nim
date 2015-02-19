@@ -63,8 +63,7 @@ proc addError*(win: var MainWin, error: TError) =
   
   win.tempStuff.errorList.add(error)
 
-proc parseError(err: string, 
-            res: var TError) =
+proc parseError(err: string, res: var TError) =
   ## Parses a line like:
   ##   ``a12.nim(1, 3) Error: undeclared identifier: 'asd'``
   ##

@@ -1,7 +1,7 @@
 #
 #
 #            Aporia - Nimrod IDE
-#        (c) Copyright 2013 Dominik Picheta
+#        (c) Copyright 2015 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
 #    distribution, for details about the copyright.
@@ -37,7 +37,7 @@ proc writeHelp() =
   quit(QuitSuccess)
 
 proc writeVersion() =
-  echo("Aporia v$1 compiled at $2 $3.\nCopyright (c) Dominik Picheta 2010-2013" % 
+  echo("Aporia v$1 compiled at $2 $3.\nCopyright (c) Dominik Picheta 2010-2015" % 
        [aporiaVersion, CompileDate, CompileTime])
   quit(QuitSuccess)
 
@@ -61,7 +61,7 @@ let (auto, global) = cfg.load(cfgErrors, lastSession)
 win.autoSettings = auto
 win.globalSettings = global
 
-proc ShowConfigErrors*() =
+proc showConfigErrors*() =
   if cfgErrors.len > 0:
     for error in cfgErrors:
       addError(win, error)
@@ -165,7 +165,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       cfgErrors = @[]
       var newSettings = cfg.loadGlobal(cfgErrors, newStringStream($text))
       if cfgErrors.len > 0:
-        ShowConfigErrors()
+        showConfigErrors()
         return     
       win.globalSettings = newSettings
       config = true
@@ -218,7 +218,7 @@ proc saveAllTabs() =
   for i in 0..high(win.tabs): 
     saveTab(i, os.splitFile(win.tabs[i].filename).dir)
 
-proc Exit() =
+proc exit() =
   # gather some settings
   win.autoSettings.VPanedPos = PPaned(win.sourceViewTabs.getParent()).getPosition()
   win.autoSettings.winWidth = win.w.allocation.width
@@ -456,7 +456,7 @@ proc createTabLabel(name: string, t_child: PWidget, filename: string): tuple[box
   closeBtn.setLabel(nil)
   var iconSize = iconSizeFromName("tabIconSize")
   if iconSize == 0:
-     iconSize = iconSizeRegister("tabIconSize", 10, 10)
+   iconSize = iconSizeRegister("tabIconSize", 10, 10)
   var image = imageNewFromStock(STOCK_CLOSE, iconSize)
   discard gSignalConnect(closebtn, "clicked", G_Callback(onCloseTab), t_child)
   closebtn.setImage(image)
@@ -481,7 +481,7 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
   updateStatusBar(buffer, "")
   updateHighlightAll(buffer)
 
-proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
+proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey, 
                           userData: Pgpointer): gboolean =
   result = false
   let ctrlPressed = (event.state and ControlMask) != 0
@@ -594,7 +594,7 @@ proc SourceViewKeyPress(sourceView: PWidget, event: PEventKey,
   else:
     discard
 
-proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
+proc sourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
                           userData: Pgpointer): gboolean =
   result = true
   let keyNameCString = keyval_name(event.keyval)
@@ -620,7 +620,7 @@ proc SourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
         win.filterSuggest()
         win.doMoveSuggest()
 
-proc SourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): gboolean =
+proc sourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): gboolean =
   win.suggest.hide()
 
 proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8"): int
@@ -672,13 +672,13 @@ proc sourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
     createSeparator(menu)
     createMenuItem(menu, "Go to definition...", goToDef_Activate)
 
-proc SourceView_Adjustment_valueChanged(adjustment: PAdjustment,
+proc sourceView_Adjustment_valueChanged(adjustment: PAdjustment,
     spb: ptr tuple[lastUpper, value: float]) =
   let value = adjustment.getValue
   if adjustment.getUpper == spb[][0]:
     spb[][1] = value
 
-proc SourceView_sizeAllocate(sourceView: PSourceView,
+proc sourceView_sizeAllocate(sourceView: PSourceView,
     allocation: gdk2.PRectangle, spb: ptr tuple[lastUpper, value: float]) =
   # TODO: This implementation has some issues: when we add a new line
   # when at the very bottom of the TextView, the TextView jumps up and down.
@@ -732,7 +732,7 @@ proc initSourceView(sourceView: var PSourceView, scrollWindow: var PScrolledWind
   sourceView.setSmartHomeEnd(SmartHomeEndBefore)
   sourceView.setWrapMode(win.globalSettings.wrapMode)
   discard signalConnect(sourceView, "button-press-event",
-                        SIGNALFUNC(SourceViewMousePress), nil)
+                        SIGNALFUNC(sourceViewMousePress), nil)
   discard gSignalConnect(sourceView, "populate-popup",
                          GCallback(sourceViewPopulatePopup), nil)
 
@@ -746,14 +746,15 @@ proc initSourceView(sourceView: var PSourceView, scrollWindow: var PScrolledWind
       win.globalSettings.highlightMatchingBrackets)
   
   discard signalConnect(sourceView, "key-press-event", 
-                        SIGNALFUNC(SourceViewKeyPress), nil)
+                        SIGNALFUNC(sourceViewKeyPress), nil)
   discard signalConnect(sourceView, "key-release-event", 
-                        SIGNALFUNC(SourceViewKeyRelease), nil)
+                        SIGNALFUNC(sourceViewKeyRelease), nil)
 
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8"): int =
+proc addTab(name, filename: string, setCurrent: bool = true,
+            encoding = "utf-8"): int =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
   ## of the filename.
@@ -865,9 +866,9 @@ proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8")
   # Adjustment signals for scrolling past bottom.
   if win.globalSettings.scrollPastBottom:
     discard sourceView.get_vadjustment().signalConnect("value_changed",
-        SIGNALFUNC(SourceView_Adjustment_valueChanged), addr nTab.spbInfo)
+        SIGNALFUNC(sourceView_Adjustment_valueChanged), addr nTab.spbInfo)
     discard sourceView.signalConnect("size-allocate",
-        SIGNALFUNC(SourceView_sizeAllocate), addr nTab.spbInfo)
+        SIGNALFUNC(sourceView_sizeAllocate), addr nTab.spbInfo)
 
   if setCurrent:
     # Select the newly created tab
@@ -1709,7 +1710,7 @@ proc loadLanguageSections():
   
   #result.sort cmpB
 
-proc initTopMenu(MainBox: PBox) =
+proc initTopMenu(mainBox: PBox) =
   # Create a accelerator group, used for shortcuts
   # like CTRL + S in SaveMenuItem
   var accGroup = accel_group_new()
@@ -1748,7 +1749,7 @@ proc initTopMenu(MainBox: PBox) =
   let quitAporia = 
     proc (menuItem: PMenuItem, user_data: pointer) =
       if not deleteEvent(menuItem, nil, nil):
-        aporia.Exit()
+        aporia.exit()
   win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyQuit.keyval, 
     quitAporia, win.globalSettings.keyQuit.state,  StockQuit)
   
@@ -1924,10 +1925,10 @@ proc initTopMenu(MainBox: PBox) =
   HelpMenuItem.show()
   TopMenu.append(HelpMenuItem)
   
-  MainBox.packStart(TopMenu, false, false, 0)
+  mainBox.packStart(TopMenu, false, false, 0)
   TopMenu.show()
 
-proc initToolBar(MainBox: PBox) =
+proc initToolBar(mainBox: PBox) =
   # Create top ToolBar
   win.toolBar = toolbarNew()
   win.toolBar.setStyle(TOOLBAR_ICONS)
@@ -1948,11 +1949,11 @@ proc initToolBar(MainBox: PBox) =
   discard win.toolBar.insertStock(STOCK_FIND, "Find",
                       "Find", SIGNAL_FUNC(aporia.find_Activate), nil, -1)
   
-  MainBox.packStart(win.toolBar, false, false, 0)
+  mainBox.packStart(win.toolBar, false, false, 0)
   if win.globalSettings.toolBarVisible == true:
     win.toolBar.show()
 
-proc initInfoBar(MainBox: PBox) =
+proc initInfoBar(mainBox: PBox) =
   win.infobar = infoBarNewWithButtons(STOCK_OPEN, ResponseOK, STOCK_CANCEL, ResponseCancel, nil)
   win.infobar.setMessageType(MessageInfo)
   var vbox = vboxNew(false, 0);vbox.show()
@@ -1987,7 +1988,7 @@ proc initInfoBar(MainBox: PBox) =
   var contentArea = win.infobar.getContentArea()
   contentArea.add(vbox)
   
-  MainBox.packStart(win.infobar, false, false, 0)
+  mainBox.packStart(win.infobar, false, false, 0)
 
   discard win.infobar.signalConnect("response",
          SIGNAL_FUNC(InfoBarResponse), encodingsComboBox)
@@ -2131,7 +2132,7 @@ proc initTAndBP(mainBox: PBox) =
   tandbpVPaned.setPosition(win.autoSettings.VPanedPos)
   tAndBPVPaned.show()
 
-proc initFindBar(MainBox: PBox) =
+proc initFindBar(mainBox: PBox) =
   # Create a fixed container
   win.findBar = hBoxNew(false, 0)
   win.findBar.setSpacing(4)
@@ -2229,7 +2230,7 @@ proc initFindBar(MainBox: PBox) =
   win.findBar.packEnd(extraBtn, false, false, 0)
   extraBtn.show()
   
-  MainBox.packStart(win.findBar, false, false, 0)
+  mainBox.packStart(win.findBar, false, false, 0)
   #win.findBar.show()
 
   proc findBar_Hide(widget: PWidget, dummy: gpointer) {.cdecl.} =
@@ -2241,7 +2242,7 @@ proc initFindBar(MainBox: PBox) =
   discard win.findBar.signalConnect("hide", 
              SIGNAL_FUNC(findBar_Hide), nil)
 
-proc initGoLineBar(MainBox: PBox) =
+proc initGoLineBar(mainBox: PBox) =
   # Create a fixed container
   win.goLineBar.bar = hBoxNew(false, 0)
   win.goLineBar.bar.setSpacing(4)
@@ -2276,7 +2277,7 @@ proc initGoLineBar(MainBox: PBox) =
   win.goLineBar.bar.packEnd(closeBtn, false, false, 2)
   closeBtn.show()
 
-  MainBox.packStart(win.goLineBar.bar, false, false, 0)
+  mainBox.packStart(win.goLineBar.bar, false, false, 0)
 
 proc initTempStuff() =
   win.tempStuff.lastSaveDir = ""
@@ -2358,7 +2359,7 @@ proc initControls() =
   
   let winDestroy = 
     proc (widget: PWidget, data: Pgpointer) {.cdecl.} =
-      aporia.Exit()
+      aporia.exit()
   
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(winDestroy), nil)
   discard win.w.signalConnect("delete_event", 
@@ -2376,7 +2377,7 @@ proc initControls() =
   # Suggest dialog
   createSuggestDialog(win)
   
-  # MainBox (vbox)
+  # mainBox (vbox)
   var mainBox = vboxNew(false, 0)
   win.w.add(mainBox)
   
@@ -2386,7 +2387,7 @@ proc initControls() =
   initTAndBP(mainBox)
   initFindBar(mainBox)
   initGoLineBar(mainBox)
-  #initStatusBar(MainBox)
+  #initStatusBar(mainBox)
   win.statusbar = initCustomStatusBar(mainBox)
   
   mainBox.show()
@@ -2399,7 +2400,7 @@ proc initControls() =
   win.w.show()
   
   # Show config errors after the main window is shown
-  ShowConfigErrors()
+  showConfigErrors()
     
   # Set focus to text input:
   win.tabs[win.sourceViewTabs.getCurrentPage()].sourceview.grabFocus()
