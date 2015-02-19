@@ -2,8 +2,10 @@
 # Copyright (C) Dominik Picheta
 # Look at copying.txt for more info.
 
-## This module contains functions which deal with running processes, such as the Nimrod process.
-## There are also some functions for gathering errors as given by the nimrod compiler and putting them into the error list.
+## This module contains functions which deal with running processes,
+## such as the Nim process.
+## There are also some functions for gathering errors as given by the
+## nim compiler and putting them into the error list.
 
 import pegs, times, osproc, streams, parseutils, strutils, re, os
 import gtk2, glib2
