@@ -12,9 +12,6 @@ import utils, CustomStatusBar
 
 {.push callConv:cdecl.}
 
-var
-  win*: ptr utils.MainWin
-
 const
   NonHighlightChars = {'=', '+', '-', '*', '/', '<', '>', '@', '$', '~', '&',
                        '%', '|', '!', '?', '^', '.', ':', '\\', '(', ')',
@@ -94,9 +91,9 @@ proc findBoundsGen(text, pattern: string,
 
   if result[0] == -1 or result[1] == -1: return (-1, 0)
 
-proc findRePeg(forward: bool, startIter: PTextIter,
+proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
                buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
-               wrappedAround = false): 
+               wrappedAround = false):
     tuple[startMatch, endMatch: TTextIter, found: bool] =
   var text: cstring
   var iter: TTextIter # If forward then this points to the end
@@ -151,11 +148,11 @@ proc findRePeg(forward: bool, startIter: PTextIter,
       else:
         # We are at the beginning. Restart from the end.
         buffer.getEndIter(addr(startMatch))
-      return findRePeg(forward, addr(startMatch), buffer, pattern, mode, true)
+      return findRePeg(win, forward, addr(startMatch), buffer, pattern, mode, true)
   
     return (startMatch, endMatch, false)
 
-proc findSimple(forward: bool, startIter: PTextIter,
+proc findSimple(win: var utils.MainWin, forward: bool, startIter: PTextIter,
                 buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
                 wrappedAround = false):
                 tuple[startMatch, endMatch: TTextIter, found: bool] =
@@ -177,11 +174,12 @@ proc findSimple(forward: bool, startIter: PTextIter,
       else:
         # We are at the beginning. Restart from end.
         buffer.getEndIter(addr(startMatch))
-      return findSimple(forward, addr(startMatch), buffer, pattern, mode, true)
+      return findSimple(win, forward, addr(startMatch), buffer, pattern, mode, true)
     
   return (startMatch, endMatch, matchFound.bool)
 
-iterator findTerm(buffer: PSourceBuffer, term: string, mode: TSearchEnum): tuple[startMatch, endMatch: TTextIter] {.closure.} =
+iterator findTerm(win: var utils.MainWin, buffer: PSourceBuffer, term: string,
+    mode: TSearchEnum): tuple[startMatch, endMatch: TTextIter] {.closure.} =
   const CurrentSearchPosName = "CurrentSearchPosMark"
   var searchPosMark = buffer.getMark(CurrentSearchPosName)
   var startIter: TTextIter
@@ -199,9 +197,9 @@ iterator findTerm(buffer: PSourceBuffer, term: string, mode: TSearchEnum): tuple
     buffer.getIterAtMark(addr(startSearchIter), searchPosMark)
     case mode
     of SearchCaseInsens, SearchCaseSens:
-      ret = findSimple(true, addr(startSearchIter), buffer, $term, mode, wrappedAround = true)
+      ret = findSimple(win, true, addr(startSearchIter), buffer, $term, mode, wrappedAround = true)
     of SearchRegex, SearchPeg, SearchStyleInsens:
-      ret = findRePeg(true, addr(startSearchIter), buffer, $term, mode, wrappedAround = true)
+      ret = findRePeg(win, true, addr(startSearchIter), buffer, $term, mode, wrappedAround = true)
     startMatch = ret[0]
     endMatch = ret[1]
     found = ret[2]
@@ -251,14 +249,16 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
   
   type 
     TIdleParam = object
+      win: utils.MainWin
       buffer: PSourceBuffer
       term: string 
       mode: TSearchEnum
-      findIter: iterator (buffer: PSourceBuffer, 
+      findIter: iterator (win: var utils.MainWin, buffer: PSourceBuffer, 
                           term: string, mode: TSearchEnum): 
                         tuple[startMatch, endMatch: TTextIter] {.closure.}
     
   var idleParam: ref TIdleParam; new(idleParam)
+  idleParam.win = w
   idleParam.buffer = w.tabs[current].buffer
   idleParam.term = term
   idleParam.mode = mode
@@ -271,7 +271,8 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
   
   proc idleHighlightAll(param: ptr TIdleParam): gboolean {.cdecl.} =
     result = true
-    var (startMatch, endMatch) = param.findIter(param.buffer, param.term, param.mode)
+    var (startMatch, endMatch) =
+        param.findIter(param.win, param.buffer, param.term, param.mode)
     if param.findIter.finished: return false
     param.buffer.applyTagByName(HighlightTagName, addr startMatch, addr endMatch)
     
@@ -285,7 +286,7 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
                    cast[ptr TIdleParam](idleParam), idleHighlightAllRemove)
   w.tabs[current].highlighted = newHighlightAll(term, forSearch, idleID)
 
-proc findText*(forward: bool) =
+proc findText*(win: var utils.MainWin, forward: bool) =
   # This proc gets called when the 'Next' or 'Prev' buttons
   # are pressed, forward is a boolean which is
   # true for Next and false for Previous
@@ -294,7 +295,7 @@ proc findText*(forward: bool) =
   # Get the current tab
   var currentTab = win.sourceViewTabs.getCurrentPage()
   if win.globalSettings.searchHighlightAll:
-    highlightAll(win[], pattern, true, win.autoSettings.search)
+    highlightAll(win, pattern, true, win.autoSettings.search)
   else:
     # Stop it from highlighting due to selection.
     win.tabs[currentTab].highlighted = newHighlightAll("", true, -1)
@@ -315,9 +316,9 @@ proc findText*(forward: bool) =
   of SearchCaseInsens, SearchCaseSens:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
     if forward:
-      ret = findSimple(forward, addr(endSel), buffer, pattern, mode)
+      ret = findSimple(win, forward, addr(endSel), buffer, pattern, mode)
     else:
-      ret = findSimple(forward, addr(startSel), buffer, pattern, mode)
+      ret = findSimple(win, forward, addr(startSel), buffer, pattern, mode)
     startMatch = ret[0]
     endMatch = ret[1]
     matchFound = ret[2]
@@ -325,9 +326,9 @@ proc findText*(forward: bool) =
   of SearchRegex, SearchPeg, SearchStyleInsens:
     var ret: tuple[startMatch, endMatch: TTextIter, found: bool]
     if forward:
-      ret = findRePeg(forward, addr(endSel), buffer, pattern, mode)
+      ret = findRePeg(win, forward, addr(endSel), buffer, pattern, mode)
     else:
-      ret = findRePeg(forward, addr(startSel), buffer, pattern, mode)
+      ret = findRePeg(win, forward, addr(startSel), buffer, pattern, mode)
     startMatch = ret[0]
     endMatch = ret[1]
     matchFound = ret[2]
@@ -365,7 +366,7 @@ proc findText*(forward: bool) =
     # Set the status bar
     win.statusbar.setTemp("Match not found.", UrgError, 5000)
     
-proc replaceAll*(find, replace: cstring): int =
+proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
   # gedit-document.c, gedit_document_replace_all
   var count = 0
   var startMatch, endMatch: TTextIter
@@ -395,7 +396,8 @@ proc replaceAll*(find, replace: cstring): int =
       found = gtksourceview.forwardSearch(addr(iter), find, 
           options, addr(startMatch), addr(endMatch), nil)
     of SearchRegex, SearchPeg, SearchStyleInsens:
-      var ret = findRePeg(true, addr(iter), buffer, $find, win.autoSettings.search)
+      var ret = findRePeg(win, true, addr(iter), buffer, $find,
+                          win.autoSettings.search)
       startMatch = ret[0]
       endMatch = ret[1]
       found = ret[2]

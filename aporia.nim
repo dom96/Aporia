@@ -25,10 +25,8 @@ const
   -h  --help Shows this message
 """
 
-var win: utils.MainWin
+var win {.threadvar.}: utils.MainWin
 win.tabs = @[]
-
-search.win = addr(win) # TODO: Stop doing this.
 
 var lastSession: seq[string] = @[]
 
@@ -1034,9 +1032,11 @@ proc replace_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.replaceBtn.show()
   win.replaceAllBtn.show()
 
-proc findNext_Activate(menuitem: PMenuItem, user_data: pointer) = findText(true)
+proc findNext_Activate(menuitem: PMenuItem, user_data: pointer) =
+  findText(win, true)
 
-proc findPrevious_Activate(menuitem: PMenuItem, user_data: pointer) = findText(false)
+proc findPrevious_Activate(menuitem: PMenuItem, user_data: pointer) =
+  findText(win, false)
   
 proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.goLineBar.bar.show()
@@ -1550,8 +1550,10 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
 
 # -- FindBar
 
-proc nextBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(true)
-proc prevBtn_Clicked(button: PButton, user_data: Pgpointer) = findText(false)
+proc nextBtn_Clicked(button: PButton, user_data: Pgpointer) =
+  findText(win, true)
+proc prevBtn_Clicked(button: PButton, user_data: Pgpointer) =
+  findText(win, false)
 
 proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
   var currentTab = win.sourceViewTabs.getCurrentPage()
@@ -1559,7 +1561,7 @@ proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
   if not win.tabs[currentTab].buffer.getSelectionBounds(
         addr(start), addr(theEnd)):
     # If no text is selected, try finding a match.
-    findText(true)
+    findText(win, true)
     if not win.tabs[currentTab].buffer.getSelectionBounds(
           addr(start), addr(theEnd)):
       # No match
@@ -1575,12 +1577,12 @@ proc replaceBtn_Clicked(button: PButton, user_data: Pgpointer) =
   win.tabs[currentTab].buffer.endUserAction()
   
   # Find next match, this is just a convenience.
-  findText(true)
+  findText(win, true)
   
 proc replaceAllBtn_Clicked(button: PButton, user_data: Pgpointer) =
   var find = getText(win.findEntry)
   var replace = getText(win.replaceEntry)
-  var count = replaceAll(find, replace)
+  var count = replaceAll(win, find, replace)
   win.statusbar.setTemp("Replaced $1 matches." % $count, UrgNormal, 5000)
   
 proc closeBtn_Clicked(button: PButton, user_data: Pgpointer) = 
