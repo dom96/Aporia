@@ -25,7 +25,7 @@ const
   -h  --help Shows this message
 """
 
-var win {.threadvar.}: utils.MainWin
+var win: utils.MainWin
 win.tabs = @[]
 
 var lastSession: seq[string] = @[]

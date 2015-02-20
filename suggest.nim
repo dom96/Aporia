@@ -191,7 +191,7 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
   var winPtr = addr win
 
   proc onSugLine(line: string) {.closure.} =
-    var win = winPtr[]
+    template win: expr = winPtr[]
     var item: TSuggestItem
     if parseIDEToolsLine("sug", line, item):
       win.suggest.allItems.add(item)
