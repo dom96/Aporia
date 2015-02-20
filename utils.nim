@@ -13,6 +13,7 @@ import tables, os, dialogs, pegs
 from gdk2 import TRectangle, intersect, TColor, colorParse, TModifierType
 # Local imports:
 from CustomStatusBar import PCustomStatusBar, TStatusID
+
 import AboutDialog, ShortcutUtils
 
 type
@@ -188,6 +189,7 @@ type
     compilationErrorBuffer*: string # holds error msg if it spans multiple lines.
     errorList*: seq[TError]
     gotDefinition*: bool
+    autoComplete*: AutoComplete
 
     recentFileMenuItems*: seq[PMenuItem] # Menu items to be destroyed.
     lastTab*: int # For reordering tabs, the last tab that was selected.
@@ -237,6 +239,13 @@ type
     text*: string # What is currently being highlighted in this tab
     forSearch*: bool # Whether highlightedText is done as a result of a search.
     idleID*: int32
+
+  AutoComplete* = ref object
+    thread*: TThread[string]
+    taskRunning*, threadRunning*: bool
+    onSugLine*: proc (line: string) {.closure.}
+    onSugExit*: proc (exit: int) {.closure.}
+    onSugError*: proc (error: string) {.closure.}
 
 # -- Debug
 proc echod*(s: varargs[string, `$`]) =

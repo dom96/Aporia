@@ -10,7 +10,7 @@
 import 
   gtk2, gdk2, glib2,
   strutils, osproc, os,
-  utils, processes, CustomStatusBar
+  utils, processes, CustomStatusBar, AutoComplete
 
 import rst, rstast
 
@@ -172,12 +172,26 @@ proc filterSuggest*(win: var MainWin) =
 
 proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
                      line, column: int) =
-  let sugCmd = win.getCmd("$findExe(nimrod)", "") & 
-        " idetools --path:$4 --track:$1,$2,$3 --suggest $5" % 
-        [file, $(line+1), $column, addToPath,
-         if projectFile != "": projectFile else: file]
+  #let sugCmd = win.getCmd("$findExe(nimrod)", "") &
+  #      " idetools --path:$4 --track:$1,$2,$3 --suggest $5" %
+  #      [file, $(line+1), $column, addToPath,
+  #       if projectFile != "": projectFile else: file]
 
-  proc onSugLine(win: var MainWin, opts: PExecOptions, line: string) {.closure.} =
+  # Verify the presence of nimsuggest in the path
+  if findExe("nimsuggest") == "":
+    win.statusbar.setTemp("Could not find NimSuggest in PATH.", UrgError)
+    return
+
+  let sugCmd = "sug \"$1\":$2:$3\c\l" % [file, $(line+1), $column]
+
+  # Start NimSuggest if this is the first request.
+  if not win.tempStuff.autoComplete.isThreadRunning:
+    win.tempStuff.autoComplete.startThread(projectFile)
+
+  var winPtr = addr win
+
+  proc onSugLine(line: string) {.closure.} =
+    var win = winPtr[]
     var item: TSuggestItem
     if parseIDEToolsLine("sug", line, item):
       win.suggest.allItems.add(item)
@@ -187,31 +201,30 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
         win.addSuggestItem(item)
       win.suggest.show()
       win.doMoveSuggest()
-      
-  proc onSugExit(win: var MainWin, opts: PExecOptions, exit: int) {.closure.} =
+
+  proc onSugExit(exit: int) {.closure.} =
+    var win = winPtr[]
     win.suggest.gotAll = true
     if win.suggest.allItems.len == 0:
       win.statusbar.setTemp("No items found for suggest.", UrgError)
-    
-  var execute = newExec(sugCmd, "", ExecRun, false, onSugLine, onSugExit)
+
+  proc onSugError(error: string) {.closure.} =
+    var win = winPtr[]
+    win.statusbar.setTemp("Suggest: " & error, UrgError)
+
   # Check if a suggest request is already running:
-  if win.tempStuff.currentExec != nil and 
-     win.tempStuff.execProcess != nil:
-    # Add new request to runAfterSuccess.
-    win.tempStuff.currentExec.runAfter = execute
-    win.tempStuff.currentExec.runAfterSuccess = false
-    # Kill the current suggest process:
-    try:
-      win.tempStuff.execProcess.terminate()
-    except EOS: 
-      discard # fail may occur if process exited already
-    win.tempStuff.execProcess.close()
+  if win.tempStuff.autocomplete.isTaskRunning:
+    win.tempStuff.autocomplete.stopTask()
   else:
-    # Run now!
-    win.execProcAsync execute 
+    win.tempStuff.autoComplete.startTask(sugCmd, onSugLine, onSugExit,
+        onSugError)
 
 proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool = 
   ## Starts the request for suggest items asynchronously.
+
+  # TODO: REMOVE THIS
+  if win.tempStuff.autoComplete.isThreadRunning:
+    win.tempStuff.autoComplete.stopThread()
   
   var aporiaTmpDir = getTempDir() / "aporia"
   var prefixDir = aporiaTmpDir / "suggest"

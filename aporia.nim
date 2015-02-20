@@ -14,7 +14,7 @@ import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
 import tables, algorithm
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes,
-       CustomStatusBar
+       CustomStatusBar, AutoComplete
 {.push callConv:cdecl.}
 
 const
@@ -2292,6 +2292,8 @@ proc initTempStuff() =
   win.tempStuff.lastTab = 0
   win.tempStuff.pendingFilename = ""
   win.tempStuff.currentToggledLang = ""
+
+  win.tempStuff.autoComplete = newAutoComplete()
 
 {.pop.}
 proc initSocket() =
