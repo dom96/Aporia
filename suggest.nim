@@ -221,10 +221,6 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
 
 proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool = 
   ## Starts the request for suggest items asynchronously.
-
-  # TODO: REMOVE THIS
-  if win.tempStuff.autoComplete.isThreadRunning:
-    win.tempStuff.autoComplete.stopThread()
   
   var aporiaTmpDir = getTempDir() / "aporia"
   var prefixDir = aporiaTmpDir / "suggest"

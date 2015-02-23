@@ -21,19 +21,19 @@ var
 commands.open()
 results.open()
 
-proc readOutput(p: Process) =
+proc readOutput(o: Stream) =
   # Check stdout for errors.
-  let o = p.outputStream
-  while not o.atEnd:
+  while not o.atEnd():
     let line = o.readLine()
+    echod("[AutoComplete] Got line from NimSuggest: ", line.repr)
     if line.toLower().startsWith("error:"):
       results.send(errorToken & line)
 
 proc shutdown(p: Process) =
   if not p.running:
     echod("[AutoComplete] Process exited.")
-    p.readOutput
   else:
+    echod("[AutoComplete] Process Shutting down.")
     p.terminate()
     discard p.waitForExit()
     p.close()
@@ -41,46 +41,48 @@ proc shutdown(p: Process) =
 proc suggestThread(projectFile: string) {.thread.} =
   let nimPath = findExe("nim")
   # TODO: Ensure nimPath exists.
+  echod(nimPath.splitFile.dir.parentDir)
   var p = startProcess(findExe("nimsuggest"), nimPath.splitFile.dir.parentDir,
                        ["--port:" & $port, projectFile],
                        options = {poStdErrToStdOut, poUseShell})
-
-  var socket: Socket
+  var o = p.outputStream
 
   while true:
+    if not p.running:
+      p.shutdown()
+      results.send(endToken)
+      break
+
+    #o.readOutput
+
     var tasks = commands.peek()
     if tasks > 0:
       let task = commands.recv()
       echod("[AutoComplete] Got task: ", task)
       case task
       of endToken:
-        socket.close()
         p.shutdown()
         results.send(endToken)
+        echod("[AutoComplete] Thread exiting")
         break
       of stopToken:
         # Can't do much here right now since we're not async.
         # TODO
         discard
       else:
-        socket = newSocket()
+        var socket = newSocket()
         socket.connect("localhost", port)
         echod("[AutoComplete] Connected")
-        socket.send(task & "\n")
+        socket.send(task & "\c\l")
         while true:
           var line = ""
           socket.readLine(line)
-          echod("[AutoComplete] Recv line: ", line)
+          echod("[AutoComplete] Recv line: ", line.repr)
           if line.len == 0: break
           results.send(line)
+        socket.close()
         results.send(stopToken)
     #os.sleep(50)
-    if not p.running:
-      socket.close()
-      p.shutdown()
-      results.send(endToken)
-      break
-    p.readOutput
 
 proc newAutoComplete*(): AutoComplete =
   result = AutoComplete()
@@ -115,8 +117,11 @@ proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
       return false
     of errorToken:
       self.onSugError(msg)
-    echod("[AutoComplete] Got Line: ", msg)
+    echod("[AutoComplete] Got Line: ", msg.repr)
     self.onSugLine(msg)
+
+  if not result:
+    echod("[AutoComplete] idle exiting")
 
 proc startTask*(self: AutoComplete, task: string,
                onSugLine: proc (line: string) {.closure.},
@@ -130,6 +135,8 @@ proc startTask*(self: AutoComplete, task: string,
 
   # Add a function which will be called when the UI is idle.
   discard gIdleAdd(peekSuggestOutput, cast[pointer](self))
+
+  echod("[AutoComplete] idleAdd")
 
   # Send the task
   commands.send(task)
