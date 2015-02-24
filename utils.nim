@@ -242,6 +242,7 @@ type
 
   AutoComplete* = ref object
     thread*: TThread[string]
+    sockThread*: TThread[void]
     taskRunning*, threadRunning*: bool
     onSugLine*: proc (line: string) {.closure.}
     onSugExit*: proc (exit: int) {.closure.}
