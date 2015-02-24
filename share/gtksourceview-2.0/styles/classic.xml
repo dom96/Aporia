@@ -71,6 +71,8 @@
   <style name="def:underlined"              italic="true" underline="true"/>
 
   <!-- Language specific styles -->
+  <style name="nim:pascal"                  foreground="green"/>
+  
   <style name="diff:added-line"             foreground="#008B8B"/>
   <style name="diff:removed-line"           foreground="#6A5ACD"/>
   <style name="diff:changed-line"           use-style="def:preprocessor"/>

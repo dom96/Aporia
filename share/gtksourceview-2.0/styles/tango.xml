@@ -93,6 +93,8 @@
   <style name="def:underlined"              italic="true" underline="true"/>
 
   <!-- Language specific -->
+  <style name="nim:pascal"                  foreground="chameleon3"/>
+  
   <style name="diff:added-line"             foreground="chameleon3"/>
   <style name="diff:removed-line"           foreground="plum3"/>
   <style name="diff:changed-line"           use-style="def:preprocessor"/>

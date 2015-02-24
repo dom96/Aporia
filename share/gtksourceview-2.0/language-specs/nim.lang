@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Author: Andreas Rumpf
+ Copyright (C) 2012 Andreas Rumpf, Dominik Picheta
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Library General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Library General Public License for more details.
+
+ You should have received a copy of the GNU Library General Public
+ License along with this library; if not, write to the
+ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ Boston, MA 02111-1307, USA.
+
+-->
+<language id="nim" _name="Nim" version="2.0" _section="Sources">
+  <metadata>
+    <property name="mimetypes">text/x-nim</property>
+    <property name="globs">*.nim</property>
+    <property name="line-comment-start">#</property>
+  </metadata>
+
+  <styles>
+    <style id="module-handler"    _name="Module Handler"        map-to="def:preprocessor"/>
+    <style id="keyword"           _name="Keyword"               map-to="def:keyword"/>
+    <style id="multiline-string"  _name="Multiline string"      map-to="def:string"/>
+    <style id="string"            _name="String"                map-to="def:string"/>
+    <style id="escaped-char"      _name="Escaped Character"     map-to="def:special-char"/>
+    <style id="format"            _name="Format"                map-to="def:character"/>
+    <style id="special-variable"  _name="Special Variable"      map-to="def:identifier"/>
+    <style id="boolean"           _name="Boolean"               map-to="def:boolean"/>
+    <style id="floating-point"    _name="Floating point number" map-to="def:floating-point"/>
+    <style id="decimal"           _name="Decimal number"        map-to="def:decimal"/>
+    <style id="base-n-integer"    _name="Base-N number"         map-to="def:base-n-integer"/>
+    <style id="type"              _name="type"                  map-to="def:type"/>
+    <style id="error"             _name="Error"                 map-to="def:error"/>
+    <style id="backticks"         _name="backticks"             />
+    <style id="pragma"            _name="pragma"                />
+    <style id="typedecl"          _name="typedecl"              />
+    <style id="procdecl"          _name="procdecl"              />
+    <style id="operator"          _name="operator"              />
+    <style id="bracket"           _name="bracket"               />
+    <style id="pascal"            _name="pascal"                />
+    <style id="call"              _name="call"                  />
+  </styles>
+
+  <definitions>
+    <context id="format" style-ref="format" extend-parent="false">
+      <match>\$[^\$]\w*</match>
+    </context>
+
+    <context id="escaped-char" style-ref="escaped-char" extend-parent="true">
+      <match extended="true">
+        \\(                 # leading backslash
+        [\\'"NnRrCcLlFfEeAaBbVvTt] | # single escaped char
+        x[0-9A-Fa-f]{1,2} | # \xhh - character with hex value hh
+        [0-9]+              # \ooo - character with decimal value ooo
+        )
+      </match>
+    </context>
+
+    <context id="multiline-double-quoted-string" style-ref="multiline-string">
+      <start>\"\"\"</start>
+      <end>\"\"\"</end>
+      <include>
+        <context ref="format"/>
+      </include>
+    </context>
+
+    <context id="double-quoted-string" style-ref="string" end-at-line-end="true">
+      <start>"</start>
+      <end>"</end>
+      <include>
+        <context ref="format"/>
+        <context ref="escaped-char"/>
+      </include>
+    </context>
+
+    <context id="single-quoted-string" style-ref="string" end-at-line-end="true">
+      <start>'</start>
+      <end>'</end>
+      <include>
+        <context ref="format"/>
+        <context ref="escaped-char"/>
+      </include>
+    </context>
+
+    <context id="double-quoted-raw-string" style-ref="string" end-at-line-end="true">
+      <start>[rR]"</start>
+      <end>"</end>
+      <include>
+        <context ref="format"/>
+      </include>
+    </context>
+
+    <context id="nim">
+      <include>
+        <context ref="def:shebang"/>
+        <context ref="def:shell-like-comment"/>
+
+        <context ref="multiline-double-quoted-string"/>
+        <context ref="double-quoted-string"/>
+        <context ref="single-quoted-string"/>
+
+        <context ref="double-quoted-raw-string"/>
+
+        <context id="backticks" style-ref="backticks" end-at-line-end="true">
+          <start>`</start>
+          <end>`</end>
+        </context>
+
+        <define-regex id="float" extended="true">
+          ( (\d+)?\.\d+ | \d+\. ) |
+          ( (\d+|(\d+)?\.\d+|\d+\.)[eE][+-]?\d+ )
+        </define-regex>
+        
+        <define-regex id="numbersuffix" extended="true">
+          (\'[Ff]32|\'[Ff]64|\'[IiUu]8|\'[IiUu]16|\'[IiUu]32|\'[IiUu]64)
+        </define-regex>
+
+        <context id="float" style-ref="floating-point">
+          <match>(?&lt;![\w\.])\%{float}(?![\w\.])(\%{numbersuffix})?</match>
+        </context>
+
+        <context id="decimal" style-ref="decimal">
+          <match>(?&lt;![\w\.])([0-9][0-9]*)[lL]?(?![\w\.])(\%{numbersuffix})?</match>
+        </context>
+
+        <context id="octal" style-ref="base-n-integer">
+          <match>(?&lt;![\w\.])0[oc][0-7]+(?![\w\.])(\%{numbersuffix})?</match>
+        </context>
+
+        <context id="hex" style-ref="base-n-integer">
+          <match>(?&lt;![\w\.])0[xX][0-9A-Fa-f]+(?![\w\.])(\%{numbersuffix})?</match>
+        </context>
+
+        <context id="boolean" style-ref="boolean">
+          <keyword>f_?(a|A)_?(l|L)_?(s|S)_?(e|E)</keyword>
+          <keyword>n_?(i|I)_?(l|L)</keyword>
+          <keyword>t_?(r|R)_?(u|U)_?(e|E)</keyword>
+        </context>
+
+        <context id="ml-pragma" style-ref="pragma">
+          <start>{\.\w+:\s?"""</start>
+          <end>"""\.?}</end>
+        </context>
+
+        <context id="pragma" style-ref="pragma">
+          <start>\{\.</start>
+          <end>(\.|)\}</end>
+        </context>
+        
+        <context id="error" style-ref="error">
+          <match>(\t|__+)</match>
+        </context>
+        
+        <context id="types" style-ref="type">
+          <keyword>a_?(n|N)_?(y|Y)</keyword>
+          <keyword>a_?(r|R)_?(r|R)_?(a|A)_?(y|Y)</keyword>
+          <keyword>a_?(u|U)_?(t|T)_?(o|O)</keyword>
+          <keyword>b_?(o|O)_?(o|O)_?(l|L)</keyword>
+          <keyword>b_?(y|Y)_?(t|T)_?(e|E)</keyword>
+          <keyword>c_?(c|C)_?(h|H)_?(a|A)_?(r|R)</keyword>
+          <keyword>c_?(d|D)_?(o|O)_?(u|U)_?(b|B)_?(l|L)_?(e|E)</keyword>
+          <keyword>c_?(f|F)_?(l|L)_?(o|O)_?(a|A)_?(t|T)</keyword>
+          <keyword>c_?(h|H)_?(a|A)_?(r|R)</keyword>
+          <keyword>c_?(i|I)_?(n|N)_?(t|T)</keyword>
+          <keyword>c_?(i|I)_?(n|N)_?(t|T)_?8</keyword>
+          <keyword>c_?(i|I)_?(n|N)_?(t|T)_?1_?6</keyword>
+          <keyword>c_?(i|I)_?(n|N)_?(t|T)_?3_?2</keyword>
+          <keyword>c_?(i|I)_?(n|N)_?(t|T)_?6_?4</keyword>
+          <keyword>c_?(l|L)_?(o|O)_?(n|N)_?(g|G)</keyword>
+          <keyword>c_?(l|L)_?(o|O)_?(n|N)_?(g|G)_?(d|D)_?(o|O)_?(u|U)_?(b|B)_?(l|L)_?(e|E)</keyword>
+          <keyword>c_?(l|L)_?(o|O)_?(n|N)_?(g|G)_?(l|L)_?(o|O)_?(n|N)_?(g|G)</keyword>
+          <keyword>c_?(s|S)_?(c|C)_?(h|H)_?(a|A)_?(r|R)</keyword>
+          <keyword>c_?(s|S)_?(h|H)_?(o|O)_?(r|R)_?(t|T)</keyword>
+          <keyword>c_?(s|S)_?(i|I)_?(z|Z)_?(e|E)</keyword>
+          <keyword>c_?(s|S)_?(t|T)_?(r|R)_?(i|I)_?(n|N)_?(g|G)</keyword>
+          <keyword>c_?(s|S)_?(t|T)_?(r|R)_?(i|I)_?(n|N)_?(g|G)_?(a|A)_?(r|R)_?(r|R)_?(a|A)_?(y|Y)</keyword>
+          <keyword>c_?(u|U)_?(c|C)_?(h|H)_?(a|A)_?(r|R)</keyword>
+          <keyword>c_?(u|U)_?(i|I)_?(n|N)_?(t|T)</keyword>
+          <keyword>c_?(u|U)_?(l|L)_?(o|O)_?(n|N)_?(g|G)</keyword>
+          <keyword>c_?(u|U)_?(l|L)_?(o|O)_?(n|N)_?(g|G)_?(l|L)_?(o|O)_?(n|N)_?(g|G)</keyword>
+          <keyword>c_?(u|U)_?(s|S)_?(h|H)_?(o|O)_?(r|R)_?(t|T)</keyword>
+          <keyword>e_?(x|X)_?(p|P)_?(r|R)</keyword>
+          <keyword>f_?(l|L)_?(o|O)_?(a|A)_?(t|T)</keyword>
+          <keyword>f_?(l|L)_?(o|O)_?(a|A)_?(t|T)_?3_?2</keyword>
+          <keyword>f_?(l|L)_?(o|O)_?(a|A)_?(t|T)_?6_?4</keyword>
+          <keyword>g_?(u|U)_?(a|A)_?(r|R)_?(d|D)_?(e|E)_?(d|D)</keyword>
+          <keyword>i_?(n|N)_?(t|T)</keyword>
+          <keyword>i_?(n|N)_?(t|T)_?8</keyword>
+          <keyword>i_?(n|N)_?(t|T)_?1_?6</keyword>
+          <keyword>i_?(n|N)_?(t|T)_?3_?2</keyword>
+          <keyword>i_?(n|N)_?(t|T)_?6_?4</keyword>
+          <keyword>n_?(a|A)_?(t|T)_?(u|U)_?(r|R)_?(a|A)_?(l|L)</keyword>
+          <keyword>o_?(p|P)_?(e|E)_?(n|N)_?(a|A)_?(r|R)_?(r|R)_?(a|A)_?(y|Y)</keyword>
+          <keyword>o_?(r|R)_?(d|D)_?(i|I)_?(n|N)_?(a|A)_?(l|L)</keyword>
+          <keyword>p_?(o|O)_?(i|I)_?(n|N)_?(t|T)_?(e|E)_?(r|R)</keyword>
+          <keyword>r_?(a|A)_?(n|N)_?(g|G)_?(e|E)</keyword>
+          <keyword>s_?(e|E)_?(t|T)</keyword>
+          <keyword>s_?(e|E)_?(q|Q)</keyword>
+          <keyword>s_?(h|H)_?(a|A)_?(r|R)_?(e|E)_?(d|D)</keyword>
+          <keyword>s_?(t|T)_?(m|M)_?(t|T)</keyword>
+          <keyword>s_?(t|T)_?(r|R)_?(i|I)_?(n|N)_?(g|G)</keyword>
+          <keyword>t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)_?(e|E)_?(s|S)_?(c|C)</keyword>
+          <keyword>u_?(i|I)_?(n|N)_?(t|T)</keyword>
+          <keyword>u_?(i|I)_?(n|N)_?(t|T)_?8</keyword>
+          <keyword>u_?(i|I)_?(n|N)_?(t|T)_?1_?6</keyword>
+          <keyword>u_?(i|I)_?(n|N)_?(t|T)_?3_?2</keyword>
+          <keyword>u_?(i|I)_?(n|N)_?(t|T)_?6_?4</keyword>
+          <keyword>v_?(a|A)_?(r|R)_?(a|A)_?(r|R)_?(g|G)_?(s|S)</keyword>
+          <keyword>v_?(o|O)_?(i|I)_?(d|D)</keyword>
+        </context>
+        
+        <context id="type-decls">
+          <start>^(\s*)(?=type\b)</start>
+          <end>(^(?!\s*$))(?!\%{1@start}\s)</end>
+          <include>
+            <context id="type-decl-names" style-ref="typedecl" extend-parent="false">
+              <match>[a-zA-Z]\w+(?=\s*(\*\s*)?(\{\..*}\s*)?=)</match>
+            </context>
+            <context ref="multiline-double-quoted-string"/>
+            <context ref="double-quoted-string"/>
+            <context ref="single-quoted-string"/>
+            <context ref="double-quoted-raw-string"/>
+            <context ref="backticks"/>
+            <context ref="float"/>
+            <context ref="decimal"/>
+            <context ref="octal"/>
+            <context ref="hex"/>
+            <context ref="boolean"/>
+            <context ref="ml-pragma"/>
+            <context ref="pragma"/>
+            <context ref="error"/>
+            <context ref="types"/>
+            <context ref="keywords"/>
+            <context ref="operators"/>
+            <context ref="pascals"/>
+            <context ref="calls"/>
+          </include>
+        </context>
+        
+        <context id="keywords" style-ref="keyword">
+          <keyword>a_?(d|D)_?(d|D)_?(r|R)</keyword>
+          <keyword>a_?(n|N)_?(d|D)</keyword>
+          <keyword>a_?(s|S)</keyword>
+          <keyword>a_?(s|S)_?(m|M)</keyword>
+          <keyword>b_?(i|I)_?(n|N)_?(d|D)</keyword>
+          <keyword>b_?(l|L)_?(o|O)_?(c|C)_?(k|K)</keyword>
+          <keyword>b_?(r|R)_?(e|E)_?(a|A)_?(k|K)</keyword>
+          <keyword>c_?(a|A)_?(s|S)_?(e|E)</keyword>
+          <keyword>c_?(a|A)_?(s|S)_?(t|T)</keyword>
+          <keyword>c_?(o|O)_?(n|N)_?(s|S)_?(t|T)</keyword>
+          <keyword>c_?(o|O)_?(n|N)_?(t|T)_?(i|I)_?(n|N)_?(u|U)_?(e|E)</keyword>
+          <!--<keyword>c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)</keyword>-->
+          <keyword>d_?(i|I)_?(s|S)_?(c|C)_?(a|A)_?(r|R)_?(d|D)</keyword>
+          <keyword>d_?(i|I)_?(s|S)_?(t|T)_?(i|I)_?(n|N)_?(c|C)_?(t|T)</keyword>
+          <keyword>d_?(i|I)_?(v|V)</keyword>
+          <keyword>e_?(l|L)_?(i|I)_?(f|F)</keyword>
+          <keyword>e_?(l|L)_?(s|S)_?(e|E)</keyword>
+          <keyword>e_?(n|N)_?(d|D)</keyword>
+          <keyword>e_?(n|N)_?(u|U)_?(m|M)</keyword>
+          <keyword>e_?(x|X)_?(c|C)_?(e|E)_?(p|P)_?(t|T)</keyword>
+          <keyword>f_?(i|I)_?(n|N)_?(a|A)_?(l|L)_?(l|L)_?(y|Y)</keyword>
+          <keyword>f_?(o|O)_?(r|R)</keyword>
+          <keyword>f_?(r|R)_?(o|O)_?(m|M)</keyword>
+          <keyword>g_?(e|E)_?(n|N)_?(e|E)_?(r|R)_?(i|I)_?(c|C)</keyword>
+          <keyword>i_?(f|F)</keyword>
+          <keyword>i_?(m|M)_?(p|P)_?(l|L)_?(i|I)_?(e|E)_?(s|S)</keyword>
+          <keyword>i_?(m|M)_?(p|P)_?(o|O)_?(r|R)_?(t|T)</keyword>
+          <keyword>i_?(n|N)</keyword>
+          <keyword>i_?(n|N)_?(c|C)_?(l|L)_?(u|U)_?(d|D)_?(e|E)</keyword>
+          <keyword>i_?(s|S)</keyword>
+          <keyword>i_?(s|S)_?(n|N)_?(o|O)_?(t|T)</keyword>
+          <!--<keyword>i_?(t|T)_?(e|E)_?(r|R)_?(a|A)_?(t|T)_?(o|O)_?(r|R)</keyword>-->
+          <keyword>l_?(a|A)_?(m|M)_?(b|B)_?(d|D)_?(a|A)</keyword>
+          <keyword>l_?(e|E)_?(t|T)</keyword>
+          <!--<keyword>m_?(a|A)_?(c|C)_?(r|R)_?(o|O)</keyword>-->
+          <!--<keyword>m_?(e|E)_?(t|T)_?(h|H)_?(o|O)_?(d|D)</keyword>-->
+          <keyword>m_?(o|O)_?(d|D)</keyword>
+          <keyword>n_?(o|O)_?(t|T)</keyword>
+          <keyword>n_?(o|O)_?(t|T)_?(i|I)_?(n|N)</keyword>
+          <keyword>o_?(b|B)_?(j|J)_?(e|E)_?(c|C)_?(t|T)</keyword>
+          <keyword>o_?(f|F)</keyword>
+          <keyword>o_?(r|R)</keyword>
+          <keyword>o_?(u|U)_?(t|T)</keyword>
+          <!--<keyword>p_?(r|R)_?(o|O)_?(c|C)</keyword>-->
+          <keyword>p_?(t|T)_?(r|R)</keyword>
+          <keyword>r_?(a|A)_?(i|I)_?(s|S)_?(e|E)</keyword>
+          <keyword>r_?(e|E)_?(f|F)</keyword>
+          <keyword>r_?(e|E)_?(t|T)_?(u|U)_?(r|R)_?(n|N)</keyword>
+          <keyword>s_?(h|H)_?(l|L)</keyword>
+          <keyword>s_?(h|H)_?(r|R)</keyword>
+          <!--<keyword>t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)</keyword>-->
+          <keyword>t_?(r|R)_?(y|Y)</keyword>
+          <keyword>t_?(u|U)_?(p|P)_?(l|L)_?(e|E)</keyword>
+          <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
+          <keyword>v_?(a|A)_?(r|R)</keyword>
+          <keyword>w_?(h|H)_?(e|E)_?(n|N)</keyword>
+          <keyword>w_?(h|H)_?(e|E)_?(r|R)_?(e|E)</keyword>
+          <keyword>w_?(h|H)_?(i|I)_?(l|L)_?(e|E)</keyword>
+          <keyword>w_?(i|I)_?(t|T)_?(h|H)</keyword>
+          <keyword>w_?(i|I)_?(t|T)_?(h|H)_?(o|O)_?(u|U)_?(t|T)</keyword>
+          <keyword>x_?(o|O)_?(r|R)</keyword>
+          <keyword>y_?(i|I)_?(e|E)_?(l|L)_?(d|D)</keyword>
+        </context>
+        
+        <context id="proc-decls" end-at-line-end="true" style-ref="keyword">
+          <start extended="true">
+            c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)|
+            f_?(u|U)_?(n|N)_?(c|C)_?|
+            i_?(t|T)_?(e|E)_?(r|R)_?(a|A)_?(t|T)_?(o|O)_?(r|R)_?|
+            m_?(a|A)_?(c|C)_?(r|R)_?(o|O)_?|m_?(e|E)_?(t|T)_?(h|H)_?(o|O)_?(d|D)_?|
+            p_?(r|R)_?(o|O)_?(c|C)_?|
+            t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)_?
+          </start>
+          <end>(\b|\B)(?=(\*|\[|\(|\{|:|=)(?!`))</end>
+          <include>
+            <context id="proc-decl-names" style-ref="procdecl">
+              <match>\w+</match>
+            </context>
+            <context id="proc-decl-ticnames" style-ref="procdecl">
+              <match>`.+`</match>
+            </context>
+          </include>
+        </context>
+        
+        <context id="operators" style-ref="operator">
+          <match>(\~|\!|\@|\$|\%|\^|&amp;|\*|\-|\+|\=|\||\\|:|;|&lt;|&gt;|\.\.+|\?|/)+</match>
+        </context>
+        
+        <context id="brackets" style-ref="bracket">
+          <match>\(|\)|\[|\]|\{|\}</match>
+        </context>
+        
+        <context id="pascals" style-ref="pascal">
+          <keyword>[A-Z]\w*</keyword>
+        </context>
+        
+        <context id="commands" style-ref="keyword">
+          <match>^\s*[a-z]\w*\b(?=(\s+\b|\s*"|\s*'|\s*:(?=\s*$)))</match>
+        </context>
+        
+        <context id="calls" style-ref="call">
+          <match extended="true">
+            \b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b(?!
+              a_?(n|N)_?(d|D)|
+              a_?(s|S)|
+              e_?(l|L)_?(s|S)_?(e|E)|
+              i_?(n|N)|
+              i_?(s|S)|
+              i_?(s|S)_?(n|N)_?(o|O)_?(t|T)|
+              n_?(o|O)_?(t|T)_?(i|I)_?(n|N)|
+              o_?(f|F)|
+              o_?(r|R)
+            ))
+          </match>
+        </context>
+        
+      </include>
+    </context>
+  </definitions>
+</language>

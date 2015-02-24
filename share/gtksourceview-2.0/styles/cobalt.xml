@@ -102,7 +102,10 @@
   <!-- Unknown? -->
   <style name="def:specials"                foreground="white" background="neon_pink"/>
   <style name="def:boolean"                 foreground="nail_polish_pink"/>
-
+  
+  <!-- Nim Styles -->
+  <style name="nim:pascal"                  foreground="teal_blue"/>
+  
   <!-- C Styles -->
   <style name="c:preprocessor"              foreground="teal_blue" bold="true"/>
   <style name="c:included-file"             foreground="spring_green"/>
