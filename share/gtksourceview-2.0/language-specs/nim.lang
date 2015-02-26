@@ -48,6 +48,7 @@
     <style id="operator"          _name="operator"              />
     <style id="bracket"           _name="bracket"               />
     <style id="pascal"            _name="pascal"                />
+    <style id="prop"              _name="prop"                  />
     <style id="call"              _name="call"                  />
   </styles>
 
@@ -223,8 +224,11 @@
           <start>^(\s*)(?=type\b)</start>
           <end>(^(?!\s*$))(?!\%{1@start}\s)</end>
           <include>
+            <context id="type-decl-keywords" style-ref="keyword">
+              <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
+            </context>
             <context id="type-decl-names" style-ref="typedecl" extend-parent="false">
-              <match>[a-zA-Z]\w+(?=\s*(\*\s*)?(\{\..*}\s*)?=)</match>
+              <match>(\b[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\{\..*}\s*)?=)</match>
             </context>
             <context ref="multiline-double-quoted-string"/>
             <context ref="double-quoted-string"/>
@@ -247,7 +251,32 @@
           </include>
         </context>
         
-        <context id="keywords" style-ref="keyword">
+        <define-regex id="proc-keys" extended="true">
+          c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)|
+          f_?(u|U)_?(n|N)_?(c|C)_?|
+          i_?(t|T)_?(e|E)_?(r|R)_?(a|A)_?(t|T)_?(o|O)_?(r|R)_?|
+          m_?(a|A)_?(c|C)_?(r|R)_?(o|O)_?|m_?(e|E)_?(t|T)_?(h|H)_?(o|O)_?(d|D)_?|
+          p_?(r|R)_?(o|O)_?(c|C)_?|
+          t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)_?
+        </define-regex>
+        
+        <context id="proc-decls" end-at-line-end="true">
+          <start>\b(?=(\%{proc-keys})\b)</start>
+          <end>(\b|\B)(?=(\*|\[|\(|\{|:|=)(?!`))</end>
+          <include>
+            <context id="proc-decl-keys" style-ref="keyword">
+              <match>\b(\%{proc-keys})\b</match>
+            </context>
+            <context id="proc-decl-names" style-ref="procdecl">
+              <match>\w+</match>
+            </context>
+            <context id="proc-decl-ticnames" style-ref="procdecl">
+              <match>`.+`</match>
+            </context>
+          </include>
+        </context>
+        
+        <context id="keywords" style-ref="keyword" extend-parent="false">
           <keyword>a_?(d|D)_?(d|D)_?(r|R)</keyword>
           <keyword>a_?(n|N)_?(d|D)</keyword>
           <keyword>a_?(s|S)</keyword>
@@ -259,7 +288,7 @@
           <keyword>c_?(a|A)_?(s|S)_?(t|T)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(s|S)_?(t|T)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(t|T)_?(i|I)_?(n|N)_?(u|U)_?(e|E)</keyword>
-          <!--<keyword>c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)</keyword>-->
+          <keyword>c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)</keyword>
           <keyword>d_?(i|I)_?(s|S)_?(c|C)_?(a|A)_?(r|R)_?(d|D)</keyword>
           <keyword>d_?(i|I)_?(s|S)_?(t|T)_?(i|I)_?(n|N)_?(c|C)_?(t|T)</keyword>
           <keyword>d_?(i|I)_?(v|V)</keyword>
@@ -279,11 +308,11 @@
           <keyword>i_?(n|N)_?(c|C)_?(l|L)_?(u|U)_?(d|D)_?(e|E)</keyword>
           <keyword>i_?(s|S)</keyword>
           <keyword>i_?(s|S)_?(n|N)_?(o|O)_?(t|T)</keyword>
-          <!--<keyword>i_?(t|T)_?(e|E)_?(r|R)_?(a|A)_?(t|T)_?(o|O)_?(r|R)</keyword>-->
+          <keyword>i_?(t|T)_?(e|E)_?(r|R)_?(a|A)_?(t|T)_?(o|O)_?(r|R)</keyword>
           <keyword>l_?(a|A)_?(m|M)_?(b|B)_?(d|D)_?(a|A)</keyword>
           <keyword>l_?(e|E)_?(t|T)</keyword>
-          <!--<keyword>m_?(a|A)_?(c|C)_?(r|R)_?(o|O)</keyword>-->
-          <!--<keyword>m_?(e|E)_?(t|T)_?(h|H)_?(o|O)_?(d|D)</keyword>-->
+          <keyword>m_?(a|A)_?(c|C)_?(r|R)_?(o|O)</keyword>
+          <keyword>m_?(e|E)_?(t|T)_?(h|H)_?(o|O)_?(d|D)</keyword>
           <keyword>m_?(o|O)_?(d|D)</keyword>
           <keyword>n_?(o|O)_?(t|T)</keyword>
           <keyword>n_?(o|O)_?(t|T)_?(i|I)_?(n|N)</keyword>
@@ -291,14 +320,14 @@
           <keyword>o_?(f|F)</keyword>
           <keyword>o_?(r|R)</keyword>
           <keyword>o_?(u|U)_?(t|T)</keyword>
-          <!--<keyword>p_?(r|R)_?(o|O)_?(c|C)</keyword>-->
+          <keyword>p_?(r|R)_?(o|O)_?(c|C)</keyword>
           <keyword>p_?(t|T)_?(r|R)</keyword>
           <keyword>r_?(a|A)_?(i|I)_?(s|S)_?(e|E)</keyword>
           <keyword>r_?(e|E)_?(f|F)</keyword>
           <keyword>r_?(e|E)_?(t|T)_?(u|U)_?(r|R)_?(n|N)</keyword>
           <keyword>s_?(h|H)_?(l|L)</keyword>
           <keyword>s_?(h|H)_?(r|R)</keyword>
-          <!--<keyword>t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)</keyword>-->
+          <keyword>t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)</keyword>
           <keyword>t_?(r|R)_?(y|Y)</keyword>
           <keyword>t_?(u|U)_?(p|P)_?(l|L)_?(e|E)</keyword>
           <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
@@ -310,26 +339,6 @@
           <keyword>w_?(i|I)_?(t|T)_?(h|H)_?(o|O)_?(u|U)_?(t|T)</keyword>
           <keyword>x_?(o|O)_?(r|R)</keyword>
           <keyword>y_?(i|I)_?(e|E)_?(l|L)_?(d|D)</keyword>
-        </context>
-        
-        <context id="proc-decls" end-at-line-end="true" style-ref="keyword">
-          <start extended="true">
-            c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)|
-            f_?(u|U)_?(n|N)_?(c|C)_?|
-            i_?(t|T)_?(e|E)_?(r|R)_?(a|A)_?(t|T)_?(o|O)_?(r|R)_?|
-            m_?(a|A)_?(c|C)_?(r|R)_?(o|O)_?|m_?(e|E)_?(t|T)_?(h|H)_?(o|O)_?(d|D)_?|
-            p_?(r|R)_?(o|O)_?(c|C)_?|
-            t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)_?
-          </start>
-          <end>(\b|\B)(?=(\*|\[|\(|\{|:|=)(?!`))</end>
-          <include>
-            <context id="proc-decl-names" style-ref="procdecl">
-              <match>\w+</match>
-            </context>
-            <context id="proc-decl-ticnames" style-ref="procdecl">
-              <match>`.+`</match>
-            </context>
-          </include>
         </context>
         
         <context id="operators" style-ref="operator">
@@ -344,24 +353,41 @@
           <keyword>[A-Z]\w*</keyword>
         </context>
         
-        <context id="commands" style-ref="keyword">
-          <match>^\s*[a-z]\w*\b(?=(\s+\b|\s*"|\s*'|\s*:(?=\s*$)))</match>
+        <define-regex id="cmd-call-exceptions" extended="true">
+          a_?(n|N)_?(d|D)\b|
+          a_?(s|S)\b|
+          e_?(l|L)_?(s|S)_?(e|E)\b|
+          i_?(n|N)\b|
+          i_?(s|S)\b|
+          i_?(s|S)_?(n|N)_?(o|O)_?(t|T)\b|
+          n_?(o|O)_?(t|T)_?(i|I)_?(n|N)\b|
+          o_?(f|F)\b|
+          o_?(r|R)\b
+        </define-regex>
+        
+        <context id="props" style-ref="operator" end-at-line-end="true">
+          <start>\b\s*\.\s*\b</start>
+          <end>\b</end>
+          <include>
+            <context id="prop-calls" style-ref="call">
+              <match>\b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b)</match>
+            </context>
+            <context id="prop-names" style-ref="prop">
+              <match>\b[a-z]\w*\b</match>
+            </context>
+          </include>
         </context>
         
-        <context id="calls" style-ref="call">
-          <match extended="true">
-            \b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b(?!
-              a_?(n|N)_?(d|D)|
-              a_?(s|S)|
-              e_?(l|L)_?(s|S)_?(e|E)|
-              i_?(n|N)|
-              i_?(s|S)|
-              i_?(s|S)_?(n|N)_?(o|O)_?(t|T)|
-              n_?(o|O)_?(t|T)_?(i|I)_?(n|N)|
-              o_?(f|F)|
-              o_?(r|R)
-            ))
-          </match>
+        <context id="command-statements" style-ref="keyword">
+          <match>^\s*[a-z]\w*\b(?=:(?=\s*$))</match>
+        </context>
+        
+        <context id="commands" style-ref="keyword">
+          <match>\b[a-z]\w*\b(?=(\s*"|\s*'|\s+\b(?!\%{cmd-call-exceptions})))</match>
+        </context>
+        
+        <context id="calls" style-ref="call" extend-parent="false">
+          <match>\b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b(?!\%{cmd-call-exceptions}))</match>
         </context>
         
       </include>
