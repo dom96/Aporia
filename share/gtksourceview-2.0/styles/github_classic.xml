@@ -56,7 +56,7 @@
   <style name="def:number" foreground="literal"/>
   <style name="def:string" foreground="literal"/>
   <style name="def:net-address-in-comment" foreground="literal" underline="true"/>
-  <style name="def:note" foreground="default" bold="true"/>
+  <style name="def:note" foreground="comment" bold="true"/>
   <style name="def:error" background="error" bold="true"/>
   <style name="def:escape" foreground="keyword"/>
   <style name="def:shebang" foreground="#00c99b" bold="true"/>
