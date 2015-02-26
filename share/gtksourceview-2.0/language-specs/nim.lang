@@ -41,6 +41,7 @@
     <style id="base-n-integer"    _name="Base-N number"         map-to="def:base-n-integer"/>
     <style id="type"              _name="type"                  map-to="def:type"/>
     <style id="error"             _name="Error"                 map-to="def:error"/>
+    <style id="comment"           _name="Comment"               map-to="def:comment"/>
     <style id="backticks"         _name="backticks"             />
     <style id="pragma"            _name="pragma"                />
     <style id="typedecl"          _name="typedecl"              />
@@ -224,6 +225,10 @@
           <start>^(\s*)(?=type\b)</start>
           <end>(^(?!\s*$))(?!\%{1@start}\s)</end>
           <include>
+            <context id="type-decl-comments" style-ref="comment">
+              <start>#.*</start>
+              <end>$</end>
+            </context>
             <context id="type-decl-keywords" style-ref="keyword">
               <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
             </context>
@@ -342,7 +347,7 @@
         </context>
         
         <context id="operators" style-ref="operator">
-          <match>(\~|\!|\@|\$|\%|\^|&amp;|\*|\-|\+|\=|\||\\|:|;|&lt;|&gt;|\.\.+|\?|/)+</match>
+          <match>(\~|\!|\@|\$|\%|\^|&amp;|\*|\-|\+|\=|\||\\|:|;|&lt;|&gt;|,|\.\.+|\?|/)+</match>
         </context>
         
         <context id="brackets" style-ref="bracket">
