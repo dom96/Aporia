@@ -233,7 +233,7 @@
               <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
             </context>
             <context id="type-decl-names" style-ref="typedecl" extend-parent="false">
-              <match>(\b[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\{\..*}\s*)?=)</match>
+              <match>(\b[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*]\s*)?(\{\..*}\s*)?=)</match>
             </context>
             <context ref="multiline-double-quoted-string"/>
             <context ref="double-quoted-string"/>
