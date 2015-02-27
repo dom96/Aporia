@@ -233,7 +233,7 @@
               <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
             </context>
             <context id="type-decl-names" style-ref="typedecl" extend-parent="false">
-              <match>(\b[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*]\s*)?(\{\..*}\s*)?=)</match>
+              <match>(\b[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
             </context>
             <context ref="multiline-double-quoted-string"/>
             <context ref="double-quoted-string"/>
@@ -251,7 +251,11 @@
             <context ref="types"/>
             <context ref="keywords"/>
             <context ref="operators"/>
+            <context ref="brackets"/>
             <context ref="pascals"/>
+            <context ref="props"/>
+            <context ref="command-statements"/>
+            <context ref="commands"/>
             <context ref="calls"/>
           </include>
         </context>
@@ -371,7 +375,7 @@
         </define-regex>
         
         <context id="props" style-ref="operator" end-at-line-end="true">
-          <start>\b\s*\.\s*\b</start>
+          <start>\.\s*\b</start>
           <end>\b</end>
           <include>
             <context id="prop-calls" style-ref="call">
