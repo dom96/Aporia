@@ -224,7 +224,7 @@
         
         <context id="type-decls">
           <start>^(\s*)(?=t_?(y|Y)_?(p|P)_?(e|E)\b)</start>
-          <end>(^(?!\s*$))(?!\%{1@start}\s)</end>
+          <end>^(?!\s*$)(?!\%{1@start}\s)</end>
           <include>
             <context id="type-decl-comments" style-ref="comment">
               <start>#.*</start>
@@ -233,8 +233,8 @@
             <context id="type-decl-keywords" style-ref="keyword">
               <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
             </context>
-            <context id="type-decl-names" style-ref="typedecl" extend-parent="false">
-              <match>(\b[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
+            <context id="type-decl-names" style-ref="typedecl">
+              <match>(^\s*[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
             </context>
             <context ref="multiline-double-quoted-string"/>
             <context ref="double-quoted-string"/>
@@ -393,7 +393,7 @@
           <match>^\s*[a-z]\w*\b(?=:(?=\s*$))</match>
         </context>
         
-        <context id="commands" style-ref="keyword">
+        <context id="commands" style-ref="keyword" extend-parent="false">
           <match>\b[a-z]\w*\b(?=(\s*"|\s*'|\s+\b(?!\%{cmd-call-exceptions})))</match>
         </context>
         
