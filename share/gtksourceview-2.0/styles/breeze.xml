@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Copyright (C) 2015
+ Original Author: Philip Witte
+
+ Same license as Aporia.
+
+-->
+<style-scheme id="breeze" _name="Breeze" version="1.0">
+  <author>filwit</author>
+  <_description>Light blues against vibrant reds.</_description>
+  
+  <!-- Colors -->
+  <color name="default"       value="#323232"/>
+  <color name="background"    value="#F6F7F8"/>
+  <color name="current-line"  value="#fff"/>
+  <color name="line-numbers"  value="#bbb"/>
+  <color name="search-match"  value="#ffff00"/>
+  <color name="error"         value="#ff0000"/>
+  
+  <color name="types"      value="#DD4A68"/>
+  <color name="comment"    value="#690"/>
+  <color name="keyword"    value="#07A"/>
+  <color name="literal"    value="#905"/>
+  
+  <color name="prop"       value="#626262"/>
+  
+  <!-- GUI styles -->
+  <style name="text" foreground="default" background="background"/>
+  <style name="selection" foreground="background" background="keyword"/>
+  <style name="selection-unfocused" foreground="background" background="keyword"/>
+  <style name="cursor" foreground="default" bold="true"/>
+  <style name="secondary-cursor" foreground="default" bold="true"/>
+  <style name="current-line" background="current-line"/>
+  <style name="line-numbers" foreground="line-numbers" background="current-line"/>
+  <style name="bracket-match" foreground="operator" background="background" bold="true"/>
+  <style name="bracket-mismatch" foreground="default" background="error" bold="true"/>
+  <style name="search-match" foreground="background" background="search-match"/>
+  
+  <!-- Default styles -->
+  <style name="doc-comment" foreground="comment"/>
+  
+  <style name="def:keyword" foreground="keyword"/>
+  <style name="def:module-handler" foreground="default" bold="true"/>
+  <style name="def:statement" foreground="default" bold="true"/>
+  <style name="def:function" foreground="default" bold="true"/>
+  <style name="def:preprocessor" foreground="search-match"/>
+  <style name="def:type" foreground="types"/>
+  
+  <style name="def:character" foreground="literal"/>
+  <style name="def:comment" foreground="comment" italic="true"/>
+  <style name="def:number" foreground="literal"/>
+  <style name="def:string" foreground="literal"/>
+  <style name="def:net-address-in-comment" foreground="literal" underline="true"/>
+  <style name="def:note" foreground="comment" bold="true"/>
+  <style name="def:error" background="error" bold="true"/>
+  <style name="def:escape" foreground="keyword"/>
+  <style name="def:shebang" foreground="#00c99b" bold="true"/>
+  <style name="def:doc-comment-element" italic="false"/>
+  <style name="def:identifier" foreground="keyword"/>
+  
+  <style name="def:specials" foreground="default"/>
+  
+  <style name="def:variable" foreground="#9DD5F1"/>
+  <style name="def:boolean" foreground="literal"/>
+  <style name="def:constant" foreground="literal"/>
+  <style name="def:special-constant" foreground="default"/>
+  
+  <!-- Language styles -->
+  <style name="nim:pascal" foreground="types"/>
+  <style name="nim:typedecl" foreground="default" bold="true"/>
+  <style name="nim:procdecl" foreground="default" bold="true" italic="true"/>
+  <style name="nim:operator" foreground="keyword"/>
+  <style name="nim:pragma" foreground="literal"/>
+  <style name="nim:prop" foreground="prop"/>
+  <style name="nim:call" foreground="prop"/>
+
+</style-scheme>
