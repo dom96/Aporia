@@ -209,6 +209,7 @@
           <keyword>s_?(e|E)_?(t|T)</keyword>
           <keyword>s_?(e|E)_?(q|Q)</keyword>
           <keyword>s_?(h|H)_?(a|A)_?(r|R)_?(e|E)_?(d|D)</keyword>
+          <keyword>(s_?(t|T)_?(a|A)_?(t|T)_?(i|I)_?(c|C))(?=\s*\[)</keyword>
           <keyword>s_?(t|T)_?(m|M)_?(t|T)</keyword>
           <keyword>s_?(t|T)_?(r|R)_?(i|I)_?(n|N)_?(g|G)</keyword>
           <keyword>t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)_?(e|E)_?(s|S)_?(c|C)</keyword>
@@ -336,6 +337,7 @@
           <keyword>r_?(e|E)_?(t|T)_?(u|U)_?(r|R)_?(n|N)</keyword>
           <keyword>s_?(h|H)_?(l|L)</keyword>
           <keyword>s_?(h|H)_?(r|R)</keyword>
+          <keyword>(s_?(t|T)_?(a|A)_?(t|T)_?(i|I)_?(c|C))(?!\s*\[)</keyword>
           <keyword>t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)</keyword>
           <keyword>t_?(r|R)_?(y|Y)</keyword>
           <keyword>t_?(u|U)_?(p|P)_?(l|L)_?(e|E)</keyword>
