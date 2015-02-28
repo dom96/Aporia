@@ -222,7 +222,7 @@
         </context>
         
         <context id="type-decls">
-          <start>^(\s*)(?=type\b)</start>
+          <start>^(\s*)(?=t_?(y|Y)_?(p|P)_?(e|E)\b)</start>
           <end>(^(?!\s*$))(?!\%{1@start}\s)</end>
           <include>
             <context id="type-decl-comments" style-ref="comment">
