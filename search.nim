@@ -94,6 +94,16 @@ proc findBoundsGen(text, pattern: string,
 
   if result[0] == -1 or result[1] == -1: return (-1, 0)
 
+proc findConfirmWrap(forward: bool): bool = 
+  if win.globalSettings.alwaysWrapSearch:
+    return true
+  var answer = 0
+  if forward:
+    answer = win.showYesCancelDialog("Match not found. Restart at the beginning?")
+  else:
+    answer = win.showYesCancelDialog("Match not found. Restart from end?")
+  result = answer == RESPONSE_ACCEPT 
+  
 proc findRePeg(forward: bool, startIter: PTextIter,
                buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
                wrappedAround = false): 
@@ -144,15 +154,18 @@ proc findRePeg(forward: bool, startIter: PTextIter,
           
     return (startMatch, endMatch, true)
   else:
-    if win.autoSettings.wrapAround and not wrappedAround:
+    if not wrappedAround:
       if forward:
         # We are at the end. Restart at the beginning.
         buffer.getStartIter(addr(startMatch))
       else:
         # We are at the beginning. Restart from the end.
         buffer.getEndIter(addr(startMatch))
-      return findRePeg(forward, addr(startMatch), buffer, pattern, mode, true)
-  
+      var res = findRePeg(forward, addr(startMatch), buffer, pattern, mode, true)
+      # Only wrap search when the match is new one AND user wants to wrap
+      if compare(addr(res.endMatch), startIter) != 0 and findConfirmWrap(forward):
+        return res
+          
     return (startMatch, endMatch, false)
 
 proc findSimple(forward: bool, startIter: PTextIter,
@@ -170,14 +183,17 @@ proc findSimple(forward: bool, startIter: PTextIter,
         options, addr(startMatch), addr(endMatch), nil)
 
   if not matchFound:
-    if win.autoSettings.wrapAround and not wrappedAround:
+    if not wrappedAround:
       if forward:
         # We are at the end. Restart from beginning.
         buffer.getStartIter(addr(startMatch))
       else:
         # We are at the beginning. Restart from end.
         buffer.getEndIter(addr(startMatch))
-      return findSimple(forward, addr(startMatch), buffer, pattern, mode, true)
+      var res = findSimple(forward, addr(startMatch), buffer, pattern, mode, true)
+      # Only wrap search when the match is new one AND user wants to wrap
+      if compare(addr(res.endMatch), startIter) != 0 and findConfirmWrap(forward):
+        return res
     
   return (startMatch, endMatch, matchFound.bool)
 

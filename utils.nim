@@ -18,7 +18,6 @@ import AboutDialog, ShortcutUtils
 type
   TAutoSettings* = object # Settings which should not be set by the user manually
     search*: TSearchEnum # Search mode.
-    wrapAround*: bool # Whether to wrap the search around.
     
     winMaximized*: bool # Whether the MainWindow is maximized on startup
     VPanedPos*: int32 # Position of the VPaned, which splits
@@ -59,6 +58,7 @@ type
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
     activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
+    alwaysWrapSearch*: bool    # true: search will wrap around, false: user will be asked whether to wrap around
     keyCommentLines*:      TShortcutKey
     keyDeleteLine*:        TShortcutKey 
     keyDuplicateLines*:    TShortcutKey 
@@ -577,6 +577,15 @@ proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
   win.tabs[tab].buffer.setHighlightSyntax(doHighlight)
   win.tempStuff.commentSyntax = ("", "", "")
 
+proc showYesCancelDialog*(win: ptr MainWin, text: string): int =
+  var dialog = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
+  dialog.setTransientFor(win.w)
+  dialog.setMarkup(text)
+  dialog.addButtons(STOCK_YES, ResponseAccept, STOCK_CANCEL, ResponseCancel, 
+     nil)
+  result = dialog.run()
+  gtk2.destroy(PWidget(dialog))
+  
 # -- Compilation-specific
 
 proc getCmd*(win: var MainWin, cmd, filename: string): string =
