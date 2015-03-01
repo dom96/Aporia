@@ -102,6 +102,8 @@
   <style name="def:constant" foreground="purp"/>
   <style name="def:special-constant" foreground="white"/>
    
+  <style name="nim:pascal" foreground="purp2"/>
+  
   <style name="diff:added-line" foreground="lime"/>
   <style name="diff:removed-line" foreground="magenta"/>
   <style name="diff:changed-line" foreground="ambra"/>

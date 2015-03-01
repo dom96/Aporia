@@ -92,7 +92,7 @@
   <style name="def:statement"               foreground="#white" bold="true"/>
 
   <!-- Types -->
-  <style name="def:type"                    foreground="chameleon1" bold="true"/> 
+  <style name="def:type"                    foreground="chameleon1" bold="true"/>
 
   <!-- Others -->
   <style name="def:preprocessor"            foreground="plum1"/>
@@ -101,6 +101,8 @@
   <style name="def:underlined"              italic="true" underline="true"/>
 
   <!-- Language specific -->
+  <style name="nim:pascal"                  foreground="chameleon1"/>
+  
   <style name="diff:added-line"             foreground="butter2"/>
   <style name="diff:removed-line"           foreground="skyblue1"/>
   <style name="diff:changed-line"           foreground="plum1"/>

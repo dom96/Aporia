@@ -2342,7 +2342,7 @@ proc initControls() =
   var newLangPaths = allocCStringArray(langManPaths)
   langMan.setSearchPath(newLangPaths)
   deallocCStringArray(newLangPaths)
-  var nimLang = langMan.getLanguage("nimrod")
+  var nimLang = langMan.getLanguage("nim")
   win.nimLang = nimLang
   
   # Load the scheme
