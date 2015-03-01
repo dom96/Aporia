@@ -287,6 +287,7 @@
         </context>
         
         <context id="keywords" style-ref="keyword" extend-parent="false">
+          <keyword>c_?(o|O)_?(n|N)_?(c|C)_?(e|E)_?(p|P)_?(t|T)</keyword>
           <keyword>a_?(d|D)_?(d|D)_?(r|R)</keyword>
           <keyword>a_?(n|N)_?(d|D)</keyword>
           <keyword>a_?(s|S)</keyword>
