@@ -70,7 +70,7 @@
   <!-- Language styles -->
   <style name="nim:pascal" foreground="types"/>
   <style name="nim:typedecl" foreground="default" bold="true"/>
-  <style name="nim:procdecl" foreground="default" bold="true" italic="true"/>
+  <style name="nim:procdecl" foreground="default" bold="true"/>
   <style name="nim:operator" foreground="keyword"/>
   <style name="nim:pragma" foreground="keyword"/>
   <style name="nim:prop" foreground="prop"/>
