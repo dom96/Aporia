@@ -1,6 +1,6 @@
 #
 #
-#            Aporia - Nimrod IDE
+#            Aporia - Nim IDE
 #        (c) Copyright 2011 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
@@ -48,13 +48,13 @@ type
     suggestFeature*: bool # Whether the suggest feature is enabled
     compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
     compileSaveAll*: bool # Whether compiling will save all opened unsaved files
-    nimrodCmd*: string  # command template to use to exec the Nimrod compiler
+    nimCmd*: string  # command template to use to exec the Nim compiler
     customCmd1*: string # command template to use to exec a custom command
     customCmd2*: string # command template to use to exec a custom command
     customCmd3*: string # command template to use to exec a custom command
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
-    nimrodPath*: string # Path to the nimrod compiler
+    nimPath*: string # Path to the nim compiler
     wrapMode*: gtk2.TWrapMode # source view wrap mode.
     scrollPastBottom*: bool # Whether to scroll past bottom.
     singleInstance*: bool # Whether the program runs as single instance.
@@ -141,7 +141,7 @@ type
     tooltipLabel*: PLabel
   
   TExecMode* = enum
-    ExecNimrod, ExecRun, ExecCustom
+    ExecNim, ExecRun, ExecCustom
   
   PExecOptions* = ref TExecOptions
   TExecOptions* = object
@@ -448,16 +448,12 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
   ## Finds the .nim project file in ``directory``.
   # Find project file
   var configFiles: seq[string] = @[]
-  for cfgFile in walkFiles(directory / "*.nimrod.cfg"):
+  for cfgFile in walkFiles(directory / "*.nim.cfg"):
     configFiles.add(cfgFile)
   let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
   var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
   if not existsFile(projectFile):
-    # check for file.nimrod
-    if not existsFile(projectFile & "rod"):
-      projectFile = ""
-    else:
-      projectFile = projectFile & "rod"
+    projectFile = ""
   return (projectFile, projectCfgFile)
 
 proc isTemporary*(t: Tab): bool =
@@ -562,7 +558,7 @@ proc getCurrentLanguageComment*(win: var MainWin,
   var currentLang = getCurrentLanguage(win, pageNum)
   if currentLang != "":
     case currentLang.normalize()
-    of "nimrod":
+    of "nim":
       syntax.blockStart = "discard \"\"\""
       syntax.blockEnd = "\"\"\""
       syntax.line = "#"
@@ -593,18 +589,18 @@ proc getCmd*(win: var MainWin, cmd, filename: string): string =
   ## ``cmd`` specifies the format string. ``findExe(exe)`` is allowed as well
   ## as ``#$``. The ``#$`` is replaced by ``filename``.
   var f = quoteIfContainsWhite(filename)
-  proc promptNimrodPath(win: var MainWin): string =
-    ## If ``settings.nimrodPath`` is not set, prompts the user for the nimrod path.
-    ## Otherwise returns ``settings.nimrodPath``.
-    if not fileExists(win.globalSettings.nimrodPath):
-      dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
-      win.globalSettings.nimrodPath = chooseFileToOpen(win.w, "")
-    result = win.globalSettings.nimrodPath
+  proc promptNimPath(win: var MainWin): string =
+    ## If ``settings.nimPath`` is not set, prompts the user for the nim path.
+    ## Otherwise returns ``settings.nimPath``.
+    if not fileExists(win.globalSettings.nimPath):
+      dialogs.info(win.w, "Unable to find nim executable. Please select it to continue.")
+      win.globalSettings.nimPath = chooseFileToOpen(win.w, "")
+    result = win.globalSettings.nimPath
   
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
     var exe = quoteIfContainsWhite(findExe(matches[0]))
-    if matches[0].normalize == "nimrod" and exe.len == 0:
-      exe = quoteIfContainsWhite(promptNimrodPath(win))
+    if matches[0].normalize == "nim" and exe.len == 0:
+      exe = quoteIfContainsWhite(promptNimPath(win))
     
     if exe.len == 0: exe = matches[0]
     result = exe & " " & matches[1] % f

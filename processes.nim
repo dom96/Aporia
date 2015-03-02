@@ -154,7 +154,7 @@ proc printProcOutput(win: var MainWin, line: string) =
   assert win.tempStuff.currentExec != nil
   
   case win.tempStuff.currentExec.mode:
-  of ExecNimrod:
+  of ExecNim:
     if line =~ pegLineError / pegOtherError / pegLineInfo:
       win.outputTextView.addText(line & "\l", errorTag)
       paErr()
@@ -223,7 +223,7 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
           if win.tempStuff.currentExec.onLine != nil:
             win.tempStuff.currentExec.onLine(win[], win.tempStuff.currentExec, event.line)
           if win.tempStuff.currentExec.output:
-            if win.tempStuff.currentExec.mode == ExecNimrod:
+            if win.tempStuff.currentExec.mode == ExecNim:
               win[].parseCompilerOutput(event)
             else:
               # TODO: Print "" as a \n?

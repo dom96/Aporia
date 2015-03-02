@@ -1,6 +1,6 @@
 #
 #
-#            Aporia - Nimrod IDE
+#            Aporia - Nim IDE
 #        (c) Copyright 2011 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
