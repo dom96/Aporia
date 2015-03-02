@@ -222,6 +222,10 @@
           <keyword>v_?(o|O)_?(i|I)_?(d|D)</keyword>
         </context>
         
+        <!--
+        NOTE: The order here is important! The 'type-decls' context must appear BEFORE the 'proc-decls'
+        and 'keywords' contexts (and those that follow it). Otherwise type declarations will not highlight correctly.
+        -->
         <context id="type-decls">
           <start>^(\s*)(?=t_?(y|Y)_?(p|P)_?(e|E)\b)</start>
           <end>^(?!\s*$)(?!\%{1@start}\s)</end>
@@ -270,6 +274,10 @@
           t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)_?
         </define-regex>
         
+        <!--
+        NOTE: The order here is important! The 'proc-decls' context must appear before the 'keywords'
+        context (and those that follow it). Otherwise proc declarations will not highlight correctly.
+        -->
         <context id="proc-decls" end-at-line-end="true">
           <start>\b(?=(\%{proc-keys})\b)</start>
           <end>(\b|\B)(?=(\*|\[|\(|\{|:|=)(?!`))</end>
@@ -353,6 +361,10 @@
           <keyword>y_?(i|I)_?(e|E)_?(l|L)_?(d|D)</keyword>
         </context>
         
+        <!--
+        NOTE: The 'operators' and 'brackets' contexts order aren't so important.
+        Still, be careful about moving them around and test in many scenerios!
+        -->
         <context id="operators" style-ref="operator">
           <match>(\~|\!|\@|\$|\%|\^|&amp;|\*|\-|\+|\=|\||\\|:|;|&lt;|&gt;|,|\.\.+|\?|/)+</match>
         </context>
@@ -361,6 +373,9 @@
           <match>\(|\)|\[|\]|\{|\}</match>
         </context>
         
+        <!--
+        NOTE: The 'pascals' context must appear after 'keywords' and the contexts that come before it.
+        -->
         <context id="pascals" style-ref="pascal">
           <keyword>[A-Z]\w*</keyword>
         </context>
@@ -377,6 +392,9 @@
           o_?(r|R)\b
         </define-regex>
         
+        <!--
+        NOTE: The order here is important! Changing the order will cause multiple things to highlight incorrectly.
+        -->
         <context id="props" end-at-line-end="true">
           <start>\.\s*\b</start>
           <end>\b</end>
