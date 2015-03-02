@@ -234,7 +234,7 @@
               <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
             </context>
             <context id="type-decl-names" style-ref="typedecl">
-              <match>(^\s*[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
+              <match>((^|\b)\s+[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
             </context>
             <context ref="multiline-double-quoted-string"/>
             <context ref="double-quoted-string"/>
@@ -287,7 +287,6 @@
         </context>
         
         <context id="keywords" style-ref="keyword" extend-parent="false">
-          <keyword>c_?(o|O)_?(n|N)_?(c|C)_?(e|E)_?(p|P)_?(t|T)</keyword>
           <keyword>a_?(d|D)_?(d|D)_?(r|R)</keyword>
           <keyword>a_?(n|N)_?(d|D)</keyword>
           <keyword>a_?(s|S)</keyword>
@@ -297,6 +296,7 @@
           <keyword>b_?(r|R)_?(e|E)_?(a|A)_?(k|K)</keyword>
           <keyword>c_?(a|A)_?(s|S)_?(e|E)</keyword>
           <keyword>c_?(a|A)_?(s|S)_?(t|T)</keyword>
+          <keyword>c_?(o|O)_?(n|N)_?(c|C)_?(e|E)_?(p|P)_?(t|T)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(s|S)_?(t|T)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(t|T)_?(i|I)_?(n|N)_?(u|U)_?(e|E)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)</keyword>
