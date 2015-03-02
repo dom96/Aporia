@@ -92,6 +92,8 @@
   <style name="def:constant" foreground="white"/>
   <style name="def:special-constant" foreground="white"/>
    
+  <style name="nim:pascal" foreground="white" bold="true"/>
+  
   <style name="diff:added-line" foreground="lime"/>
   <style name="diff:removed-line" foreground="magenta"/>
   <style name="diff:changed-line" foreground="ambra"/>
