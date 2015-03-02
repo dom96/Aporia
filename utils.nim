@@ -494,6 +494,12 @@ proc normalize*(le: TLineEnding, text: string): string =
   var i = 0
   while true:
     case text[i]
+    of ' ', '\t':
+      # peek and see if a newline follows:
+      var j = i+1
+      while text[j] in {' ', '\t'}: inc j
+      if text[j] in {'\L', '\C'}: i = j-1
+      else: result.add text[i]
     of '\L':
       result.add(le.srepr("\L"))
     of '\C':
