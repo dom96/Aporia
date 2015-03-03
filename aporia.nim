@@ -564,13 +564,6 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         
         return key.toLower() != "period"
 
-    if win.globalSettings.suggestFeature and not win.suggest.shown and
-        key.toLower() == "space" and ctrlPressed and
-        win.getCurrentLanguage() == "nim":
-      if win.suggest.items.len() != 0: win.suggest.clear()
-      doSuggest(win)
-      win.filterSuggest()
-
   of "backspace":
     if win.globalSettings.suggestFeature and win.suggest.shown:
       var current = win.sourceViewTabs.getCurrentPage()
@@ -595,14 +588,17 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 proc sourceViewKeyRelease(sourceView: PWidget, event: PEventKey, 
                           userData: Pgpointer): gboolean =
   result = true
+  let ctrlPressed = (event.state and ControlMask) != 0
   let keyNameCString = keyval_name(event.keyval)
   if keyNameCString == nil: return
   let key = $keyNameCString
   case key.toLower()
   of "period":
-    if win.globalSettings.suggestFeature and win.getCurrentLanguage() == "nim":
-      if win.suggest.items.len() != 0: win.suggest.clear()
-      doSuggest(win)
+    discard
+    # TODO: Disable implicit invocation of suggest until it's more stable.
+    #if win.globalSettings.suggestFeature and win.getCurrentLanguage() == "nim":
+    #  if win.suggest.items.len() != 0: win.suggest.clear()
+    #  doSuggest(win)
 
   of "backspace":
     if win.globalSettings.suggestFeature and win.suggest.shown:
@@ -611,6 +607,14 @@ proc sourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       
       win.filterSuggest()
       win.doMoveSuggest()
+  of "space":
+    if win.globalSettings.suggestFeature and not win.suggest.shown and
+        key.toLower() == "space" and ctrlPressed and
+        win.getCurrentLanguage() == "nim":
+      if win.suggest.items.len() != 0: win.suggest.clear()
+      doSuggest(win)
+      result = false
+      #win.filterSuggest()
   else:
     if key.toLower() notin ["up", "down", "page_up", "page_down", "home", "end"]:
 

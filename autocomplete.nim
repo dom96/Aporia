@@ -64,13 +64,12 @@ proc suggestThread(projectFile: string) {.thread.} =
       of endToken:
         p.shutdown()
         results.send(endToken)
-        echod("[AutoComplete] Process thread exiting")
         break
       of stopToken:
         # Can't do much here right now since we're not async.
         # TODO
         discard
-    #os.sleep(50)
+  echod("[AutoComplete] Process thread exiting")
 
 proc socketThread() {.thread.} =
   while true:
