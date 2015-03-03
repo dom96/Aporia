@@ -1,6 +1,6 @@
 #
 #
-#            Aporia - Nimrod IDE
+#            Aporia - Nim IDE
 #        (c) Copyright 2011 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
@@ -172,7 +172,7 @@ proc filterSuggest*(win: var MainWin) =
 
 proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
                      line, column: int) =
-  #let sugCmd = win.getCmd("$findExe(nimrod)", "") &
+  #let sugCmd = win.getCmd("$findExe(nim)", "") &
   #      " idetools --path:$4 --track:$1,$2,$3 --suggest $5" %
   #      [file, $(line+1), $column, addToPath,
   #       if projectFile != "": projectFile else: file]
@@ -256,7 +256,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
       if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
         var f: TFile
         var fileSplit = splitFile(t.filename)
-        if fileSplit.ext notin [".nim", ".nimrod"]: continue
+        if fileSplit.ext != ".nim": continue
         echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
         if f.open(prefixDir / fileSplit.name & fileSplit.ext, fmWrite):
           # Save everything.
@@ -328,7 +328,7 @@ proc asyncGetDef*(win: var MainWin, file: string,
                   line, column: int,
     onSugLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.},
     onSugExit: proc (win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.}): string =
-  let sugCmd = win.getCmd("$findExe(nimrod)", "") & 
+  let sugCmd = win.getCmd("$findExe(nim)", "") & 
         " idetools --path:$4 --track:$1,$2,$3 --def $1" % 
         [file, $(line+1), $column, getTempDir()]
   

@@ -1,6 +1,6 @@
 #
 #
-#            Aporia - Nimrod IDE
+#            Aporia - Nim IDE
 #        (c) Copyright 2011 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
@@ -20,18 +20,18 @@ type
   TAutoSettings* = object # Settings which should not be set by the user manually
     search*: TSearchEnum # Search mode.
     wrapAround*: bool # Whether to wrap the search around.
-    
+
     winMaximized*: bool # Whether the MainWindow is maximized on startup
     VPanedPos*: int32 # Position of the VPaned, which splits
                       # the sourceViewTabs and bottomPanelTabs
     winWidth*, winHeight*: int32 # The size of the window.
-    
+
     recentlyOpenedFiles*: seq[string] # paths of recently opened files
-    
+
     lastSelectedTab*: string # The tab filename that was selected when aporia was last closed.
-    
+
     bottomPanelVisible*: bool # Whether the bottom panel is shown
-  
+
   TGlobalSettings* = object
     selectHighlightAll*: bool # Whether to highlight all occurrences upon selection
     searchHighlightAll*: bool # Whether to highlight all occurrences of the currently searched text
@@ -48,28 +48,28 @@ type
     suggestFeature*: bool # Whether the suggest feature is enabled
     compileUnsavedSave*: bool # Whether compiling unsaved files will make them appear saved in the front end.
     compileSaveAll*: bool # Whether compiling will save all opened unsaved files
-    nimrodCmd*: string  # command template to use to exec the Nimrod compiler
+    nimCmd*: string  # command template to use to exec the Nim compiler
     customCmd1*: string # command template to use to exec a custom command
     customCmd2*: string # command template to use to exec a custom command
     customCmd3*: string # command template to use to exec a custom command
     singleInstancePort*: int32 # Port used for listening socket to get filepaths
     showCloseOnAllTabs*: bool # Whether to show a close btn on all tabs.
-    nimrodPath*: string # Path to the nimrod compiler
+    nimPath*: string # Path to the nim compiler
     wrapMode*: gtk2.TWrapMode # source view wrap mode.
     scrollPastBottom*: bool # Whether to scroll past bottom.
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
     activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
     keyCommentLines*:      TShortcutKey
-    keyDeleteLine*:        TShortcutKey 
-    keyDuplicateLines*:    TShortcutKey 
-    keyQuit*:              TShortcutKey 
-    keyNewFile*:           TShortcutKey 
-    keyOpenFile*:          TShortcutKey 
-    keySaveFile*:          TShortcutKey 
-    keySaveFileAs*:        TShortcutKey 
+    keyDeleteLine*:        TShortcutKey
+    keyDuplicateLines*:    TShortcutKey
+    keyQuit*:              TShortcutKey
+    keyNewFile*:           TShortcutKey
+    keyOpenFile*:          TShortcutKey
+    keySaveFile*:          TShortcutKey
+    keySaveFileAs*:        TShortcutKey
     keySaveAll*:           TShortcutKey
-    keyCloseCurrentTab*:   TShortcutKey 
+    keyCloseCurrentTab*:   TShortcutKey
     keyCloseAllTabs*:      TShortcutKey
     keyFind*:              TShortcutKey
     keyReplace*:           TShortcutKey
@@ -87,8 +87,8 @@ type
     keyRunCustomCommand2*: TShortcutKey
     keyRunCustomCommand3*: TShortcutKey
     keyRunCheck*:          TShortcutKey
-    
-  
+
+
   MainWin* = object
     # Widgets
     w*: gtk2.PWindow
@@ -97,33 +97,33 @@ type
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
     sourceViewTabs*: PNotebook # Tabs which hold the sourceView
     statusBar*: PCustomStatusBar
-    
+
     infobar*: PInfoBar ## For encoding selection
-    
+
     toolBar*: PToolBar # \
     # FIXME: should be notebook?
     bottomPanelTabs*: PNotebook
     outputTextView*: PTextView
     errorListWidget*: PTreeView
-    
+
     findBar*: PHBox # findBar
     findEntry*: PEntry
     replaceEntry*: PEntry
     replaceLabel*: PLabel
     replaceBtn*: PButton
     replaceAllBtn*: PButton
-    
+
     goLineBar*: TGoLineBar
-    
+
     FileMenu*: PMenu
-    
+
     viewToolBarMenuItem*: PMenuItem # view menu
     viewBottomPanelMenuItem*: PMenuItem # view menu
 
     tabs*: seq[Tab] # Other
-    
+
     tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
-    
+
     autoSettings*: TAutoSettings
     globalSettings*: TGlobalSettings
     oneInstSock*: PAsyncSocket
@@ -139,10 +139,10 @@ type
     currentFilter*: string
     tooltip*: gtk2.PWindow
     tooltipLabel*: PLabel
-  
+
   TExecMode* = enum
-    ExecNimrod, ExecRun, ExecCustom
-  
+    ExecNim, ExecRun, ExecCustom
+
   PExecOptions* = ref TExecOptions
   TExecOptions* = object
     command*: string
@@ -153,7 +153,7 @@ type
     onExit*: proc (win: var MainWin, opts: PExecOptions, exitcode: int) {.closure.}
     runAfterSuccess*: bool # If true, ``runAfter`` will only be ran on success.
     runAfter*: PExecOptions
-  
+
   TExecThrTaskType* = enum
     ThrRun, ThrStop
   TExecThrTask* = object
@@ -162,7 +162,7 @@ type
       command*: string
       workDir*: string
     of ThrStop: nil
-  
+
   TExecThrEventType* = enum
     EvStarted, EvRecv, EvStopped
   TExecThrEvent* = object
@@ -173,11 +173,11 @@ type
       line*: string
     of EvStopped:
       exitCode*: int
-  
+
   Temp = object
     lastSaveDir*: string # Last saved directory/last active directory
     stopSBUpdates*: bool
-    
+
     currentExec*: PExecOptions # nil if nothing is being executed.
     compileSuccess*: bool
     execThread*: TThread[void]
@@ -212,7 +212,7 @@ type
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string
     line*, col*: int32
-  
+
   TSearchEnum* = enum
     SearchCaseSens, SearchCaseInsens, SearchStyleInsens, SearchRegex, SearchPeg
 
@@ -302,24 +302,24 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
 
   var mark = win.tabs[current].buffer.getInsert()
   win.tabs[current].sourceView.scrollToMark(mark, 0.25, false, 0.0, 0.0)
-  
+
   # TODO: What if I remove the tab, while this is happening, segfault because
   # sourceview is gone? The likelihood of this happening is probably very unlikely
   # though.
-  
+
   proc idleConfirmScroll(sv: PSourceView): gboolean {.cdecl.} =
     result = false
-    
+
     var buff = sv.getBuffer()
     var insertMark = buff.getInsert()
     var insertIter: TTextIter
     buff.getIterAtMark(addr(insertIter), insertMark)
     var insertLoc: gdk2.TRectangle
     sv.getIterLocation(addr(insertIter), addr(insertLoc))
-    
+
     var rect: gdk2.TRectangle
     sv.getVisibleRect(addr(rect))
-    
+
     # Now check whether insert iter is inside the visible rect.
     # Width has to be higher than 0
     if insertLoc.width <= 0: insertLoc.width = 1
@@ -327,7 +327,7 @@ proc forceScrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
     if not inside:
       sv.scrollToMark(insertMark, 0.25, false, 0.0, 0.0)
       return true
-  
+
   discard gIdleAdd(idleConfirmScroll, win.tabs[current].sourceview)
 
 proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
@@ -341,11 +341,11 @@ proc scrollToInsert*(win: var MainWin, tabIndex: int32 = -1) =
 proc findTab*(win: var MainWin, filename: string, absolute: bool = true): int =
   for i in 0..win.tabs.len()-1:
     if absolute:
-      if win.tabs[i].filename == filename: 
+      if win.tabs[i].filename == filename:
         return i
     else:
       if win.tabs[i].filename.extractFilename == filename:
-        return i 
+        return i
       elif win.tabs[i].filename == "" and filename == ("a" & $i & ".nim"):
         return i
 
@@ -370,16 +370,16 @@ proc createTextColumn*(tv: PTreeView, title: string, column: int,
   ## Creates a new Text column.
   var c = treeViewColumnNew()
   var renderer = cellRendererTextNew()
-  
+
   c.columnSetTitle(title)
   c.columnPackStart(renderer, expand)
   c.columnSetExpand(expand)
   c.columnSetResizable(true)
   c.columnSetVisible(visible)
 
-  c.column_add_attribute(renderer, "text", column.gint) 
+  c.column_add_attribute(renderer, "text", column.gint)
   c.column_add_attribute(renderer, "foreground", foregroundColorColumn)
-   
+
   doAssert tv.appendColumn(c) == column+1
 
 # -- Useful ListStore functions
@@ -389,25 +389,25 @@ proc add*(ls: PListStore, val: string, col = 0) =
   ls.set(addr(iter), col, val, -1)
 
 # -- Useful Menu functions
-proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup, 
+proc createAccelMenuItem*(toolsMenu: PMenu, accGroup: PAccelGroup,
                          label: string, acc: guint,
                          action: proc (i: PMenuItem, p: pointer) {.cdecl.},
                          mask: TModifierType = accelerator_get_default_mod_mask(),
-                         stockid: string = "") = 
+                         stockid: string = "") =
   var result: PMenuItem
   if stockid != "":
     result = imageMenuItemNewFromStock(stockid, nil)
   else:
     result = menu_item_new(label)
-  
+
   if accelerator_valid(acc, mask):
     result.addAccelerator("activate", accGroup, acc, mask, ACCEL_VISIBLE)
-  
+
   toolsMenu.append(result)
   show(result)
   discard signal_connect(result, "activate", SIGNAL_FUNC(action), nil)
 
-proc createMenuItem*(menu: PMenu, label: string, 
+proc createMenuItem*(menu: PMenu, label: string,
                      action: proc (i: PMenuItem, p: pointer) {.cdecl.}) =
   var result = menuItemNew(label)
   menu.append(result)
@@ -429,11 +429,11 @@ proc createSeparator*(menu: PMenu) =
 # -- Window functions
 proc forcePresent*(w: PWindow) =
   w.present()
-  
+
   proc idleConfirmPresent(y: PWindow): gboolean {.cdecl.} =
     y.present()
     result = not y.isActive()
-  
+
   if not w.isActive():
     discard gIdleAdd(idleConfirmPresent, w)
 
@@ -448,16 +448,12 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
   ## Finds the .nim project file in ``directory``.
   # Find project file
   var configFiles: seq[string] = @[]
-  for cfgFile in walkFiles(directory / "*.nimrod.cfg"):
+  for cfgFile in walkFiles(directory / "*.nim.cfg"):
     configFiles.add(cfgFile)
   let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
   var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
   if not existsFile(projectFile):
-    # check for file.nimrod
-    if not existsFile(projectFile & "rod"):
-      projectFile = ""
-    else:
-      projectFile = projectFile & "rod"
+    projectFile = ""
   return (projectFile, projectCfgFile)
 
 proc isTemporary*(t: Tab): bool =
@@ -494,10 +490,17 @@ proc srepr(le: TLineEnding, auto: string): string =
   of leAuto: auto
 
 proc normalize*(le: TLineEnding, text: string): string =
+  ## Normalizes newlines and strips trailing whitespace.
   result = ""
   var i = 0
   while true:
     case text[i]
+    of ' ', '\t':
+      # peek and see if a newline follows:
+      var j = i+1
+      while text[j] in {' ', '\t'}: inc j
+      if text[j] in {'\L', '\C'}: i = j-1
+      else: result.add text[i]
     of '\L':
       result.add(le.srepr("\L"))
     of '\C':
@@ -558,11 +561,11 @@ proc getCurrentLanguageComment*(win: var MainWin,
           syntax: var tuple[line, blockStart, blockEnd: string], pageNum: int) =
   ## Gets the current line comment string and block comment string.
   ## If no comment can be found ``false`` is returned.
-  
+
   var currentLang = getCurrentLanguage(win, pageNum)
   if currentLang != "":
     case currentLang.normalize()
-    of "nimrod":
+    of "nim":
       syntax.blockStart = "discard \"\"\""
       syntax.blockEnd = "\"\"\""
       syntax.line = "#"
@@ -581,7 +584,7 @@ proc getCurrentLanguageComment*(win: var MainWin,
 
 proc setLanguage*(win: var MainWin, tab: int, lang: PSourceLanguage) =
   win.tabs[tab].buffer.setLanguage(lang)
-  getCurrentLanguageComment(win, win.tempStuff.commentSyntax, tab) 
+  getCurrentLanguageComment(win, win.tempStuff.commentSyntax, tab)
 
 proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
   win.tabs[tab].buffer.setHighlightSyntax(doHighlight)
@@ -593,19 +596,19 @@ proc getCmd*(win: var MainWin, cmd, filename: string): string =
   ## ``cmd`` specifies the format string. ``findExe(exe)`` is allowed as well
   ## as ``#$``. The ``#$`` is replaced by ``filename``.
   var f = quoteIfContainsWhite(filename)
-  proc promptNimrodPath(win: var MainWin): string =
-    ## If ``settings.nimrodPath`` is not set, prompts the user for the nimrod path.
-    ## Otherwise returns ``settings.nimrodPath``.
-    if not fileExists(win.globalSettings.nimrodPath):
-      dialogs.info(win.w, "Unable to find nimrod executable. Please select it to continue.")
-      win.globalSettings.nimrodPath = chooseFileToOpen(win.w, "")
-    result = win.globalSettings.nimrodPath
-  
+  proc promptNimPath(win: var MainWin): string =
+    ## If ``settings.nimPath`` is not set, prompts the user for the nim path.
+    ## Otherwise returns ``settings.nimPath``.
+    if not fileExists(win.globalSettings.nimPath):
+      dialogs.info(win.w, "Unable to find nim executable. Please select it to continue.")
+      win.globalSettings.nimPath = chooseFileToOpen(win.w, "")
+    result = win.globalSettings.nimPath
+
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
     var exe = quoteIfContainsWhite(findExe(matches[0]))
-    if matches[0].normalize == "nimrod" and exe.len == 0:
-      exe = quoteIfContainsWhite(promptNimrodPath(win))
-    
+    if matches[0].normalize == "nim" and exe.len == 0:
+      exe = quoteIfContainsWhite(promptNimPath(win))
+
     if exe.len == 0: exe = matches[0]
     result = exe & " " & matches[1] % f
   else:

@@ -1,6 +1,6 @@
 #
 #
-#            Aporia - Nimrod IDE
+#            Aporia - Nim IDE
 #        (c) Copyright 2015 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
@@ -566,7 +566,7 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 
     if win.globalSettings.suggestFeature and not win.suggest.shown and
         key.toLower() == "space" and ctrlPressed and
-        win.getCurrentLanguage() == "nimrod":
+        win.getCurrentLanguage() == "nim":
       if win.suggest.items.len() != 0: win.suggest.clear()
       doSuggest(win)
       win.filterSuggest()
@@ -600,7 +600,7 @@ proc sourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
   let key = $keyNameCString
   case key.toLower()
   of "period":
-    if win.globalSettings.suggestFeature and win.getCurrentLanguage() == "nimrod":
+    if win.globalSettings.suggestFeature and win.getCurrentLanguage() == "nim":
       if win.suggest.items.len() != 0: win.suggest.clear()
       doSuggest(win)
 
@@ -625,8 +625,8 @@ proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8")
 proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   let currentPage = win.sourceViewTabs.getCurrentPage()
   let tab = win.tabs[currentPage]
-  if win.getCurrentLanguage(currentPage) != "nimrod":
-    win.statusbar.setTemp("This feature is only supported for Nimrod.", UrgError)
+  if win.getCurrentLanguage(currentPage) != "nim":
+    win.statusbar.setTemp("This feature is only supported for Nim.", UrgError)
     return
   
   var cursor: TTextIter
@@ -666,7 +666,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
     win.statusbar.setTemp(err, UrgError, 5000)
 
 proc sourceView_PopulatePopup(entry: PTextView, menu: PMenu, u: pointer) =
-  if win.getCurrentLanguage() == "nimrod":
+  if win.getCurrentLanguage() == "nim":
     createSeparator(menu)
     createMenuItem(menu, "Go to definition...", goToDef_Activate)
 
@@ -1127,7 +1127,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
         cb.insert(addr(theEnd), blockEnd, blockEnd.len.gint)
     else:
       # TODO: Loop through each line and add `lineComment` 
-      # (# in the case of Nimrod) to it.
+      # (# in the case of Nim) to it.
       discard
     cb.endUserAction()
     
@@ -1260,7 +1260,7 @@ proc saveForCompile(currentTab: int): string =
 proc supportedLang(): bool =
   result = false
   let currentLang = win.getCurrentLanguage()
-  if currentLang  == "nimrod": return true
+  if currentLang  == "nim": return true
   win.statusbar.setTemp("Unable to determine what action to take for " &
                         currentLang, UrgError, 5000) 
 
@@ -1276,7 +1276,7 @@ proc compileRun(filename: string, shouldRun: bool) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = win.getCmd(win.globalSettings.nimrodCmd, filename)
+  var cmd = win.getCmd(win.globalSettings.nimCmd, filename)
 
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
@@ -1285,7 +1285,7 @@ proc compileRun(filename: string, shouldRun: bool) =
   if shouldRun:
     let ifSuccess = changeFileExt(filename, os.ExeExt)
     runAfter = newExec(ifSuccess.quoteIfContainsWhite(), workDir, ExecRun)
-  win.execProcAsync newExec(cmd, workDir, ExecNimrod, runAfter = runAfter)
+  win.execProcAsync newExec(cmd, workDir, ExecNim, runAfter = runAfter)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =
   if not supportedLang(): return
@@ -1371,8 +1371,8 @@ proc RunCheck(menuItem: PMenuItem, user_data: pointer) =
   win.outputTextView.getBuffer().setText("", 0)
   showBottomPanel()
 
-  var cmd = win.getCmd("$findExe(nimrod) check --listFullPaths $#", filename)
-  win.execProcAsync newExec(cmd, "", ExecNimrod)
+  var cmd = win.getCmd("$findExe(nim) check --listFullPaths $#", filename)
+  win.execProcAsync newExec(cmd, "", ExecNim)
 
 proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
   echod("Memory usage: ")
@@ -1384,8 +1384,8 @@ proc memUsage_click(menuitem: PMenuItem, user_data: pointer) =
 proc about_click(menuitem: PMenuItem, user_data: pointer) =
   # About dialog
   var aboutDialog = newAboutDialog("Aporia " & aporiaVersion, 
-      "Aporia is an IDE for the \nNimrod programming language.",
-      "Copyright (c) 2010-2012 Dominik Picheta")
+      "Aporia is an IDE for the \nNim programming language.",
+      "Copyright (c) 2010-2015 Dominik Picheta")
   aboutDialog.show()
 
 # -- Infobar
