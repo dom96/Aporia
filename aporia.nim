@@ -636,7 +636,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   var cursor: TTextIter
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
   
-  proc onSugLine(win: var MainWin, opts: PExecOptions, line: string) {.closure.} =
+  proc onSugLine(win: var MainWin, line: string) {.closure.} =
     if win.tempStuff.gotDefinition:
       return
     var def: TSuggestItem
@@ -660,12 +660,17 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
       
       echod(def.repr())
   
-  proc onSugExit(win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.} =
+  proc onSugExit(win: var MainWin, exitCode: int) {.closure.} =
     if not win.tempStuff.gotDefinition:
       win.statusbar.setTemp("Definition retrieval failed.", UrgError, 5000)
+
+  proc onSugError(win: var MainWin, error: string) {.closure.} =
+    if not win.tempStuff.gotDefinition:
+      win.statusbar.setTemp("Definition retrieval failed: " & error,
+          UrgError, 5000)
   
   var err = win.asyncGetDef(tab.filename, getLine(addr cursor), 
-                    getLineOffset(addr cursor), onSugLine, onSugExit)
+                  getLineOffset(addr cursor), onSugLine, onSugExit, onSugError)
   if err != "":
     win.statusbar.setTemp(err, UrgError, 5000)
 

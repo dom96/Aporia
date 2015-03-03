@@ -326,21 +326,40 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
 
 proc asyncGetDef*(win: var MainWin, file: string,
                   line, column: int,
-    onSugLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.},
-    onSugExit: proc (win: var MainWin, opts: PExecOptions, exitCode: int) {.closure.}): string =
-  let sugCmd = win.getCmd("$findExe(nim)", "") & 
-        " idetools --path:$4 --track:$1,$2,$3 --def $1" % 
-        [file, $(line+1), $column, getTempDir()]
-  
-  var execute = newExec(sugCmd, "", ExecRun, false, onSugLine, onSugExit)
-  # Check if something is currently running.
-  if win.tempStuff.currentExec != nil and 
-     win.tempStuff.execProcess != nil:
-    return "Process already running. Use F7 to terminate and try again."
+    onSugLine: proc (win: var MainWin, line: string) {.closure.},
+    onSugExit: proc (win: var MainWin, exitCode: int) {.closure.},
+    onSugError: proc (win: var MainWin, error: string) {.closure.}): string =
+
+  result = ""
+  # Verify the presence of nimsuggest in the path
+  if findExe("nimsuggest") == "":
+    win.statusbar.setTemp("Could not find NimSuggest in PATH.", UrgError)
+    return
+
+  let sugCmd = "def \"$1\":$2:$3\c\l" % [file, $(line+1), $column]
+
+  # Start NimSuggest if this is the first request.
+  if not win.tempStuff.autoComplete.isThreadRunning:
+    # TODO: Get project file?
+    win.tempStuff.autoComplete.startThread(file)
+
+  var winPtr = addr win
+
+  proc onSugLineEx(line: string) {.closure.} =
+    onSugLine(winPtr[], line)
+
+  proc onSugExitEx(exit: int) {.closure.} =
+    onSugExit(winPtr[], exit)
+
+  proc onSugErrorEx(error: string) {.closure.} =
+    onSugError(winPtr[], error)
+
+  # Check if a suggest request is already running:
+  if win.tempStuff.autocomplete.isTaskRunning:
+    win.tempStuff.autocomplete.stopTask()
   else:
-    win.tempStuff.gotDefinition = false
-    win.execProcAsync execute 
-  return ""
+    win.tempStuff.autoComplete.startTask(sugCmd, onSugLineEx, onSugExitEx,
+        onSugErrorEx)
 
 proc doSuggest*(win: var MainWin) =
   var current = win.sourceViewTabs.getCurrentPage()
