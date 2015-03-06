@@ -52,7 +52,11 @@ proc suggestThread(projectFile: string) {.thread.} =
       break
 
     let line = o.readLine()
-    echod("[AutoComplete] Got line from NimSuggest (stdout): ", line)
+    # For some reason on Linux reading from the process
+    # returns an empty line sometimes.
+    if line.len == 0: continue
+    echod("[AutoComplete] Got line from NimSuggest (stdout): ", line.repr)
+
     if line.toLower().startsWith("error:"):
       results.send(errorToken & line)
 
@@ -71,6 +75,20 @@ proc suggestThread(projectFile: string) {.thread.} =
         discard
   echod("[AutoComplete] Process thread exiting")
 
+proc processTask(task: string) =
+  var socket = newSocket()
+  socket.connect("localhost", port)
+  echod("[AutoComplete] Socket connected")
+  socket.send(task & "\c\l")
+  while true:
+    var line = ""
+    socket.readLine(line)
+    echod("[AutoComplete] Recv line: \"", line, "\"")
+    if line.len == 0: break
+    results.send(line)
+  socket.close()
+  results.send(stopToken)
+
 proc socketThread() {.thread.} =
   while true:
     let task = suggestTasks.recv()
@@ -81,18 +99,17 @@ proc socketThread() {.thread.} =
     of stopToken:
       assert false
     else:
-      var socket = newSocket()
-      socket.connect("localhost", port)
-      echod("[AutoComplete] Socket connected")
-      socket.send(task & "\c\l")
-      while true:
-        var line = ""
-        socket.readLine(line)
-        echod("[AutoComplete] Recv line: \"", line, "\"")
-        if line.len == 0: break
-        results.send(line)
-      socket.close()
-      results.send(stopToken)
+      var success = false
+      for i in 0 .. 10:
+        try:
+          processTask(task)
+          success = true
+          break
+        except OSError:
+          echod("[AutoComplete] Error sending task. Retrying in 500ms.")
+          sleep(500)
+      if not success:
+        results.send(errorToken & "Couldn't connect to NimSuggest.")
 
 proc newAutoComplete*(): AutoComplete =
   result = AutoComplete()
