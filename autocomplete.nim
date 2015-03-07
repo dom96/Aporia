@@ -30,35 +30,36 @@ proc shutdown(p: Process) =
     echod("[AutoComplete] Process Shutting down.")
     p.terminate()
     discard p.waitForExit()
-    p.close()
+  p.close()
 
-proc suggestThread(projectFile: string) {.thread.} =
+proc suggestThread() {.thread.} =
   let nimBinPath = findExe("nim")
   let nimPath = nimBinPath.splitFile.dir.parentDir
-  let projectFileNorm = projectFile.replace('\\', '/')
-  # TODO: Ensure nimPath exists.
-  echod("[AutoComplete] Work Dir for NimSuggest: ", nimPath)
-  echod("[AutoComplete] Project file for NimSuggest: ", projectFileNorm)
-  var p = startProcess(findExe("nimsuggest"), nimPath,
-                       ["--port:" & $port, projectFileNorm],
-                       options = {poStdErrToStdOut, poUseShell})
-  echod("[AutoComplete] NimSuggest started on port ", port)
-  var o = p.outputStream
+  var p: Process = nil
+  var o: Stream = nil
 
   while true:
-    if not p.running:
-      p.shutdown()
-      results.send(endToken)
-      break
+    if not p.isNil:
+      if not p.running:
+        p.shutdown()
+        results.send(endToken)
+        p = nil
+        continue
 
-    let line = o.readLine()
-    # For some reason on Linux reading from the process
-    # returns an empty line sometimes.
-    if line.len == 0: continue
-    echod("[AutoComplete] Got line from NimSuggest (stdout): ", line.repr)
+    if not o.isNil:
+      if o.atEnd:
+        echod("[AutoComplete] Stream is at end")
+        o.close()
+        o = nil
+      else:
+        let line = o.readLine()
+        # For some reason on Linux reading from the process
+        # returns an empty line sometimes.
+        if line.len == 0: continue
+        echod("[AutoComplete] Got line from NimSuggest (stdout): ", line.repr)
 
-    if line.toLower().startsWith("error:"):
-      results.send(errorToken & line)
+        if line.toLower().startsWith("error:"):
+          results.send(errorToken & line)
 
     var tasks = commands.peek()
     if tasks > 0:
@@ -68,11 +69,24 @@ proc suggestThread(projectFile: string) {.thread.} =
       of endToken:
         p.shutdown()
         results.send(endToken)
-        break
+        p = nil
+        o = nil
       of stopToken:
         # Can't do much here right now since we're not async.
         # TODO
         discard
+      else:
+        let projectFile = task
+        let projectFileNorm = projectFile.replace('\\', '/')
+        # TODO: Ensure nimPath exists.
+        echod("[AutoComplete] Work Dir for NimSuggest: ", nimPath)
+        echod("[AutoComplete] Project file for NimSuggest: ", projectFileNorm)
+        p = startProcess(findExe("nimsuggest"), nimPath,
+                             ["--port:" & $port, projectFileNorm],
+                             options = {poStdErrToStdOut, poUseShell})
+        echod("[AutoComplete] NimSuggest started on port ", port)
+        o = p.outputStream
+
   echod("[AutoComplete] Process thread exiting")
 
 proc processTask(task: string) =
@@ -95,7 +109,7 @@ proc socketThread() {.thread.} =
     echod("[AutoComplete] Got suggest task: ", task)
     case task
     of endToken:
-      break
+      assert false
     of stopToken:
       assert false
     else:
@@ -113,17 +127,13 @@ proc socketThread() {.thread.} =
 
 proc newAutoComplete*(): AutoComplete =
   result = AutoComplete()
+  createThread[void](result.thread, suggestThread)
+  createThread[void](result.sockThread, socketThread)
 
-proc startThread*(self: AutoComplete, projectFile: string) =
-  createThread(self.thread, suggestThread, projectFile)
-  createThread[void](self.sockThread, socketThread)
-  self.threadRunning = true
-
-proc stopThread*(self: AutoComplete) =
-  commands.send(endToken)
-  suggestTasks.send(endToken)
-  self.threadRunning = false
-  self.taskRunning = false
+proc startNimSuggest*(self: AutoComplete, projectFile: string) =
+  assert(not self.nimSuggestRunning)
+  commands.send projectFile
+  self.nimSuggestRunning = true
 
 proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
   result = true
@@ -136,9 +146,11 @@ proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
     let (available, msg) = tryRecv[string](results)
     if not available:
       break
-    case msg
+    let cmd = msg.split("\t")[0]
+    echod("[AutoComplete] SuggestOutput: Cmd: ", cmd.repr)
+    case cmd & '\t'
     of endToken:
-      self.threadRunning = false
+      self.nimSuggestRunning = false
       self.taskRunning = false
       self.onSugExit(0)
       return false
@@ -147,7 +159,7 @@ proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
       self.onSugExit(0)
       return false
     of errorToken:
-      self.onSugError(msg)
+      self.onSugError(msg.split("\t")[1])
     self.onSugLine(msg)
 
   if not result:
@@ -159,6 +171,7 @@ proc startTask*(self: AutoComplete, task: string,
                onSugError: proc (error: string) {.closure.}) =
   ## Sends a new task to nimsuggest.
   assert(not self.taskRunning)
+  assert(self.nimSuggestRunning)
   self.taskRunning = true
   self.onSugLine = onSugLine
   self.onSugExit = onSugExit
@@ -175,8 +188,8 @@ proc startTask*(self: AutoComplete, task: string,
 proc isTaskRunning*(self: AutoComplete): bool =
   self.taskRunning
 
-proc isThreadRunning*(self: AutoComplete): bool =
-  self.threadRunning
+proc isNimSuggestRunning*(self: AutoComplete): bool =
+  self.nimSuggestRunning
 
 proc stopTask*(self: AutoComplete) =
   #commands.send(stopToken)

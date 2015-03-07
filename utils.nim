@@ -241,9 +241,9 @@ type
     idleID*: int32
 
   AutoComplete* = ref object
-    thread*: TThread[string]
+    thread*: TThread[void]
     sockThread*: TThread[void]
-    taskRunning*, threadRunning*: bool
+    taskRunning*, nimSuggestRunning*: bool
     onSugLine*: proc (line: string) {.closure.}
     onSugExit*: proc (exit: int) {.closure.}
     onSugError*: proc (error: string) {.closure.}

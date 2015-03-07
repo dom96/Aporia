@@ -185,8 +185,8 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
   let sugCmd = "sug \"$1\":$2:$3\c\l" % [file, $(line+1), $column]
 
   # Start NimSuggest if this is the first request.
-  if not win.tempStuff.autoComplete.isThreadRunning:
-    win.tempStuff.autoComplete.startThread(projectFile)
+  if not win.tempStuff.autoComplete.isNimSuggestRunning:
+    win.tempStuff.autoComplete.startNimSuggest(projectFile)
 
   var winPtr = addr win
 
@@ -339,9 +339,9 @@ proc asyncGetDef*(win: var MainWin, file: string,
   let sugCmd = "def \"$1\":$2:$3\c\l" % [file, $(line+1), $column]
 
   # Start NimSuggest if this is the first request.
-  if not win.tempStuff.autoComplete.isThreadRunning:
+  if not win.tempStuff.autoComplete.isNimSuggestRunning:
     # TODO: Get project file?
-    win.tempStuff.autoComplete.startThread(file)
+    win.tempStuff.autoComplete.startNimSuggest(file)
 
   var winPtr = addr win
 
