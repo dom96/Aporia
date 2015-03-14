@@ -62,7 +62,7 @@ proc suggestThread() {.thread.} =
           results.send(errorToken & line)
 
     var tasks = commands.peek()
-    if tasks > 0:
+    if tasks > 0 or (o.isNil and p.isNil):
       let task = commands.recv()
       echod("[AutoComplete] Got command: ", task)
       case task
