@@ -24,7 +24,7 @@ Aporia.
 * GTK
 * GtkSourceView
 * PCRE
-* gtk2 nimble package (if you're not installing through nimble)
+* `gtk2` nimble package (if you're not installing through nimble)
 
 Installation instructions:
 
