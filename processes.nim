@@ -44,35 +44,35 @@ proc addError*(win: var MainWin, error: TError) =
   var mainDir = win.tabs[win.sourceViewTabs.getCurrentPage()].filename
   var i = mainDir.rfind($os.DirSep)
   if i > 0 and error.file.startsWith(mainDir.substr(0, i)):
-     fileShort = "..." & fileShort.substr(i) 
-               
+     fileShort = "..." & fileShort.substr(i)
+
   var ls = cast[PListStore](win.errorListWidget.getModel())
   var iter: TTreeIter
   ls.append(addr(iter))
-  
-  if error.kind == TETError: 
+
+  if error.kind == TETError:
     ls.set(addr(iter), 0, fileShort, 1, error.line, 2, error.column, 3, $error.kind, 4, error.desc, 5, "red", -1)
   else:
     ls.set(addr(iter), 0, fileShort, 1, error.line, 2, error.column, 3, $error.kind, 4, error.desc, 5, nil, -1)
-  
+
   # Scroll to last error
   var treepath = win.errorListWidget.getModel().get_path(addr(iter));
   win.errorListWidget.scrollToCell(treepath, nil, false, 0, 0)
-  
+
   # Activate "Error list" tab
   if win.globalSettings.activateErrorTabOnErrors:
     win.bottomPanelTabs.setCurrentPage(1)
-  
+
   win.tempStuff.errorList.add(error)
 
 proc parseError(err: string, res: var TError) =
   ## Parses a line like:
   ##   ``a12.nim(1, 3) Error: undeclared identifier: 'asd'``
   ##
-  ## or: 
+  ## or:
   ##
   ## lib/system.nim(686, 5) Error: type mismatch: got (string, int literal(5))
-  ## but expected one of: 
+  ## but expected one of:
   ## <(x: pointer, y: pointer): bool
   ## <(x: UIntMax32, y: UIntMax32): bool
   ## <(x: int32, y: int32): bool
@@ -98,12 +98,12 @@ proc parseError(err: string, res: var TError) =
   var i = 0
   if err.startsWith("Error: "):
     res.kind = TETError
-    res.desc = err[7 .. -1]
+    res.desc = err[7 .. ^1]
     res.file = ""
     res.line = ""
     res.column = ""
     return
-    
+
   res.file = ""
   i += parseUntil(err, res.file, '(', i)
   inc(i) # Skip (
@@ -142,7 +142,7 @@ proc printProcOutput(win: var MainWin, line: string) =
   template paErr(): stmt =
     var parseRes: TError
     parseError(line, parseRes)
-       
+
     win.addError(parseRes)
 
   # Colors
@@ -150,9 +150,9 @@ proc printProcOutput(win: var MainWin, line: string) =
   var errorTag = createColor(win.outputTextView, "errorTag", "red")
   var warningTag = createColor(win.outputTextView, "warningTag", "darkorange")
   var successTag = createColor(win.outputTextView, "successTag", "darkgreen")
-  
+
   assert win.tempStuff.currentExec != nil
-  
+
   case win.tempStuff.currentExec.mode:
   of ExecNim:
     if line =~ pegLineError / pegOtherError / pegLineInfo:
@@ -205,7 +205,7 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
   result = true
   if win.tempStuff.currentExec != nil:
     var events = execThrEventChan.peek()
-    
+
     if epochTime() - win.tempStuff.lastProgressPulse >= 0.1:
       win.statusbar.progressbar.pulse()
       win.tempStuff.lastProgressPulse = epochTime()
@@ -229,26 +229,26 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
               # TODO: Print "" as a \n?
               if event.line != "":
                 win[].printProcOutput(event.line)
-          
+
         of EvStopped:
           echod("[Idle] Process has quit")
           if win.tempStuff.currentExec.onExit != nil:
             win.tempStuff.currentExec.onExit(win[], win.tempStuff.currentExec, event.exitCode)
-          
+
           if win.tempStuff.currentExec.output:
             if win.tempStuff.compilationErrorBuffer.len() > 0:
               win[].printProcOutput(win.tempStuff.compilationErrorBuffer)
-          
+
             if event.exitCode == QuitSuccess:
-              win.outputTextView.addText("> Process terminated with exit code " & 
+              win.outputTextView.addText("> Process terminated with exit code " &
                                                $event.exitCode & "\l", successTag)
               # Activate "Output" tab, after successful compilation
-              win.bottomPanelTabs.setCurrentPage(0)    
+              win.bottomPanelTabs.setCurrentPage(0)
             else:
-              win.outputTextView.addText("> Process terminated with exit code " & 
+              win.outputTextView.addText("> Process terminated with exit code " &
                                                $event.exitCode & "\l", errorTag)
-          
-          
+
+
           let runAfter = win.tempStuff.currentExec.runAfter
           let runAfterSuccess = win.tempStuff.currentExec.runAfterSuccess
           win.tempStuff.currentExec = nil
@@ -257,7 +257,7 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
           if win.statusbar.statusID == win.tempStuff.progressStatusID:
             win.statusbar.restorePrevious()
           # TODO: Remove idle proc here?
-          
+
           # Execute another process in queue (if any)
           if runAfter != nil:
             if runAfterSuccess and (not win.tempStuff.compileSuccess):
@@ -272,7 +272,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   ## This function executes a process in a new thread, using only idle time
   ## to add the output of the process to the `outputTextview`.
   assert(win.tempStuff.currentExec == nil)
-  
+
   # Reset some things; and set some flags.
   # Execute the process
   win.tempStuff.currentExec = exec
@@ -286,7 +286,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   if exec.output:
     var normalTag = createColor(win.outputTextView, "normalTag", "#3d3d3d")
     win.outputTextView.addText("> " & exec.command & "\l", normalTag)
-    
+
   # Add a function which will be called when the UI is idle.
   win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, addr(win))
 
@@ -296,7 +296,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   # Clear errors
   win.clearErrors()
 
-proc newExec*(command: string, workDir: string, mode: TExecMode, output = true, 
+proc newExec*(command: string, workDir: string, mode: TExecMode, output = true,
               onLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.} = nil,
               onExit: proc (win: var MainWin, opts: PExecOptions, exitcode: int) {.closure.} = nil,
               runAfter: PExecOptions = nil, runAfterSuccess = true): PExecOptions =
@@ -356,7 +356,7 @@ proc execThreadProc(){.thread.} =
           createExecThrEvent(EvStopped):
             event.exitCode = exitCode
           p.close()
-    
+
     # Check if process exited.
     if started:
       if not p.running:
@@ -367,14 +367,14 @@ proc execThreadProc(){.thread.} =
             line = o.readLine()
             createExecThrEvent(EvRecv):
               event.line = line
-        
+
         # Process exited.
         var exitCode = p.waitForExit()
         p.close()
         started = false
         createExecThrEvent(EvStopped):
           event.exitCode = exitCode
-    
+
     if started:
       var line = o.readLine()
       createExecThrEvent(EvRecv):

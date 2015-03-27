@@ -451,7 +451,7 @@ proc findProjectFile*(directory: string): tuple[projectFile, projectCfg: string]
   for cfgFile in walkFiles(directory / "*.nim.cfg"):
     configFiles.add(cfgFile)
   let projectCfgFile = if configFiles.len != 1: "" else: configFiles[0]
-  var projectFile = if projectCfgFile != "": projectCfgFile[0 .. -8] else: ""
+  var projectFile = projectCfgFile[0 .. ^8]
   if not existsFile(projectFile):
     projectFile = ""
   return (projectFile, projectCfgFile)

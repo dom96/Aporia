@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import 
+import
   gtk2, gdk2, glib2,
   strutils, osproc, os,
   utils, processes, CustomStatusBar, AutoComplete
@@ -54,11 +54,11 @@ proc getIterGlobalCoords(iter: PTextIter, tab: Tab): tuple[x, y: int32] =
   var winX, winY: gint
   tab.sourceView.bufferToWindowCoords(TEXT_WINDOW_WIDGET, iterLoc.x, iterLoc.y,
                                      addr(winX), addr(winY))
-  
+
   var mainGWin = tab.sourceView.getWindow(TEXT_WINDOW_WIDGET)
   var mainLocX, mainLocY: gint
   discard mainGWin.getOrigin(addr(mainLocX), addr(mainLocY))
-  
+
   # - Get the size of the left window(Line numbers) too.
   var leftGWin = tab.sourceView.getWindow(TEXT_WINDOW_LEFT)
   var leftWidth, leftHeight: gint
@@ -70,7 +70,7 @@ proc getIterGlobalCoords(iter: PTextIter, tab: Tab): tuple[x, y: int32] =
 
 proc moveSuggest*(win: var MainWin, start: PTextIter, tab: Tab) =
   var (x, y) = getIterGlobalCoords(start, tab)
-  
+
   win.suggest.dialog.move(x, y)
 
 proc doMoveSuggest*(win: var MainWin) =
@@ -96,7 +96,7 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
     # Get the name without the module name in front of it.
     var dots = item.name.split('.')
     if dots.len() == 2:
-      item.nmName = item.name[dots[0].len()+1.. -1]
+      item.nmName = item.name[dots[0].len()+1.. ^1]
     else:
       echod("[Suggest] Unknown module name for ", item.name)
       item.nmName = item.name
@@ -112,11 +112,11 @@ proc clear*(suggest: var TSuggestDialog) =
 
 proc show*(suggest: var TSuggestDialog) =
   if not suggest.shown and suggest.items.len() > 0:
-    var selection = suggest.treeview.getSelection()  
+    var selection = suggest.treeview.getSelection()
     var selectedPath = tree_path_new_first()
     selection.selectPath(selectedPath)
     suggest.treeview.scroll_to_cell(selectedPath, nil, false, 0.5, 0.5)
-  
+
     suggest.shown = true
     suggest.dialog.show()
 
@@ -135,13 +135,13 @@ proc getFilter(win: var MainWin): string =
   var cursor: TTextIter
   # Get the iter at the cursor position.
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
-  
+
   # Search backwards for a dot.
   var startMatch: TTextIter
   var endMatch: TTextIter
   var matched = (addr(cursor)).backwardSearch(".", TEXT_SEARCH_TEXT_ONLY,
                                 addr(startMatch), addr(endMatch), nil)
-  
+
   if not matched:
     return ""
   result = $((addr(endMatch)).getText(addr(cursor)))
@@ -219,36 +219,36 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
     win.tempStuff.autoComplete.startTask(sugCmd, onSugLine, onSugExit,
         onSugError)
 
-proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool = 
+proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
   ## Starts the request for suggest items asynchronously.
-  
+
   var aporiaTmpDir = getTempDir() / "aporia"
   var prefixDir = aporiaTmpDir / "suggest"
-  
+
   # Create /tmp/aporia if it doesn't exist
   if not existsDir(aporiaTmpDir):
     createDir(prefixDir)
-  
+
   # Remove and Create /tmp/aporia/suggest
   if existsDir(prefixDir):
     # Empty this to get rid of stale files.
     removeDir(prefixDir)
   # Recreate it.
   createDir(prefixDir)
-  
+
   if tab.filename != "":
     var currentTabSplit = splitFile(tab.filename)
-  
+
     var (projectFile, projectCfgFile) = findProjectFile(tab.filename.splitFile.dir)
     let splitPrjF = splitFile(projectFile)
     if projectFile != "":
       projectFile = prefixDir / splitPrjF.name & splitPrjF.ext
     else:
       projectFile = prefixDir / currentTabSplit.name & currentTabSplit.ext
-    
+
     echod("[Suggest] Project cfg file is: ", projectCfgFile)
     echod("[Suggest] Project file is: ", projectFile)
-    
+
     # Save tabs that are in the same directory as the file
     # being suggested to /tmp/aporia/suggest
     var alreadySaved: seq[string] = @[]
@@ -263,22 +263,22 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
           # - Get the text from the TextView.
           var startIter: TTextIter
           t.buffer.getStartIter(addr(startIter))
-          
+
           var endIter: TTextIter
           t.buffer.getEndIter(addr(endIter))
-          
+
           var text = t.buffer.getText(addr(startIter), addr(endIter), false)
-          
+
           # - Save it.
           f.write(text)
-          
+
           alreadySaved.add(t.filename)
         else:
           win.statusbar.setTemp("Unable to save one or more files for suggest. Suggest may not be activated.", UrgError, 5000)
           echod("[Warning] Unable to save one or more files, suggest won't work.")
           return false
         f.close()
-    
+
     # Copy other .nim files in the directory of the file in which suggest was
     # activated to /tmp/aporia/suggest.
     for nimfile in walkFiles(tab.filename.splitFile.dir / "*.nim"):
@@ -286,12 +286,12 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
         var fileSplit = splitFile(nimfile)
         echod("Copying ", prefixDir / fileSplit.name & fileSplit.ext)
         copyFile(nimfile, prefixDir / fileSplit.name & fileSplit.ext)
-    
+
     # Copy over the config file, if it exists.
     if projectCfgFile != "":
       let fileSplit = splitFile(projectCfgFile)
       copyFile(projectCfgFile, prefixDir / fileSplit.name & fileSplit.ext)
-    
+
     var file = prefixDir / currentTabSplit.name & ".nim"
     asyncGetSuggest(win, file, projectFile, prefixDir, start.getLine(),
                     start.getLineOffset())
@@ -305,12 +305,12 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
       # - Get the text from the TextView.
       var startIter: TTextIter
       tab.buffer.getStartIter(addr(startIter))
-      
+
       var endIter: TTextIter
       tab.buffer.getEndIter(addr(endIter))
-      
+
       var text = tab.buffer.getText(addr(startIter), addr(endIter), false)
-      
+
       # - Save it.
       f.write(text)
     else:
@@ -319,9 +319,9 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     f.close()
     asyncGetSuggest(win, filename, "", prefixDir, start.getLine(),
                         start.getLineOffset())
-  
+
   win.suggest.currentFilter = ""
-  
+
   return true
 
 proc asyncGetDef*(win: var MainWin, file: string,
@@ -375,12 +375,12 @@ proc insertSuggestItem*(win: var MainWin, index: int) =
   # Remove the part that was already typed
   if win.suggest.currentFilter != "":
     assert(normalize(name).startsWith(win.suggest.currentFilter))
-    name = name[win.suggest.currentFilter.len() .. -1]
-  
+    name = name[win.suggest.currentFilter.len() .. ^1]
+
   # We have the name of the item. Now insert it into the TextBuffer.
   var currentTab = win.sourceViewTabs.getCurrentPage()
   win.tabs[currentTab].buffer.insertAtCursor(name, int32(len(name)))
-  
+
   # Now hide the suggest dialog and clear the items.
   win.suggest.hide()
   win.suggest.clear()
@@ -458,7 +458,7 @@ proc showTooltip*(win: var MainWin, tab: Tab, item: TSuggestItem,
   var markup = "<i>" & escapePango(item.nimType) & "</i>"
   if item.docs != "":
     markup.add("\n\n" & item.docs.rstToPango)
-  
+
   win.suggest.tooltipLabel.setMarkup(markup)
   var cursor: TTextIter
   # Get the iter at the cursor position.
@@ -478,12 +478,12 @@ proc showTooltip*(win: var MainWin, tab: Tab, item: TSuggestItem,
   win.suggest.tooltip.resize(1, 1) # Reset the window size. Kinda hackish D:
   win.suggest.tooltip.move(x, y)
   win.suggest.tooltip.show()
-  
+
   tab.sourceView.grabFocus()
   assert(tab.sourceView.isFocus())
 
 # -- Signals
-proc treeView_RowActivated(tv: PTreeView, path: PTreePath, 
+proc treeView_RowActivated(tv: PTreeView, path: PTreePath,
             column: PTreeViewColumn, win: ptr MainWin) {.cdecl.} =
   var index = path.getIndices()[]
   if win.suggest.items.len() > index:
@@ -511,7 +511,7 @@ proc onFocusIn(widget: PWidget, ev: PEvent, win: ptr MainWin) {.cdecl.} =
 # -- GUI
 proc createSuggestDialog*(win: var MainWin) =
   ## Creates the suggest dialog, it does not show it.
-  
+
   #win.suggest.dialog = dialogNew()
   win.suggest.dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
 
@@ -526,16 +526,16 @@ proc createSuggestDialog*(win: var MainWin) =
   #win.suggest.dialog.actionArea.hide()
   #win.suggest.dialog.vbox.remove(win.suggest.dialog.actionArea)
   #echo(win.suggest.dialog.vbox.spacing)
-  
+
   # Properties
   win.suggest.dialog.setDefaultSize(250, 150)
-  
+
   win.suggest.dialog.setTransientFor(win.w)
   win.suggest.dialog.setDecorated(false)
   win.suggest.dialog.setSkipTaskbarHint(true)
   discard win.suggest.dialog.signalConnect("focus-in-event",
       SIGNAL_FUNC(onFocusIn), addr(win))
-  
+
   # TreeView & TreeModel
   # -- ScrolledWindow
   var scrollWindow = scrolledWindowNew(nil, nil)
@@ -548,14 +548,14 @@ proc createSuggestDialog*(win: var MainWin) =
   #win.suggest.treeView.setHasTooltip(true)
   #win.suggest.treeView.setTooltipColumn(3)
   scrollWindow.add(win.suggest.treeView)
-  
+
   discard win.suggest.treeView.signalConnect("row-activated",
               SIGNAL_FUNC(treeView_RowActivated), addr(win))
-              
+
   var selection = win.suggest.treeview.getSelection()
   discard selection.gsignalConnect("changed",
               GCallback(treeView_SelectChanged), addr(win))
-  
+
   var textRenderer = cellRendererTextNew()
   # Renderer is number 0. That's why we count from 1.
   var textColumn   = treeViewColumnNewWithAttributes("Title", textRenderer,
@@ -567,7 +567,7 @@ proc createSuggestDialog*(win: var MainWin) =
   assert(listStore != nil)
   win.suggest.treeview.setModel(liststore)
   win.suggest.treeView.show()
-  
+
   # -- Append some items.
   #win.addSuggestItem("Test!", "<b>Tes</b>t!")
   #win.addSuggestItem("Test2!", "Test2!", "#ff0000")
@@ -583,18 +583,18 @@ proc createSuggestDialog*(win: var MainWin) =
   win.suggest.tooltip.setSkipTaskbarHint(true)
   win.suggest.tooltip.setDecorated(false)
   win.suggest.tooltip.setDefaultSize(250, 450)
-  
+
   discard win.suggest.tooltip.signalConnect("focus-in-event",
     SIGNAL_FUNC(onFocusIn), addr(win))
-  
+
   var tpVBox = vboxNew(false, 0)
   win.suggest.tooltip.add(tpVBox)
   tpVBox.show()
-  
+
   var tpHBox = hboxNew(false, 0)
   tpVBox.packStart(tpHBox, false, false, 7)
   tpHBox.show()
-  
+
   win.suggest.tooltipLabel = labelNew("")
   win.suggest.tooltipLabel.setLineWrap(true)
   tpHBox.packStart(win.suggest.tooltipLabel, false, false, 5)
