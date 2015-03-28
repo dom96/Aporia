@@ -393,7 +393,7 @@
           o_?(r|R)\b
         </define-regex>
         
-				<define-regex id="cmd-call-opt-ops">((\~|\!|\@|\$|\%|\^|&amp;|\?|/)+)?</define-regex>
+				<define-regex id="cmd-call-opt-ops">((\~|\!|\@|\$|\%|\^|\?|/)+)?</define-regex>
 				
         <!--
         NOTE: The order here is important! Changing the order will cause multiple things to highlight incorrectly.
@@ -403,7 +403,7 @@
           <end>\b</end>
           <include>
             <context id="prop-calls" style-ref="call">
-              <match>\b[a-z]\w*\b(?=\s*\%{cmd-call-opt-ops}(\(|"|')|\s+\%{cmd-call-opt-ops}\b)</match>
+              <match>\b[a-z]\w*\b(?=\s*((\[.*\]\s*)?\(|"|')|\s+\%{cmd-call-opt-ops}\b)</match>
             </context>
             <context id="prop-names" style-ref="prop">
               <match>\b[a-z]\w*\b</match>
@@ -420,7 +420,7 @@
         </context>
         
         <context id="calls" style-ref="call" extend-parent="false">
-          <match>\b[a-z]\w*\b(?=(\s*\()|"|')</match>
+          <match>\b[a-z]\w*\b(?=(\s*(\[.*\]\s*)?\()|"|')</match>
         </context>
         
       </include>
