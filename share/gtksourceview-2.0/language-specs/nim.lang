@@ -311,6 +311,7 @@
           <keyword>d_?(i|I)_?(s|S)_?(c|C)_?(a|A)_?(r|R)_?(d|D)</keyword>
           <keyword>d_?(i|I)_?(s|S)_?(t|T)_?(i|I)_?(n|N)_?(c|C)_?(t|T)</keyword>
           <keyword>d_?(i|I)_?(v|V)</keyword>
+          <keyword>d_?(o|O)</keyword>
           <keyword>e_?(l|L)_?(i|I)_?(f|F)</keyword>
           <keyword>e_?(l|L)_?(s|S)_?(e|E)</keyword>
           <keyword>e_?(n|N)_?(d|D)</keyword>
@@ -413,7 +414,7 @@
         </context>
         
         <context id="commands" style-ref="keyword" extend-parent="false">
-          <match>\b[a-z]\w*\b(?=(\s*"|\s*'|\s+\b(?!\%{cmd-call-exceptions})))</match>
+          <match>\b[a-z]\w*\b(?=\s+((\~|\!|\@|\$|\%|\^|&amp;|\\|\?|/)+)?("|'|\b(?!\%{cmd-call-exceptions})))</match>
         </context>
         
         <context id="calls" style-ref="call" extend-parent="false">
