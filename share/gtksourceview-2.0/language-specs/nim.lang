@@ -393,6 +393,8 @@
           o_?(r|R)\b
         </define-regex>
         
+				<define-regex id="cmd-call-opt-ops">((\~|\!|\@|\$|\%|\^|&amp;|\?|/)+)?</define-regex>
+				
         <!--
         NOTE: The order here is important! Changing the order will cause multiple things to highlight incorrectly.
         -->
@@ -401,7 +403,7 @@
           <end>\b</end>
           <include>
             <context id="prop-calls" style-ref="call">
-              <match>\b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b)</match>
+              <match>\b[a-z]\w*\b(?=\s*\%{cmd-call-opt-ops}(\(|"|')|\s+\%{cmd-call-opt-ops}\b)</match>
             </context>
             <context id="prop-names" style-ref="prop">
               <match>\b[a-z]\w*\b</match>
@@ -414,11 +416,11 @@
         </context>
         
         <context id="commands" style-ref="keyword" extend-parent="false">
-          <match>\b[a-z]\w*\b(?=\s+((\~|\!|\@|\$|\%|\^|&amp;|\\|\?|/)+)?("|'|\b(?!\%{cmd-call-exceptions})))</match>
+          <match>\b[a-z]\w*\b(?=\s+\%{cmd-call-opt-ops}("|'|\b(?!\%{cmd-call-exceptions})))</match>
         </context>
         
         <context id="calls" style-ref="call" extend-parent="false">
-          <match>\b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b(?!\%{cmd-call-exceptions}))</match>
+          <match>\b[a-z]\w*\b(?=(\s*\()|"|')</match>
         </context>
         
       </include>
