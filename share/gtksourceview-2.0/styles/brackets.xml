@@ -24,7 +24,7 @@
   <color name="keyword"    value="#446FBD"/>
   <color name="literal"    value="#F18900"/>
   
-  <color name="call"       value="#738D00"/>
+  <color name="prop"       value="#738D00"/>
   
   <!-- GUI styles -->
   <style name="text" foreground="default" background="background"/>
@@ -72,8 +72,7 @@
   <style name="nim:typedecl" foreground="default" bold="true"/>
   <style name="nim:procdecl" foreground="default" bold="true"/>
   <style name="nim:operator" foreground="keyword"/>
-  <style name="nim:pragma" foreground="keyword"/>
   <style name="nim:prop" foreground="prop"/>
-  <style name="nim:call" foreground="call"/>
+  <style name="nim:call" foreground="keyword"/>
 
 </style-scheme>
