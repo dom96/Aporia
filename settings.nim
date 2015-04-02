@@ -1,6 +1,6 @@
 #
 #
-#            Aporia - Nimrod IDE
+#            Aporia - Nim IDE
 #        (c) Copyright 2011 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
@@ -155,14 +155,14 @@ var
   keyRunCheckEdit: PEntry 
   
   # Tools:
-  nimrodEdit, custom1Edit, custom2Edit, custom3Edit: PEntry
+  nimEdit, custom1Edit, custom2Edit, custom3Edit: PEntry
   
 proc initTools(settingsTabs: PNotebook) =
   var t = vboxNew(false, 5)
   discard settingsTabs.appendPage(t, labelNew("Tools"))
   t.show()
   
-  nimrodEdit = addTextEdit(t, "Nimrod", win.globalSettings.nimrodCmd)
+  nimEdit = addTextEdit(t, "Nim", win.globalSettings.nimCmd)
   custom1Edit = addTextEdit(t, "Custom Command 1", win.globalSettings.customCmd1)
   custom2Edit = addTextEdit(t, "Custom Command 2", win.globalSettings.customCmd2)
   custom3Edit = addTextEdit(t, "Custom Command 3", win.globalSettings.customCmd3)
@@ -431,7 +431,7 @@ proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   win.globalSettings.keyRunCheck = StrToKey($keyRunCheckEdit.getText())
     
   # Tools:
-  win.globalSettings.nimrodCmd = $nimrodEdit.getText()
+  win.globalSettings.nimCmd = $nimEdit.getText()
   win.globalSettings.customCmd1 = $custom1Edit.getText()
   win.globalSettings.customCmd2 = $custom2Edit.getText()
   win.globalSettings.customCmd3 = $custom3Edit.getText()

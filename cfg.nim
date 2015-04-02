@@ -1,6 +1,6 @@
 #
 #
-#            Aporia - Nimrod IDE
+#            Aporia - Nim IDE
 #        (c) Copyright 2011 Dominik Picheta
 #
 #    See the file "copying.txt", included in this
@@ -37,14 +37,14 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.toolBarVisible = true
   result.autoIndent = true
   result.compileSaveAll = false
-  result.nimrodCmd = "$findExe(nimrod) c --listFullPaths $#"
+  result.nimCmd = "$findExe(nim) c --listFullPaths $#"
   result.customCmd1 = ""
   result.customCmd2 = ""
   result.customCmd3 = ""
   result.singleInstancePort = 55679
   result.showCloseOnAllTabs = false
   result.compileUnsavedSave = true
-  result.nimrodPath = ""
+  result.nimPath = ""
   result.wrapMode = WrapNone
   result.scrollPastBottom = false
   result.singleInstance = true
@@ -176,7 +176,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyVal("restoreTabs", $settings.restoreTabs)
     f.writeKeyVal("activateErrorTabOnErrors", $settings.activateErrorTabOnErrors)
-    f.writeKeyValRaw("nimrodPath", $settings.nimrodPath)
+    f.writeKeyValRaw("nimPath", $settings.nimPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
     f.writeKeyVal("wrapMode",
       case settings.wrapMode
@@ -189,7 +189,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("scrollPastBottom", $settings.scrollPastBottom)
     f.writeKeyVal("compileSaveAll", $settings.compileSaveAll)
     
-    f.writeKeyVal("nimrodCmd", settings.nimrodCmd)
+    f.writeKeyVal("nimCmd", settings.nimCmd)
     f.writeKeyVal("customCmd1", settings.customCmd1)
     f.writeKeyVal("customCmd2", settings.customCmd2)
     f.writeKeyVal("customCmd3", settings.customCmd3)
@@ -276,7 +276,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "bottompanelvisible": result.a.bottomPanelVisible = isTrue(e.value)
       of "winwidth": result.a.winWidth = int32(e.value.parseInt())
       of "winheight": result.a.winHeight = int32(e.value.parseInt())
-      of "nimrodcmd": result.g.nimrodCmd = e.value
+      of "nimcmd", "nimrodcmd": result.g.nimCmd = e.value
       of "customcmd1": result.g.customCmd1 = e.value
       of "customcmd2": result.g.customCmd2 = e.value
       of "customcmd3": result.g.customCmd3 = e.value
@@ -295,8 +295,8 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
         result.a.lastSelectedTab = e.value
       of "compileunsavedsave":
         result.g.compileUnsavedSave = isTrue(e.value)
-      of "nimrodpath":
-        result.g.nimrodPath = e.value
+      of "nimpath", "nimrodpath":
+        result.g.nimPath = e.value
       else:
         cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
@@ -386,7 +386,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "activateerrortabonerrors": result.activateErrorTabOnErrors = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
       of "compilesaveall": result.compileSaveAll = isTrue(e.value)
-      of "nimrodcmd": result.nimrodCmd = e.value
+      of "nimcmd", "nimrodcmd": result.nimCmd = e.value
       of "customcmd1": result.customCmd1 = e.value
       of "customcmd2": result.customCmd2 = e.value
       of "customcmd3": result.customCmd3 = e.value
@@ -420,8 +420,8 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "keyruncustomcommand3": result.keyRunCustomCommand3 = StrToKey(e.value)
       of "keyruncheck": result.keyRunCheck = StrToKey(e.value)
             
-      of "nimrodpath":
-        result.nimrodPath = e.value
+      of "nimpath", "nimrodpath":
+        result.nimPath = e.value
       of "wrapmode":
         case e.value.normalize
         of "none":
