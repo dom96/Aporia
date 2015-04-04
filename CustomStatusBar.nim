@@ -3,7 +3,7 @@ import gtk2, glib2, times, strutils
 type
   TStatusKind = enum
     StatusPerm, StatusTemp, StatusProgress
-  
+
   TUrgency* = enum
     UrgNormal, UrgError, UrgSuccess
 
@@ -39,25 +39,25 @@ proc initCustomStatusBar*(mainBox: PBox): PCustomStatusBar =
   ## Creates a new custom status bar.
   new(result)
   result.hbox = hboxNew(false, 0)
-  
+
   result.statusLabel = labelNew("Ready")
   result.hbox.packStart(result.statusLabel, false, false, 5)
   result.statusLabel.show()
-  
+
   result.progressbar = progressBarNew()
   result.hbox.packStart(result.progressbar, false, false, 5)
-  
+
   result.docInfoLabel = labelNew("Ln: 0 Col: 0")
   result.hbox.packEnd(result.docInfoLabel, false, false, 64)
   result.docInfoLabel.show()
-  
+
   mainBox.packStart(result.hbox, false, false, 3)
   result.hbox.show()
 
   result.status = defaultStatus()
   result.statuses = @[]
 
-proc restorePrevious*(bar: PCustomStatusBar)
+proc restorePrevious*(bar: PCustomStatusBar) {.gcsafe.}
 proc setStatus(bar: PCustomStatusBar, st: TStatus) =
   if bar == nil:
     echo("[Warning] CustomStatusBar is not yet initialised. SetStatus failed.")
@@ -89,7 +89,7 @@ proc setStatus(bar: PCustomStatusBar, st: TStatus) =
   if st.kind == StatusTemp:
     # Priority has to be high, otherwise the proc fails to be executed in some
     # cases.
-    let tid = gTimeoutAddFull(GPriorityHigh, 500, 
+    let tid = gTimeoutAddFull(GPriorityHigh, 500,
       proc (barP: pointer): bool {.cdecl.} =
         let b = cast[PCustomStatusBar](barP)
         if b.status.kind == StatusTemp:
@@ -125,7 +125,7 @@ proc setTemp*(bar: PCustomStatusBar, text: string, urgency: TUrgency, timeout: i
   st.startTime = epochTime()
   setStatus(bar, st)
   result = TStatusID(st.startTime)
-  
+
 proc setProgress*(bar: PCustomStatusBar, text: string): TStatusID {.discardable.} =
   ## Shows the ``bar.progressbar``.
   ##
@@ -163,7 +163,7 @@ proc restorePrevious*(bar: PCustomStatusBar) =
     # We don't want the current status added to bar.statuses, setStatus adds it
     # so pop it here.
     discard bar.statuses.pop()
-    
+
 proc setDocInfo*(bar: PCustomStatusBar, line, col: int) =
   bar.docInfoLabel.setText("Ln: " & $line & " Col: " & $col)
 
