@@ -405,6 +405,7 @@
             <context id="prop-calls" style-ref="call">
               <match>\b[a-z]\w*\b(?=\s*((\[.*\]\s*)?\(|"|')|\s+\%{cmd-call-opt-ops}\b)</match>
             </context>
+            <context ref="types"/>
             <context id="prop-names" style-ref="prop">
               <match>\b[a-z]\w*\b</match>
             </context>
