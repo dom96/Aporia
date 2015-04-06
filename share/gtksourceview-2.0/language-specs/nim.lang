@@ -381,20 +381,22 @@
           <keyword>[A-Z]\w*</keyword>
         </context>
         
-        <define-regex id="cmd-call-exceptions" extended="true">
-          a_?(n|N)_?(d|D)\b|
-          a_?(s|S)\b|
-          e_?(l|L)_?(s|S)_?(e|E)\b|
-          i_?(n|N)\b|
-          i_?(s|S)\b|
-          i_?(s|S)_?(n|N)_?(o|O)_?(t|T)\b|
-          n_?(o|O)_?(t|T)_?(i|I)_?(n|N)\b|
-          o_?(f|F)\b|
-          o_?(r|R)\b
+        <define-regex id="cmd-call-space" extended="true">
+          \s+
+          ((-|\~|\!|\@|\$|\%|\^|\?|/)+)?
+          ("|'|\(|\[|\{|\b(?!
+            a_?(n|N)_?(d|D)\b|
+            a_?(s|S)\b|
+            e_?(l|L)_?(s|S)_?(e|E)\b|
+            i_?(n|N)\b|
+            i_?(s|S)\b|
+            i_?(s|S)_?(n|N)_?(o|O)_?(t|T)\b|
+            n_?(o|O)_?(t|T)_?(i|I)_?(n|N)\b|
+            o_?(f|F)\b|
+            o_?(r|R)\b
+          )
         </define-regex>
         
-				<define-regex id="cmd-call-opt-ops">((\~|\!|\@|\$|\%|\^|\?|/)+)?</define-regex>
-				
         <!--
         NOTE: The order here is important! Changing the order will cause multiple things to highlight incorrectly.
         -->
@@ -403,7 +405,7 @@
           <end>\b</end>
           <include>
             <context id="prop-calls" style-ref="call">
-              <match>\b[a-z]\w*\b(?=\s*((\[.*\]\s*)?\(|"|')|\s+\%{cmd-call-opt-ops}\b)</match>
+              <match>\b[a-z]\w*\b(?=\s*((\[.*\]\s*)?\(|"|')|\%{cmd-call-space}))</match>
             </context>
             <context ref="types"/>
             <context id="prop-names" style-ref="prop">
@@ -417,7 +419,7 @@
         </context>
         
         <context id="commands" style-ref="keyword" extend-parent="false">
-          <match>\b[a-z]\w*\b(?=\s+\%{cmd-call-opt-ops}("|'|\b(?!\%{cmd-call-exceptions})))</match>
+          <match>\b[a-z]\w*\b(?=\%{cmd-call-space}))</match>
         </context>
         
         <context id="calls" style-ref="call" extend-parent="false">
