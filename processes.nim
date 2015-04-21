@@ -116,7 +116,9 @@ proc parseError(err: string, res: var TError) =
   res.column = ""
   var colInt = -1
   i += parseInt(err, colInt, i)
-  res.column = $colInt
+  # NOTE: Aporia numbers colums from 0,
+  # but Nim diagnostics column numbers start from 1
+  res.column = $(max(0, colInt-1))
   inc(i) # Skip )
   i += skipWhitespace(err, i)
   var theType = ""
