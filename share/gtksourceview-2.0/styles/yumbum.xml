@@ -103,6 +103,8 @@
   <style name="def:special-constant" foreground="white"/>
    
   <style name="nim:pascal" foreground="purp2"/>
+  <style name="nim:typedecl" foreground="white" bold="true"/>
+  <style name="nim:procdecl" foreground="white" bold="true"/>
   
   <style name="diff:added-line" foreground="lime"/>
   <style name="diff:removed-line" foreground="magenta"/>

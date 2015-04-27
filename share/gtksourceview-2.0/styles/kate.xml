@@ -85,6 +85,8 @@
 
   <!-- Language specific styles -->
   <style name="nim:pascal"                  foreground="dark-blue"/>
+  <style name="nim:typedecl"                foreground="dark-blue" bold="true"/>
+  <style name="nim:procdecl"                foreground="dark-blue" bold="true"/>
   
   <style name="c:preprocessor"              foreground="dark-green"/>
   <style name="c:included-file"             use-style="c:preprocessor"/>

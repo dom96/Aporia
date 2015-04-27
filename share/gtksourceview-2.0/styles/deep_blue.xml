@@ -24,7 +24,7 @@
   <color name="keyword"    value="#C6D7F5"/>
   <color name="literal"    value="#FFA4A4"/>
   
-  <color name="operator"   value="#fcc"/>
+  <color name="pragma"     value="#fcc"/>
   <color name="prop"       value="#dadada"/>
   
   <!-- GUI styles -->
@@ -35,7 +35,7 @@
   <style name="secondary-cursor" foreground="default" bold="true"/>
   <style name="current-line" background="current-line"/>
   <style name="line-numbers" foreground="line-numbers" background="current-line"/>
-  <style name="bracket-match" foreground="operator" background="background" bold="true"/>
+  <style name="bracket-match" foreground="pragma" background="background" bold="true"/>
   <style name="bracket-mismatch" foreground="default" background="error" bold="true"/>
   <style name="search-match" foreground="background" background="search-match"/>
   
@@ -46,7 +46,7 @@
   <style name="def:module-handler" foreground="default" bold="true"/>
   <style name="def:statement" foreground="default" bold="true"/>
   <style name="def:function" foreground="default" bold="true"/>
-  <style name="def:preprocessor" foreground="search-match"/>
+  <style name="def:preprocessor" foreground="keyword"/>
   <style name="def:type" foreground="types"/>
   
   <style name="def:character" foreground="literal"/>
@@ -72,8 +72,8 @@
   <style name="nim:pascal" foreground="types"/>
   <style name="nim:typedecl" foreground="default" bold="true"/>
   <style name="nim:procdecl" foreground="default" bold="true"/>
-  <style name="nim:operator" foreground="operator"/>
-  <style name="nim:pragma" foreground="operator"/>
+  <style name="nim:operator" foreground="keyword"/>
+  <style name="nim:pragma" foreground="pragma"/>
   <style name="nim:prop" foreground="prop"/>
   <style name="nim:call" foreground="prop"/>
 

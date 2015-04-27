@@ -94,6 +94,8 @@
 
   <!-- Language specific -->
   <style name="nim:pascal"                  foreground="chameleon3"/>
+  <style name="nim:typedecl"                bold="true"/>
+  <style name="nim:procdecl"                bold="true"/>
   
   <style name="diff:added-line"             foreground="chameleon3"/>
   <style name="diff:removed-line"           foreground="plum3"/>

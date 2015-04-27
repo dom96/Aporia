@@ -47,7 +47,7 @@
   <style name="def:module-handler" foreground="default" bold="true"/>
   <style name="def:statement" foreground="default" bold="true"/>
   <style name="def:function" foreground="default" bold="true"/>
-  <style name="def:preprocessor" foreground="search-match"/>
+  <style name="def:preprocessor" foreground="keyword"/>
   <style name="def:type" foreground="types"/>
   
   <style name="def:character" foreground="literal"/>
@@ -71,8 +71,8 @@
   
   <!-- Language styles -->
   <style name="nim:pascal" foreground="types"/>
-  <style name="nim:typedecl" foreground="declare" bold="true"/>
-  <style name="nim:procdecl" foreground="declare" bold="true" italic="true"/>
+  <style name="nim:typedecl" foreground="declare"/>
+  <style name="nim:procdecl" foreground="declare"/>
   <style name="nim:operator" foreground="operator"/>
   <style name="nim:pragma" foreground="operator"/>
   <style name="nim:prop" foreground="prop"/>
