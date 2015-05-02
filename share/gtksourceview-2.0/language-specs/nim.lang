@@ -212,12 +212,14 @@
           <keyword>(s_?(t|T)_?(a|A)_?(t|T)_?(i|I)_?(c|C))(?=\s*\[)</keyword>
           <keyword>s_?(t|T)_?(m|M)_?(t|T)</keyword>
           <keyword>s_?(t|T)_?(r|R)_?(i|I)_?(n|N)_?(g|G)</keyword>
+          <keyword>t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)</keyword>
           <keyword>t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)_?(e|E)_?(s|S)_?(c|C)</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?8</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?1_?6</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?3_?2</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?6_?4</keyword>
+          <keyword>u_?(n|N)_?t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)</keyword>
           <keyword>v_?(a|A)_?(r|R)_?(a|A)_?(r|R)_?(g|G)_?(s|S)</keyword>
           <keyword>v_?(o|O)_?(i|I)_?(d|D)</keyword>
         </context>

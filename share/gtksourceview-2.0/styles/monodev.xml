@@ -14,7 +14,7 @@
   <!-- Colors -->
   <color name="default"       value="#444"/>
   <color name="background"    value="#fff"/>
-  <color name="current-line"  value="#f8f8f8"/>
+  <color name="current-line"  value="#f3f3f3"/>
   <color name="line-numbers"  value="#888"/>
   <color name="search-match"  value="#ffff00"/>
   <color name="error"         value="#ff0000"/>
