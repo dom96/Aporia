@@ -496,7 +496,6 @@ proc normalize*(le: TLineEnding, text: string, keepEmptyLines = false): string =
   result = ""
   var i = 0
   var wasNewline = true
-  var prevIndent = 0
   while true:
     case text[i]
     of ' ', '\t':
