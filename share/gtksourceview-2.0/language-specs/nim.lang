@@ -389,13 +389,18 @@
           ("|'|\(|\[|\{(?!\.)|\b(?!
             a_?(n|N)_?(d|D)\b|
             a_?(s|S)\b|
+            d_?(i|I)_?(v|V)\b|
+            e_?(l|L)_?(i|I)_?(f|F)\b|
             e_?(l|L)_?(s|S)_?(e|E)\b|
             i_?(n|N)\b|
             i_?(s|S)\b|
             i_?(s|S)_?(n|N)_?(o|O)_?(t|T)\b|
             n_?(o|O)_?(t|T)_?(i|I)_?(n|N)\b|
             o_?(f|F)\b|
-            o_?(r|R)\b
+            o_?(r|R)\b|
+            s_?(h|H)_?(l|L)\b|
+            s_?(h|H)_?(r|R)\b|
+            x_?(o|O)_?(r|R)\b
           )
         </define-regex>
 
