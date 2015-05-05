@@ -579,18 +579,15 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       # Get an iter behind by tab length.
       var startIter: TTextIter = endIter
       var skipForward = false
-      var lenToDel = 0
       for i in 0 .. <win.globalSettings.indentWidth:
         if backwardChar(addr startIter): # Can move back.
           if getChar(addr startIter).char != ' ':
-            discard forwardChar(addr startIter) # move forward again
+            discard forwardChar(addr startIter) # only want whitespace
             break
-          else:
-            lenToDel += 1
         else:
           skipForward = true
           break
-      if lenToDel > 1:
+      if getOffset(addr endIter) - getOffset(addr startIter) > 1:
         if not skipForward:
           discard forwardChar(addr startIter) # move forward because 'backspace' deletes 1 too
         tab.buffer.delete(addr startIter, addr endIter)
