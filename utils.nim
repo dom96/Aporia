@@ -502,11 +502,10 @@ proc normalize*(le: TLineEnding, text: string, keepEmptyLines = false): string =
       # peek and see if a newline follows:
       var j = i+1
       while text[j] in {' ', '\t'}: inc j
-      let jj = j-1
       if text[j] notin {'\L', '\C'} or (wasNewline and keepEmptyLines):
-        for k in i .. jj:
+        for k in i .. <j:
           result.add text[k]
-      i = jj
+      i = <j
     of '\L':
       wasNewline = true
       result.add(le.srepr("\L"))
