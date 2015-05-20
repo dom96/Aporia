@@ -261,7 +261,9 @@
             <context ref="brackets"/>
             <context ref="pascals"/>
             <context ref="props"/>
+            <!-- NOTE: Leave this out cause is messes up when command-statements follow type sections.
             <context ref="command-statements"/>
+            -->
             <context ref="commands"/>
             <context ref="calls"/>
           </include>
