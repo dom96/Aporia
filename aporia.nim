@@ -356,7 +356,7 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
                           userData: Pgpointer): gboolean =
   result = false
   var modifiers = acceleratorGetDefaultModMask()
-  
+
   if (event.state and modifiers) == CONTROL_MASK:
     # Ctrl pressed.
     case event.keyval
@@ -566,7 +566,7 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 
   of "backspace":
     let tab = win.tabs[getCurrentPage(win.sourceViewTabs)]
-    
+
     var endIter: TTextIter
     tab.buffer.getIterAtMark(addr endIter, getInsert(tab.buffer))
     let endOffset = getOffset(addr endIter)
@@ -574,7 +574,7 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
     var selectIter: TTextIter
     tab.buffer.getIterAtMark(addr selectIter, getSelectionBound(tab.buffer))
     let selectOffset = getOffset(addr selectIter)
-    
+
     if win.globalSettings.deleteByIndent and endOffset == selectOffset:
       # Get an iter behind by tab length.
       var startIter: TTextIter = endIter
@@ -591,7 +591,7 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         if not skipForward:
           discard forwardChar(addr startIter) # move forward because 'backspace' deletes 1 too
         tab.buffer.delete(addr startIter, addr endIter)
-    
+
     if win.globalSettings.suggestFeature and win.suggest.shown:
       # Get an iter one char behind.
       var startIter: TTextIter = endIter
