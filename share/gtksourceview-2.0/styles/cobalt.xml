@@ -105,6 +105,8 @@
   
   <!-- Nim Styles -->
   <style name="nim:pascal"                  foreground="teal_blue"/>
+  <style name="nim:typedecl"                foreground="white" bold="true"/>
+  <style name="nim:procdecl"                foreground="white" bold="true"/>
   
   <!-- C Styles -->
   <style name="c:preprocessor"              foreground="teal_blue" bold="true"/>

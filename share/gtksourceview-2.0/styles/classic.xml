@@ -72,6 +72,8 @@
 
   <!-- Language specific styles -->
   <style name="nim:pascal"                  foreground="green"/>
+  <style name="nim:typedecl"                bold="true"/>
+  <style name="nim:procdecl"                bold="true"/>
   
   <style name="diff:added-line"             foreground="#008B8B"/>
   <style name="diff:removed-line"           foreground="#6A5ACD"/>

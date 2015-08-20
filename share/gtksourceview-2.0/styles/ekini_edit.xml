@@ -107,5 +107,7 @@
   <style name="def:underlined" italic="true" underline="true"/>
  
   <style name="nim:pascal" foreground="go_get_it"/>
+  <style name="nim:typedecl" foreground="#fff" bold="true"/>
+  <style name="nim:procdecl" foreground="#fff" bold="true"/>
   
 </style-scheme>

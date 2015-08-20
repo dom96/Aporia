@@ -122,7 +122,7 @@
           ( (\d+)?\.\d+ | \d+\. ) |
           ( (\d+|(\d+)?\.\d+|\d+\.)[eE][+-]?\d+ )
         </define-regex>
-        
+
         <define-regex id="numbersuffix" extended="true">
           (\'[Ff]32|\'[Ff]64|\'[IiUu]8|\'[IiUu]16|\'[IiUu]32|\'[IiUu]64)
         </define-regex>
@@ -158,11 +158,11 @@
           <start>\{\.</start>
           <end>(\.|)\}</end>
         </context>
-        
+
         <context id="error" style-ref="error">
           <match>(\t|__+)</match>
         </context>
-        
+
         <context id="types" style-ref="type">
           <keyword>a_?(n|N)_?(y|Y)</keyword>
           <keyword>a_?(r|R)_?(r|R)_?(a|A)_?(y|Y)</keyword>
@@ -212,16 +212,22 @@
           <keyword>(s_?(t|T)_?(a|A)_?(t|T)_?(i|I)_?(c|C))(?=\s*\[)</keyword>
           <keyword>s_?(t|T)_?(m|M)_?(t|T)</keyword>
           <keyword>s_?(t|T)_?(r|R)_?(i|I)_?(n|N)_?(g|G)</keyword>
+          <keyword>t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)</keyword>
           <keyword>t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)_?(e|E)_?(s|S)_?(c|C)</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?8</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?1_?6</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?3_?2</keyword>
           <keyword>u_?(i|I)_?(n|N)_?(t|T)_?6_?4</keyword>
+          <keyword>u_?(n|N)_?t_?(y|Y)_?(p|P)_?(e|E)_?(d|D)</keyword>
           <keyword>v_?(a|A)_?(r|R)_?(a|A)_?(r|R)_?(g|G)_?(s|S)</keyword>
           <keyword>v_?(o|O)_?(i|I)_?(d|D)</keyword>
         </context>
-        
+
+        <!--
+        NOTE: The order here is important! The 'type-decls' context must appear BEFORE the 'proc-decls'
+        and 'keywords' contexts (and those that follow it). Otherwise type declarations will not highlight correctly.
+        -->
         <context id="type-decls">
           <start>^(\s*)(?=t_?(y|Y)_?(p|P)_?(e|E)\b)</start>
           <end>^(?!\s*$)(?!\%{1@start}\s)</end>
@@ -234,7 +240,7 @@
               <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
             </context>
             <context id="type-decl-names" style-ref="typedecl">
-              <match>(^\s*[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
+              <match>((^|\b)\s+[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
             </context>
             <context ref="multiline-double-quoted-string"/>
             <context ref="double-quoted-string"/>
@@ -260,7 +266,7 @@
             <context ref="calls"/>
           </include>
         </context>
-        
+
         <define-regex id="proc-keys" extended="true">
           c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)|
           f_?(u|U)_?(n|N)_?(c|C)_?|
@@ -269,7 +275,11 @@
           p_?(r|R)_?(o|O)_?(c|C)_?|
           t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)_?
         </define-regex>
-        
+
+        <!--
+        NOTE: The order here is important! The 'proc-decls' context must appear before the 'keywords'
+        context (and those that follow it). Otherwise proc declarations will not highlight correctly.
+        -->
         <context id="proc-decls" end-at-line-end="true">
           <start>\b(?=(\%{proc-keys})\b)</start>
           <end>(\b|\B)(?=(\*|\[|\(|\{|:|=)(?!`))</end>
@@ -285,9 +295,8 @@
             </context>
           </include>
         </context>
-        
+
         <context id="keywords" style-ref="keyword" extend-parent="false">
-          <keyword>c_?(o|O)_?(n|N)_?(c|C)_?(e|E)_?(p|P)_?(t|T)</keyword>
           <keyword>a_?(d|D)_?(d|D)_?(r|R)</keyword>
           <keyword>a_?(n|N)_?(d|D)</keyword>
           <keyword>a_?(s|S)</keyword>
@@ -297,12 +306,14 @@
           <keyword>b_?(r|R)_?(e|E)_?(a|A)_?(k|K)</keyword>
           <keyword>c_?(a|A)_?(s|S)_?(e|E)</keyword>
           <keyword>c_?(a|A)_?(s|S)_?(t|T)</keyword>
+          <keyword>c_?(o|O)_?(n|N)_?(c|C)_?(e|E)_?(p|P)_?(t|T)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(s|S)_?(t|T)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(t|T)_?(i|I)_?(n|N)_?(u|U)_?(e|E)</keyword>
           <keyword>c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)</keyword>
           <keyword>d_?(i|I)_?(s|S)_?(c|C)_?(a|A)_?(r|R)_?(d|D)</keyword>
           <keyword>d_?(i|I)_?(s|S)_?(t|T)_?(i|I)_?(n|N)_?(c|C)_?(t|T)</keyword>
           <keyword>d_?(i|I)_?(v|V)</keyword>
+          <keyword>d_?(o|O)</keyword>
           <keyword>e_?(l|L)_?(i|I)_?(f|F)</keyword>
           <keyword>e_?(l|L)_?(s|S)_?(e|E)</keyword>
           <keyword>e_?(n|N)_?(d|D)</keyword>
@@ -352,56 +363,79 @@
           <keyword>x_?(o|O)_?(r|R)</keyword>
           <keyword>y_?(i|I)_?(e|E)_?(l|L)_?(d|D)</keyword>
         </context>
-        
+
+        <!--
+        NOTE: The 'operators' and 'brackets' contexts order aren't so important.
+        Still, be careful about moving them around and test in many scenerios!
+        -->
         <context id="operators" style-ref="operator">
           <match>(\~|\!|\@|\$|\%|\^|&amp;|\*|\-|\+|\=|\||\\|:|;|&lt;|&gt;|,|\.\.+|\?|/)+</match>
         </context>
-        
+
         <context id="brackets" style-ref="bracket">
           <match>\(|\)|\[|\]|\{|\}</match>
         </context>
-        
+
+        <!--
+        NOTE: The 'pascals' context must appear after 'keywords' and the contexts that come before it.
+        -->
         <context id="pascals" style-ref="pascal">
           <keyword>[A-Z]\w*</keyword>
         </context>
-        
-        <define-regex id="cmd-call-exceptions" extended="true">
-          a_?(n|N)_?(d|D)\b|
-          a_?(s|S)\b|
-          e_?(l|L)_?(s|S)_?(e|E)\b|
-          i_?(n|N)\b|
-          i_?(s|S)\b|
-          i_?(s|S)_?(n|N)_?(o|O)_?(t|T)\b|
-          n_?(o|O)_?(t|T)_?(i|I)_?(n|N)\b|
-          o_?(f|F)\b|
-          o_?(r|R)\b
+
+        <define-regex id="cmd-call-space" extended="true">
+          \s+
+          ((-|`|\~|\!|\@|\$|\%|\^|\?|/)+)?
+          ("|'|\(|\[|\{(?!\.)|\b(?!
+            a_?(n|N)_?(d|D)\b|
+            a_?(s|S)\b|
+            e_?(l|L)_?(s|S)_?(e|E)\b|
+            i_?(n|N)\b|
+            i_?(s|S)\b|
+            i_?(s|S)_?(n|N)_?(o|O)_?(t|T)\b|
+            n_?(o|O)_?(t|T)_?(i|I)_?(n|N)\b|
+            o_?(f|F)\b|
+            o_?(r|R)\b
+          )
         </define-regex>
-        
+
+        <!--
+        NOTE: The order here is important! Changing the order will cause multiple things to highlight incorrectly.
+        -->
         <context id="props" end-at-line-end="true">
           <start>\.\s*\b</start>
           <end>\b</end>
           <include>
             <context id="prop-calls" style-ref="call">
-              <match>\b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b)</match>
+              <!--
+              NOTE: ATM the [] brackets are handled naively. Eg, 'list' in `item.list[i] = Foo[int]()` will get highlight
+              as a call, because the regex `\[.*\]` matchest anything between the brackets. Not sure how to fix...
+              -->
+              <match>\b[a-z]\w*\b(?=\s*((\[.*\]\s*)?\(|"|')|\%{cmd-call-space}))</match>
             </context>
+            <context ref="types"/>
             <context id="prop-names" style-ref="prop">
               <match>\b[a-z]\w*\b</match>
             </context>
           </include>
         </context>
-        
+
         <context id="command-statements" style-ref="keyword">
           <match>^\s*[a-z]\w*\b(?=:(?=\s*$))</match>
         </context>
-        
+
         <context id="commands" style-ref="keyword" extend-parent="false">
-          <match>\b[a-z]\w*\b(?=(\s*"|\s*'|\s+\b(?!\%{cmd-call-exceptions})))</match>
+          <match>\b[a-z]\w*\b(?=\%{cmd-call-space}))</match>
         </context>
-        
+
         <context id="calls" style-ref="call" extend-parent="false">
-          <match>\b[a-z]\w*\b(?=(\s*\(|\s*"|\s*')|\s+\b(?!\%{cmd-call-exceptions}))</match>
+          <!--
+          NOTE: ATM the [] brackets are handled naively. Eg, 'list' in `list[i] = Foo[int]()` will get highlight
+          as a call, because the regex `\[.*\]` matchest anything between the brackets. Not sure how to fix...
+          -->
+          <match>\b[a-z]\w*\b(?=(\s*(\[.*\]\s*)?\()|"|')</match>
         </context>
-        
+
       </include>
     </context>
   </definitions>

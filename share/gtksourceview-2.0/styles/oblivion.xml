@@ -102,6 +102,8 @@
 
   <!-- Language specific -->
   <style name="nim:pascal"                  foreground="chameleon1"/>
+  <style name="nim:typedecl"                foreground="aluminium2" bold="true"/>
+  <style name="nim:procdecl"                foreground="aluminium2" bold="true"/>
   
   <style name="diff:added-line"             foreground="butter2"/>
   <style name="diff:removed-line"           foreground="skyblue1"/>

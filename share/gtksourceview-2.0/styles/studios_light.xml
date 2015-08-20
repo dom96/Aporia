@@ -24,9 +24,8 @@
   <color name="keyword"    value="#0000ff"/>
   <color name="literal"    value="#a31515"/>
   
-  <color name="declare"    value="#000"/>
-  <color name="operator"   value="#0000ff"/>
   <color name="pragma"     value="#a3226d"/>
+  <color name="prop"       value="#234"/>
   
   <!-- GUI styles -->
   <style name="text" foreground="default" background="background"/>
@@ -36,7 +35,7 @@
   <style name="secondary-cursor" foreground="default" bold="true"/>
   <style name="current-line" background="current-line"/>
   <style name="line-numbers" foreground="line-numbers" background="current-line"/>
-  <style name="bracket-match" foreground="operator" background="background" bold="true"/>
+  <style name="bracket-match" foreground="keyword" background="background" bold="true"/>
   <style name="bracket-mismatch" foreground="default" background="error" bold="true"/>
   <style name="search-match" foreground="background" background="search-match"/>
   
@@ -47,7 +46,7 @@
   <style name="def:module-handler" foreground="default" bold="true"/>
   <style name="def:statement" foreground="default" bold="true"/>
   <style name="def:function" foreground="default" bold="true"/>
-  <style name="def:preprocessor" foreground="search-match"/>
+  <style name="def:preprocessor" foreground="keyword"/>
   <style name="def:type" foreground="types"/>
   
   <style name="def:character" foreground="literal"/>
@@ -71,11 +70,11 @@
   
   <!-- Language styles -->
   <style name="nim:pascal" foreground="types"/>
-  <style name="nim:typedecl" foreground="declare" bold="true"/>
-  <style name="nim:procdecl" foreground="declare" bold="true" italic="true"/>
-  <style name="nim:operator" foreground="operator"/>
+  <style name="nim:typedecl" foreground="default" bold="true"/>
+  <style name="nim:procdecl" foreground="default" bold="true"/>
+  <style name="nim:operator" foreground="prop"/>
   <style name="nim:pragma" foreground="pragma"/>
-  <style name="nim:prop" foreground="default"/>
-  <style name="nim:call" foreground="default" italic="true"/>
+  <style name="nim:prop" foreground="prop"/>
+  <style name="nim:call" foreground="prop"/>
 
 </style-scheme>
