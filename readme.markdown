@@ -28,6 +28,10 @@ Aporia.
 Installation instructions:
 
 ### Windows
+
+**Warning:** If you are on a 64bit version of Windows you must not compile Aporia using a 64 bit version of Nim.
+This is because there are no 64 bit GTK+ binaries available, see discussion [here](https://github.com/nim-lang/Aporia/issues/51).
+
 #### GTK+
 If you already have GTK+ on your system, you don't need to do anything. Just
 make sure GTK+ is in your PATH.
@@ -38,14 +42,14 @@ Make sure that the installer adds GTK+ to the PATH.
 #### GtkSourceView
 The GtkSourceView doesn't have an installer, however binaries are available 
 from [here](http://ftp.acc.umu.se/pub/gnome/binaries/win32/gtksourceview/ "GtkSourceView")
- ([win64](http://ftp.acc.umu.se/pub/gnome/binaries/win64/gtksourceview/ "GtkSourceView")). Just pick
+ (these are 32 bit only!). Just pick
 the latest version and download the archive then copy the files/folders
 in the archive into the 'bin' directory in gtk's directory
 (Most likely: ``C:\Program Files\GTK2-Runtime\bin``).
 #### libxml2-2
 GtkSourceView depends on libxml2-2. This should be downloaded from 
 [here](http://ftp.gnome.org/pub/GNOME/binaries/win32/dependencies/ "dependencies")
- ([win64](http://ftp.gnome.org/pub/GNOME/binaries/win64/dependencies/ "dependencies")).
+ (these are 32 bit only!).
 And the contents of it should be copied the same 'bin' directory as GtkSourceView above.
 The zip you are looking for is usually called ``libxml2_2.X.X-1_win32.zip``
 #### pcre
