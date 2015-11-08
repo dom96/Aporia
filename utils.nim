@@ -69,6 +69,8 @@ type
     keySaveFile*:          TShortcutKey
     keySaveFileAs*:        TShortcutKey
     keySaveAll*:           TShortcutKey
+    keyUndo*:              TShortcutKey
+    keyRedo*:              TShortcutKey
     keyCloseCurrentTab*:   TShortcutKey
     keyCloseAllTabs*:      TShortcutKey
     keyFind*:              TShortcutKey
