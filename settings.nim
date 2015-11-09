@@ -135,6 +135,8 @@ var
   keySaveFileEdit: PEntry
   keySaveFileAsEdit: PEntry
   keySaveAllEdit: PEntry
+  keyUndoEdit: PEntry
+  keyRedoEdit: PEntry
   keyCloseCurrentTabEdit: PEntry
   keyCloseAllTabsEdit: PEntry
   keyFindEdit: PEntry
@@ -411,6 +413,8 @@ proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   win.globalSettings.keySaveFile = StrToKey($keySaveFileEdit.getText())
   win.globalSettings.keySaveFileAs = StrToKey($keySaveFileAsEdit.getText())
   win.globalSettings.keySaveAll = StrToKey($keySaveAllEdit.getText())
+  win.globalSettings.keyUndo = StrToKey($keyUndoEdit.getText())
+  win.globalSettings.keyRedo = StrToKey($keyRedoEdit.getText())
   win.globalSettings.keyCloseCurrentTab = StrToKey($keyCloseCurrentTabEdit.getText())
   win.globalSettings.keyCloseAllTabs = StrToKey($keyCloseAllTabsEdit.getText())
   win.globalSettings.keyFind = StrToKey($keyFindEdit.getText())
@@ -483,6 +487,8 @@ proc entryKeyRelease(entry: PEntry, EventKey: PEventKey) {.cdecl.} =
     removeDuplicateShortcut(entry, keySaveFileEdit)
     removeDuplicateShortcut(entry, keySaveFileAsEdit)
     removeDuplicateShortcut(entry, keySaveAllEdit)
+    removeDuplicateShortcut(entry, keyUndoEdit)
+    removeDuplicateShortcut(entry, keyRedoEdit)
     removeDuplicateShortcut(entry, keyCloseCurrentTabEdit)
     removeDuplicateShortcut(entry, keyCloseAllTabsEdit)
     removeDuplicateShortcut(entry, keyFindEdit)
@@ -551,6 +557,8 @@ proc initShortcuts(settingsTabs: PNotebook) =
   keySaveFileEdit = addKeyEdit(VBox, "Save file", win.globalSettings.keySaveFile)
   keySaveFileAsEdit = addKeyEdit(VBox, "Save file as", win.globalSettings.keySaveFileAs)
   keySaveAllEdit = addKeyEdit(VBox, "Save all", win.globalSettings.keySaveAll)
+  keyUndoEdit = addKeyEdit(VBox, "Undo", win.globalSettings.keyUndo)
+  keyRedoEdit = addKeyEdit(VBox, "Redo", win.globalSettings.keyRedo)
   keyCloseCurrentTabEdit = addKeyEdit(VBox, "Close current tab", win.globalSettings.keyCloseCurrentTab)
   keyCloseAllTabsEdit = addKeyEdit(VBox, "Close all tabs", win.globalSettings.keyCloseAllTabs)
   keyFindEdit = addKeyEdit(VBox, "Find", win.globalSettings.keyFind)
@@ -582,8 +590,8 @@ proc showSettings*(aWin: var utils.MainWin) =
                     # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)
-  dialog.setDefaultSize(740, 530)
-  dialog.setSizeRequest(740, 530)
+  dialog.setDefaultSize(740, 595)
+  dialog.setSizeRequest(740, 595)
   dialog.setTransientFor(win.w)
   dialog.setTitle("Settings")
   dialog.setTypeHint(WINDOW_TYPE_HINT_DIALOG)
