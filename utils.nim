@@ -59,6 +59,8 @@ type
     scrollPastBottom*: bool # Whether to scroll past bottom.
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
+    keepEmptyLines*: bool # Whether the program keeps whitespace of empty lines
+    deleteByIndent*: bool # Weahter the program deletes whitespace by indentation chunks
     activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
     keyCommentLines*:      TShortcutKey
     keyDeleteLine*:        TShortcutKey
@@ -491,21 +493,26 @@ proc srepr(le: TLineEnding, auto: string): string =
   of leCRLF: "\c\L"
   of leAuto: auto
 
-proc normalize*(le: TLineEnding, text: string): string =
+proc normalize*(le: TLineEnding, text: string, keepEmptyLines = false): string =
   ## Normalizes newlines and strips trailing whitespace.
   result = ""
   var i = 0
+  var wasNewline = true
   while true:
     case text[i]
     of ' ', '\t':
       # peek and see if a newline follows:
       var j = i+1
       while text[j] in {' ', '\t'}: inc j
-      if text[j] in {'\L', '\C'}: i = j-1
-      else: result.add text[i]
+      if text[j] notin {'\L', '\C'} or (wasNewline and keepEmptyLines):
+        for k in i .. <j:
+          result.add text[k]
+      i = <j
     of '\L':
+      wasNewline = true
       result.add(le.srepr("\L"))
     of '\C':
+      wasNewline = true
       if text[i + 1] == '\L':
         result.add(le.srepr("\c\L"))
         i.inc
@@ -513,6 +520,7 @@ proc normalize*(le: TLineEnding, text: string): string =
         result.add(le.srepr("\c"))
     of '\0': return
     else:
+      wasNewline = false
       result.add text[i]
 
     i.inc

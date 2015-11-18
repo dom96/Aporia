@@ -169,7 +169,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
       config = true
 
     # Handle text before saving
-    text = win.tabs[tabNr].lineEnding.normalize(text)
+    text = win.tabs[tabNr].lineEnding.normalize(text, win.globalSettings.keepEmptyLines)
     win.tabs[tabNr].lineEnding.addExtraNL(text)
 
     # Save it to a file
@@ -565,12 +565,34 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         return key.toLower() != "period"
 
   of "backspace":
+    let tab = win.tabs[getCurrentPage(win.sourceViewTabs)]
+
+    var endIter: TTextIter
+    tab.buffer.getIterAtMark(addr endIter, getInsert(tab.buffer))
+    let endOffset = getOffset(addr endIter)
+
+    var selectIter: TTextIter
+    tab.buffer.getIterAtMark(addr selectIter, getSelectionBound(tab.buffer))
+    let selectOffset = getOffset(addr selectIter)
+
+    if win.globalSettings.deleteByIndent and endOffset == selectOffset:
+      # Get an iter behind by tab length.
+      var startIter: TTextIter = endIter
+      var skipForward = false
+      for i in 0 .. <win.globalSettings.indentWidth:
+        if backwardChar(addr startIter): # Can move back.
+          if getChar(addr startIter).char != ' ':
+            discard forwardChar(addr startIter) # only want whitespace
+            break
+        else:
+          skipForward = true
+          break
+      if getOffset(addr endIter) - getOffset(addr startIter) > 1:
+        if not skipForward:
+          discard forwardChar(addr startIter) # move forward because 'backspace' deletes 1 too
+        tab.buffer.delete(addr startIter, addr endIter)
+
     if win.globalSettings.suggestFeature and win.suggest.shown:
-      var current = win.sourceViewTabs.getCurrentPage()
-      var tab     = win.tabs[current]
-      var endIter: TTextIter
-      # Get the iter at the cursor position.
-      tab.buffer.getIterAtMark(addr(endIter), tab.buffer.getInsert())
       # Get an iter one char behind.
       var startIter: TTextIter = endIter
       if (addr(startIter)).backwardChar(): # Can move back.
@@ -820,7 +842,7 @@ proc addTab(name, filename: string, setCurrent: bool = true,
       nTab.lineEnding = detectLineEndings(fileTxt)
 
       # Normalize to LF to fix extra newline after copying issue on Windows.
-      fileTxt = normalize(leLf, fileTxt)
+      fileTxt = normalize(leLf, fileTxt, win.globalSettings.keepEmptyLines)
 
       # Read in the file.
       buffer.set_text(fileTxt, len(fileTxt).int32)

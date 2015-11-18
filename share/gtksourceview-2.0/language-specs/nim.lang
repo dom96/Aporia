@@ -53,6 +53,10 @@
     <style id="call"              _name="call"                  />
   </styles>
 
+  <!--
+  NOTE: Most contexts used within type-sections (which is the large majority of them) must be
+  'extend-parent="false"' in order for type-sections to properly sense the ending of the block.
+  -->
   <definitions>
     <context id="format" style-ref="format" extend-parent="false">
       <match>\$[^\$]\w*</match>
@@ -68,7 +72,7 @@
       </match>
     </context>
 
-    <context id="multiline-double-quoted-string" style-ref="multiline-string">
+    <context id="multiline-double-quoted-string" style-ref="multiline-string" extend-parent="false">
       <start>\"\"\"</start>
       <end>\"\"\"</end>
       <include>
@@ -76,7 +80,7 @@
       </include>
     </context>
 
-    <context id="double-quoted-string" style-ref="string" end-at-line-end="true">
+    <context id="double-quoted-string" style-ref="string" end-at-line-end="true" extend-parent="false">
       <start>"</start>
       <end>"</end>
       <include>
@@ -85,7 +89,7 @@
       </include>
     </context>
 
-    <context id="single-quoted-string" style-ref="string" end-at-line-end="true">
+    <context id="single-quoted-string" style-ref="string" end-at-line-end="true" extend-parent="false">
       <start>'</start>
       <end>'</end>
       <include>
@@ -94,7 +98,7 @@
       </include>
     </context>
 
-    <context id="double-quoted-raw-string" style-ref="string" end-at-line-end="true">
+    <context id="double-quoted-raw-string" style-ref="string" end-at-line-end="true" extend-parent="false">
       <start>[rR]"</start>
       <end>"</end>
       <include>
@@ -113,57 +117,59 @@
 
         <context ref="double-quoted-raw-string"/>
 
-        <context id="backticks" style-ref="backticks" end-at-line-end="true">
+        <context id="backticks" style-ref="backticks" end-at-line-end="true" extend-parent="false">
           <start>`</start>
           <end>`</end>
         </context>
 
+        <define-regex id="int">\d(_?\d)*</define-regex>
+
         <define-regex id="float" extended="true">
-          ( (\d+)?\.\d+ | \d+\. ) |
-          ( (\d+|(\d+)?\.\d+|\d+\.)[eE][+-]?\d+ )
+          ( (\%{int})?\.\%{int} | \%{int}\. ) |
+          ( (\%{int}|(\%{int})?\.\%{int}|\%{int}\.)[eE][+-]?\%{int} )
         </define-regex>
 
         <define-regex id="numbersuffix" extended="true">
           (\'[Ff]32|\'[Ff]64|\'[IiUu]8|\'[IiUu]16|\'[IiUu]32|\'[IiUu]64)
         </define-regex>
 
-        <context id="float" style-ref="floating-point">
+        <context id="float" style-ref="floating-point" extend-parent="false">
           <match>(?&lt;![\w\.])\%{float}(?![\w\.])(\%{numbersuffix})?</match>
         </context>
 
-        <context id="decimal" style-ref="decimal">
-          <match>(?&lt;![\w\.])([0-9][0-9]*)[lL]?(?![\w\.])(\%{numbersuffix})?</match>
+        <context id="decimal" style-ref="decimal" extend-parent="false">
+          <match>(?&lt;![\w\.])(\%{int})[lL]?(?![\w\.])(\%{numbersuffix})?</match>
         </context>
 
-        <context id="octal" style-ref="base-n-integer">
+        <context id="octal" style-ref="base-n-integer" extend-parent="false">
           <match>(?&lt;![\w\.])0[oc][0-7]+(?![\w\.])(\%{numbersuffix})?</match>
         </context>
 
-        <context id="hex" style-ref="base-n-integer">
+        <context id="hex" style-ref="base-n-integer" extend-parent="false">
           <match>(?&lt;![\w\.])0[xX][0-9A-Fa-f]+(?![\w\.])(\%{numbersuffix})?</match>
         </context>
 
-        <context id="boolean" style-ref="boolean">
+        <context id="boolean" style-ref="boolean" extend-parent="false">
           <keyword>f_?(a|A)_?(l|L)_?(s|S)_?(e|E)</keyword>
           <keyword>n_?(i|I)_?(l|L)</keyword>
           <keyword>t_?(r|R)_?(u|U)_?(e|E)</keyword>
         </context>
 
-        <context id="ml-pragma" style-ref="pragma">
+        <context id="ml-pragma" style-ref="pragma" extend-parent="false">
           <start>{\.\w+:\s?"""</start>
           <end>"""\.?}</end>
         </context>
 
-        <context id="pragma" style-ref="pragma">
+        <context id="pragma" style-ref="pragma" extend-parent="false">
           <start>\{\.</start>
           <end>(\.|)\}</end>
         </context>
 
-        <context id="error" style-ref="error">
+        <context id="error" style-ref="error" extend-parent="false">
           <match>(\t|__+)</match>
         </context>
 
-        <context id="types" style-ref="type">
+        <context id="types" style-ref="type" extend-parent="false">
           <keyword>a_?(n|N)_?(y|Y)</keyword>
           <keyword>a_?(r|R)_?(r|R)_?(a|A)_?(y|Y)</keyword>
           <keyword>a_?(u|U)_?(t|T)_?(o|O)</keyword>
@@ -225,22 +231,24 @@
         </context>
 
         <!--
-        NOTE: The order here is important! The 'type-decls' context must appear BEFORE the 'proc-decls'
+        NOTE: The order here is important! The 'type-section' context must appear BEFORE the 'proc-decl', 'type-decl'
         and 'keywords' contexts (and those that follow it). Otherwise type declarations will not highlight correctly.
         -->
-        <context id="type-decls">
-          <start>^(\s*)(?=t_?(y|Y)_?(p|P)_?(e|E)\b)</start>
-          <end>^(?!\s*$)(?!\%{1@start}\s)</end>
+        <define-regex id="type-key">\bt_?(y|Y)_?(p|P)_?(e|E)\b</define-regex>
+
+        <context id="type-section">
+          <start>^(\s*)(?=\%{type-key}\s*$)</start>
+          <end>^(?!\s*$)(?!\%{1@start}\s+)</end>
           <include>
-            <context id="type-decl-comments" style-ref="comment">
+            <context id="type-section-comments" style-ref="comment" extend-parent="false">
               <start>#.*</start>
               <end>$</end>
             </context>
-            <context id="type-decl-keywords" style-ref="keyword">
+            <context id="type-section-keywords" style-ref="keyword">
               <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
             </context>
-            <context id="type-decl-names" style-ref="typedecl">
-              <match>((^|\b)\s+[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=)</match>
+            <context id="type-section-names" style-ref="typedecl" extend-parent="false">
+              <match>(^\s+[a-zA-Z]\w*\b)(?=\s*(\*\s*)?(\[.*\]\s*)?(\{\..*\}\s*)?=(?=\s*([a-zA-Z]|$)))</match>
             </context>
             <context ref="multiline-double-quoted-string"/>
             <context ref="double-quoted-string"/>
@@ -267,6 +275,22 @@
           </include>
         </context>
 
+        <context id="type-decl" end-at-line-end="true">
+          <start>\b(?=(\%{type-key})\b)</start>
+          <end>(\b|\B)(?=(\*|\[|\(|\{|:|=)(?!`))</end>
+          <include>
+            <context id="type-decl-keys" style-ref="keyword">
+              <match>\b(\%{type-key})\b</match>
+            </context>
+            <context id="type-decl-names" style-ref="typedecl">
+              <match>\w+</match>
+            </context>
+            <context id="type-decl-ticnames" style-ref="typedecl">
+              <match>`.+`</match>
+            </context>
+          </include>
+        </context>
+
         <define-regex id="proc-keys" extended="true">
           c_?(o|O)_?(n|N)_?(v|V)_?(e|E)_?(r|R)_?(t|T)_?(e|E)_?(r|R)|
           f_?(u|U)_?(n|N)_?(c|C)_?|
@@ -277,10 +301,12 @@
         </define-regex>
 
         <!--
-        NOTE: The order here is important! The 'proc-decls' context must appear before the 'keywords'
+        NOTE: The order here is important! The 'proc-decl' context must appear before the 'keywords'
         context (and those that follow it). Otherwise proc declarations will not highlight correctly.
+
+        Also note that 'proc-decl' does not appear in 'type-section' and thus does not need 'extend-parent="false"'.
         -->
-        <context id="proc-decls" end-at-line-end="true">
+        <context id="proc-decl" end-at-line-end="true">
           <start>\b(?=(\%{proc-keys})\b)</start>
           <end>(\b|\B)(?=(\*|\[|\(|\{|:|=)(?!`))</end>
           <include>
@@ -319,6 +345,7 @@
           <keyword>e_?(n|N)_?(d|D)</keyword>
           <keyword>e_?(n|N)_?(u|U)_?(m|M)</keyword>
           <keyword>e_?(x|X)_?(c|C)_?(e|E)_?(p|P)_?(t|T)</keyword>
+          <keyword>e_?(x|X)_?(p|P)_?(o|O)_?(r|R)_?(t|T)</keyword>
           <keyword>f_?(i|I)_?(n|N)_?(a|A)_?(l|L)_?(l|L)_?(y|Y)</keyword>
           <keyword>f_?(o|O)_?(r|R)</keyword>
           <keyword>f_?(r|R)_?(o|O)_?(m|M)</keyword>
@@ -353,7 +380,9 @@
           <keyword>t_?(e|E)_?(m|M)_?(p|P)_?(l|L)_?(a|A)_?(t|T)_?(e|E)</keyword>
           <keyword>t_?(r|R)_?(y|Y)</keyword>
           <keyword>t_?(u|U)_?(p|P)_?(l|L)_?(e|E)</keyword>
+          <!-- NOTE: leave `type` keyword out as it's handled specifically above.
           <keyword>t_?(y|Y)_?(p|P)_?(e|E)</keyword>
+          -->
           <keyword>v_?(a|A)_?(r|R)</keyword>
           <keyword>w_?(h|H)_?(e|E)_?(n|N)</keyword>
           <keyword>w_?(h|H)_?(e|E)_?(r|R)_?(e|E)</keyword>
@@ -368,18 +397,18 @@
         NOTE: The 'operators' and 'brackets' contexts order aren't so important.
         Still, be careful about moving them around and test in many scenerios!
         -->
-        <context id="operators" style-ref="operator">
+        <context id="operators" style-ref="operator" extend-parent="false">
           <match>(\~|\!|\@|\$|\%|\^|&amp;|\*|\-|\+|\=|\||\\|:|;|&lt;|&gt;|,|\.\.+|\?|/)+</match>
         </context>
 
-        <context id="brackets" style-ref="bracket">
+        <context id="brackets" style-ref="bracket" extend-parent="false">
           <match>\(|\)|\[|\]|\{|\}</match>
         </context>
 
         <!--
         NOTE: The 'pascals' context must appear after 'keywords' and the contexts that come before it.
         -->
-        <context id="pascals" style-ref="pascal">
+        <context id="pascals" style-ref="pascal" extend-parent="false">
           <keyword>[A-Z]\w*</keyword>
         </context>
 
@@ -389,20 +418,26 @@
           ("|'|\(|\[|\{(?!\.)|\b(?!
             a_?(n|N)_?(d|D)\b|
             a_?(s|S)\b|
+            d_?(i|I)_?(v|V)\b|
+            e_?(l|L)_?(i|I)_?(f|F)\b|
             e_?(l|L)_?(s|S)_?(e|E)\b|
             i_?(n|N)\b|
             i_?(s|S)\b|
             i_?(s|S)_?(n|N)_?(o|O)_?(t|T)\b|
+            m_?(o|O)_?(d|D)\b|
             n_?(o|O)_?(t|T)_?(i|I)_?(n|N)\b|
             o_?(f|F)\b|
-            o_?(r|R)\b
+            o_?(r|R)\b|
+            s_?(h|H)_?(l|L)\b|
+            s_?(h|H)_?(r|R)\b|
+            x_?(o|O)_?(r|R)\b
           )
         </define-regex>
 
         <!--
         NOTE: The order here is important! Changing the order will cause multiple things to highlight incorrectly.
         -->
-        <context id="props" end-at-line-end="true">
+        <context id="props" end-at-line-end="true" extend-parent="false">
           <start>\.\s*\b</start>
           <end>\b</end>
           <include>
@@ -420,8 +455,8 @@
           </include>
         </context>
 
-        <context id="command-statements" style-ref="keyword">
-          <match>^\s*[a-z]\w*\b(?=:(?=\s*$))</match>
+        <context id="command-statements" style-ref="keyword" extend-parent="false">
+          <match>^\s*[a-z]\w*(?=\s*:\s*$)</match>
         </context>
 
         <context id="commands" style-ref="keyword" extend-parent="false">

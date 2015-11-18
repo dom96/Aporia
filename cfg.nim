@@ -49,6 +49,8 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.scrollPastBottom = false
   result.singleInstance = true
   result.restoreTabs = true
+  result.keepEmptyLines = false
+  result.deleteByIndent = false
   result.activateErrorTabOnErrors = false
   result.keyCommentLines      = TShortcutKey(keyval: KEY_slash, state: ControlMask)
   result.keyDeleteLine        = TShortcutKey(keyval: KEY_d, state: ControlMask)
@@ -79,7 +81,7 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.keyRunCustomCommand2 = TShortcutKey(keyval: KEY_F2, state: 0)
   result.keyRunCustomCommand3 = TShortcutKey(keyval: KEY_F3, state: 0)
   result.keyRunCheck          = TShortcutKey(keyval: KEY_F5, state: ControlMask)
-      
+
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
   f.write(sectionName)
@@ -108,25 +110,25 @@ proc writeKeyValRaw(f: TFile, key: string, val: string) =
 proc save(settings: TAutoSettings, win: var MainWin) =
   if not os.existsDir(os.getConfigDir() / "Aporia"):
     os.createDir(os.getConfigDir() / "Aporia")
-  
+
   var f: TFile
   if open(f, joinPath(os.getConfigDir(), "Aporia", "config.auto.ini"), fmWrite):
     var confInfo = "; Aporia automatically generated configuration file - Last modified: "
     confInfo.add($getTime())
     f.write(confInfo & "\n")
-    
+
     f.writeKeyVal("searchMethod", $int(settings.search))
     f.writeKeyVal("wrapAround", $settings.wrapAround)
     f.writeKeyVal("winMaximized", $settings.winMaximized)
     f.writeKeyVal("VPanedPos", settings.VPanedPos)
     f.writeKeyVal("winWidth", settings.winWidth)
     f.writeKeyVal("winHeight", settings.winHeight)
-    
+
     f.writeKeyVal("bottomPanelVisible", $settings.bottomPanelVisible)
     if settings.recentlyOpenedFiles.len() > 0:
       let frm = max(0, (settings.recentlyOpenedFiles.len-1)-19)
       let to  = settings.recentlyOpenedFiles.len()-1
-      f.writeKeyValRaw("recentlyOpenedFiles", 
+      f.writeKeyValRaw("recentlyOpenedFiles",
                     join(settings.recentlyOpenedFiles[frm..to], ";"))
 
     if win.tabs.len != 0:
@@ -141,7 +143,7 @@ proc save(settings: TAutoSettings, win: var MainWin) =
           # Kind of a messy way to save the cursor pos and filename.
           tabs.add(i.filename & "|" & $cursorPos & ";")
       f.write(tabs & "\"\n")
-    
+
       # Save currently selected tab
       var current = win.getCurrentTab()
       f.writeKeyValRaw("lastSelectedTab", win.tabs[current].filename)
@@ -150,7 +152,7 @@ proc save(settings: TAutoSettings, win: var MainWin) =
 proc save*(settings: TGlobalSettings) =
   if not os.existsDir(os.getConfigDir() / "Aporia"):
     os.createDir(os.getConfigDir() / "Aporia")
-  
+
   # Save the settings to file.
   var f: TFile
   if open(f, joinPath(os.getConfigDir(), "Aporia", "config.global.ini"), fmWrite):
@@ -163,7 +165,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("scheme", settings.colorSchemeID)
     f.writeKeyVal("indentWidth", settings.indentWidth)
     f.writeKeyVal("showLineNumbers", $settings.showLineNumbers)
-    f.writeKeyVal("highlightMatchingBrackets", 
+    f.writeKeyVal("highlightMatchingBrackets",
                   $settings.highlightMatchingBrackets)
     f.writeKeyVal("rightMargin", $settings.rightMargin)
     f.writeKeyVal("highlightCurrentLine", $settings.highlightCurrentLine)
@@ -177,6 +179,8 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("singleInstancePort", $int(settings.singleInstancePort))
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyVal("restoreTabs", $settings.restoreTabs)
+    f.writeKeyVal("keepEmptyLines", $settings.keepEmptyLines)
+    f.writeKeyVal("deleteByIndent", $settings.deleteByIndent)
     f.writeKeyVal("activateErrorTabOnErrors", $settings.activateErrorTabOnErrors)
     f.writeKeyValRaw("nimPath", $settings.nimPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
@@ -190,14 +194,14 @@ proc save*(settings: TGlobalSettings) =
     )
     f.writeKeyVal("scrollPastBottom", $settings.scrollPastBottom)
     f.writeKeyVal("compileSaveAll", $settings.compileSaveAll)
-    
+
     f.writeKeyVal("nimCmd", settings.nimCmd)
     f.writeKeyVal("customCmd1", settings.customCmd1)
     f.writeKeyVal("customCmd2", settings.customCmd2)
     f.writeKeyVal("customCmd3", settings.customCmd3)
-    
+
     f.writeSection("ShortcutKeys")
-    
+
     f.writeKeyVal("keyQuit", KeyToStr(settings.keyQuit))
     f.writeKeyVal("keyCommentLines", KeyToStr(settings.keyCommentLines))
     f.writeKeyVal("keydeleteline", KeyToStr(settings.keyDeleteLine))
@@ -227,7 +231,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("keyRunCustomCommand2", KeyToStr(settings.keyRunCustomCommand2))
     f.writeKeyVal("keyRunCustomCommand3", KeyToStr(settings.keyRunCustomCommand3))
     f.writeKeyVal("keyRunCheck", KeyToStr(settings.keyRunCheck))
-      
+
     f.close()
 
 proc save*(win: var MainWin) =
@@ -238,7 +242,7 @@ proc save*(win: var MainWin) =
     removeFile(os.getConfigDir() / "Aporia" / "config.ini")
 
 
-proc istrue(s: string): bool = 
+proc istrue(s: string): bool =
   result = cmpIgnoreStyle(s, "true") == 0
 
 proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
@@ -246,7 +250,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
   var filename = os.getConfigDir() / "Aporia" / "config.ini"
   var input = newFileStream(filename, fmRead)
   open(p, input, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
-  # It is important to initialize every field, because some fields may not 
+  # It is important to initialize every field, because some fields may not
   # be set in the configuration file:
   result.a = defaultAutoSettings()
   result.g = defaultGlobalSettings()
@@ -262,7 +266,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "scheme": result.g.colorSchemeID = e.value
       of "indentwidth": result.g.indentWidth = int32(e.value.parseInt())
       of "showlinenumbers": result.g.showLineNumbers = isTrue(e.value)
-      of "highlightmatchingbrackets": 
+      of "highlightmatchingbrackets":
         result.g.highlightMatchingBrackets = isTrue(e.value)
       of "rightmargin": result.g.rightMargin = isTrue(e.value)
       of "highlightcurrentline": result.g.highlightCurrentLine = isTrue(e.value)
@@ -292,7 +296,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: 
+            if count > 19:
               cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.a.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
@@ -317,7 +321,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
   var pAuto: TCfgParser
   var autoStream = newFileStream(filename, fmRead)
   open(pAuto, autoStream, filename)
-  # It is important to initialize every field, because some fields may not 
+  # It is important to initialize every field, because some fields may not
   # be set in the configuration file:
   while true:
     var e = next(pAuto)
@@ -341,7 +345,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: 
+            if count > 19:
               cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
@@ -374,7 +378,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "scheme": result.colorSchemeID = e.value
       of "indentwidth": result.indentWidth = int32(e.value.parseInt())
       of "showlinenumbers": result.showLineNumbers = isTrue(e.value)
-      of "highlightmatchingbrackets": 
+      of "highlightmatchingbrackets":
         result.highlightMatchingBrackets = isTrue(e.value)
       of "rightmargin": result.rightMargin = isTrue(e.value)
       of "highlightcurrentline": result.highlightCurrentLine = isTrue(e.value)
@@ -387,6 +391,8 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "singleinstanceport":
         result.singleInstancePort = int32(e.value.parseInt())
       of "restoretabs": result.restoreTabs = isTrue(e.value)
+      of "keepemptylines": result.keepEmptyLines = isTrue(e.value)
+      of "deletebyindent": result.deleteByIndent = isTrue(e.value)
       of "activateerrortabonerrors": result.activateErrorTabOnErrors = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
       of "compilesaveall": result.compileSaveAll = isTrue(e.value)
@@ -425,7 +431,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "keyruncustomcommand2": result.keyRunCustomCommand2 = StrToKey(e.value)
       of "keyruncustomcommand3": result.keyRunCustomCommand3 = StrToKey(e.value)
       of "keyruncheck": result.keyRunCheck = StrToKey(e.value)
-            
+
       of "nimpath", "nimrodpath":
         result.nimPath = e.value
       of "wrapmode":
@@ -448,7 +454,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       nil
   close(pGlobal)
 
-proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] = 
+proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
   if existsFile(os.getConfigDir() / "Aporia" / "config.ini"):
     return loadOld(cfgErrors, lastSession)
   else:
