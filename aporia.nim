@@ -158,7 +158,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     var text = $buffer.getText(addr(startIter), addr(endIter), false)
 
     var config = false
-    if path == os.getConfigDir() / "Aporia" / "config.global.ini":
+    if path == cfg.getConfigDir() / "config.global.ini":
       # If we are overwriting Aporia's config file. Validate it.
       cfgErrors = @[]
       var newSettings = cfg.loadGlobal(cfgErrors, newStringStream($text))
@@ -1792,7 +1792,7 @@ proc initTopMenu(mainBox: PBox) =
   EditMenu.createMenuItem("Raw Preferences",
     proc (i: PMenuItem, p: pointer) {.cdecl.} =
       try:
-        discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.global.ini"))
+        discard addTab("", cfg.getConfigDir() / "config.global.ini")
       except EIO:
         win.statusBar.setTemp(getCurrentExceptionMsg(), UrgError)
   )
