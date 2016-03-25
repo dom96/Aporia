@@ -1,0 +1,120 @@
+/* Copyright 2011-2013 elementary LLC.
+*
+* This file is part of the elementary GTK theme.
+*
+* The elementary GTK theme is free software: you can redistribute it
+* and/or modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation, either version 3 of the
+* License, or (at your option) any later version.
+*
+* The elementary GTK theme is distributed in the hope that it will be
+* useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+* Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along
+* with the elementary GTK theme. If not, see http://www.gnu.org/licenses/.
+*/
+
+
+
+/*************
+ * Statusbar *
+ ************/
+NautilusQueryEditor .toolbar {
+    padding-top: 3px;
+    padding-bottom: 4px;
+
+    border-width: 1px 0 0 0;
+    border-style: solid;
+    border-color: @theme_bg_color;
+    
+    background-color: mix(@theme_bg_color, @theme_base_color, 0.5);
+
+}
+GtkStatusbar {
+    padding: 5px;
+background-image: @transparent;
+    
+    -GtkStatusbar-shadow-type: none;
+}
+GraniteWidgetsStatusBar {
+    padding: 3px;
+color: #f3f3f3;
+    text-shadow: 0 1px alpha (#000, 0.4);
+    icon-shadow: 0 1px alpha (#000, 0.4);
+
+    background-image: linear-gradient(to bottom,
+                                 #4d5055,
+                                  #313539
+                                  );
+
+    border-style:solid;
+    border-width: 1px 0 0 0;
+    border-top-color: shade (#686868, 0.52);
+
+    box-shadow: inset 0 1px 0 0 alpha (#fff, 0.20);
+}
+GraniteWidgetsStatusBar GtkImage,
+ GraniteWidgetsStatusBar GtkLabel{
+    background-color: @transparent;
+    color: #f3f3f3;
+}
+
+/***********
+ * Popover *
+ **********/
+
+GraniteWidgetsPopOver {
+
+    -GraniteWidgetsPopOver-arrow-width: 21;
+    -GraniteWidgetsPopOver-arrow-height: 10;
+    -GraniteWidgetsPopOver-border-radius: 5px;
+    -GraniteWidgetsPopOver-border-width: 1;
+    -GraniteWidgetsPopOver-shadow-size: 12;
+    
+    border: 1px solid alpha (#000, 0.3);
+    margin: 0;
+}
+
+.popover_bg {
+    background-color: #333;
+
+    background-image: linear-gradient(to bottom,
+                                  alpha (#f9f9f9, 0.97),
+                                  alpha (#f9f9f9, 0.97) 80%,
+                                  alpha (#f9f9f9, 0.97)
+                                  );
+
+    border: 1px solid alpha (#000, 0.3);
+}
+
+GraniteWidgetsPopOver .sidebar.view,
+GraniteWidgetsPopOver * {
+    background-color: transparent;
+}
+
+GraniteWidgetsPopOver .button {
+    background-image: none;
+    background-color: transparent;    
+}
+
+GraniteWidgetsPopOver .button:active,
+GraniteWidgetsPopOver .button:hover:active {
+    background-image: none;
+    background-color: alpha (#000, 0.05);
+    border-color: shade (@base_color, 0.74);
+}
+
+.button.app {
+    border-width: 0;
+    border-radius: 5px;
+    box-shadow: none;
+}
+
+.app:hover {
+    background-color: alpha (#000, 0.08);
+}
+.app:focus {
+    background-color: alpha (#000, 0.20);
+}
