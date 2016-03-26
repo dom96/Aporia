@@ -8,7 +8,7 @@
 #
 
 import gtk2, gdk2, glib2, pango, os, tables
-import gtksourceview, utils, ShortcutUtils
+import gtksourceview, utils, cfg
 
 {.push callConv:cdecl.}
 
@@ -77,9 +77,9 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
   fontDialog.setTransientFor(win.w)
   discard fontDialog.dialogSetFontName(win.globalSettings.font)
   
-  discard fontDialog.okButton.gSignalConnect("clicked", 
+  discard fontDialog.okButton.gSignalConnect("clicked",
       G_CALLBACK(fontDialog_OK), fontDialog)
-  discard fontDialog.cancelButton.gSignalConnect("clicked", 
+  discard fontDialog.cancelButton.gSignalConnect("clicked",
       G_CALLBACK(fontDialog_Canc), fontDialog)
   
   # This will wait until the user responds(clicks the OK or Cancel button)
@@ -95,7 +95,7 @@ proc fontChangeBtn_Clicked(widget: PWidget, user_data: PEntry) =
     
   gtk2.POBject(fontDialog).destroy()
 
-proc addTextEdit(parent: PVBox, labelText, value: string): PEntry = 
+proc addTextEdit(parent: PVBox, labelText, value: string): PEntry =
   var label = labelNew("")
   label.setMarkup("<b>" & labelText & "</b>")
   
@@ -154,7 +154,7 @@ var
   keyRunCustomCommand1Edit: PEntry
   keyRunCustomCommand2Edit: PEntry
   keyRunCustomCommand3Edit: PEntry
-  keyRunCheckEdit: PEntry 
+  keyRunCheckEdit: PEntry
   
   # Tools:
   nimEdit, custom1Edit, custom2Edit, custom3Edit: PEntry
@@ -199,7 +199,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   
   # Change font button
   var fontChangeBtn = buttonNew("Change Font")
-  discard fontChangeBtn.gSignalConnect("clicked", 
+  discard fontChangeBtn.gSignalConnect("clicked",
     G_CALLBACK(fontChangeBtn_Clicked), fontEntry)
   fontEntryHBox.packEnd(fontChangeBtn, false, false, 10)
   fontChangeBtn.show()
@@ -222,7 +222,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   var schemeTree = treeviewNew()
   schemeTree.setHeadersVisible(false) # Make the headers invisible
   var selection = schemeTree.getSelection()
-  discard selection.gSignalConnect("changed", 
+  discard selection.gSignalConnect("changed",
     G_CALLBACK(schemesTreeView_onChanged), nil)
   var schemeTreeScrolled = scrolledWindowNew(nil, nil)
   # Make the scrollbars invisible by default
@@ -239,7 +239,7 @@ proc initFontsColors(settingsTabs: PNotebook) =
   schemeTree.show()
   
   var renderer = cellRendererTextNew()
-  var column = treeViewColumnNewWithAttributes("Schemes", 
+  var column = treeViewColumnNewWithAttributes("Schemes",
                                                renderer, "markup", 1, nil)
   discard schemeTree.appendColumn(column)
   # Add all the schemes available, to the TreeView
@@ -316,7 +316,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var indentWidthSpinButton = spinButtonNew(1.0, 24.0, 1.0)
   indentWidthSpinButton.setValue(win.globalSettings.indentWidth.toFloat())
-  discard indentWidthSpinButton.gSignalConnect("value-changed", 
+  discard indentWidthSpinButton.gSignalConnect("value-changed",
     G_CALLBACK(indentWidth_changed), nil)
   indentWidthHBox.packStart(indentWidthSpinButton, false, false, 0)
   indentWidthSpinButton.show()
@@ -328,7 +328,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var showLineNumsCheckBox = checkButtonNew("Show line numbers")
   showLineNumsCheckBox.setActive(win.globalSettings.showLineNumbers)
-  discard showLineNumsCheckBox.gSignalConnect("toggled", 
+  discard showLineNumsCheckBox.gSignalConnect("toggled",
     G_CALLBACK(showLineNums_Toggled), nil)
   showLineNumsHBox.packStart(showLineNumsCheckBox, false, false, 20)
   showLineNumsCheckBox.show()
@@ -340,7 +340,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var hlCurrLineCheckBox = checkButtonNew("Highlight selected line")
   hlCurrLineCheckBox.setActive(win.globalSettings.highlightCurrentLine)
-  discard hlCurrLineCheckBox.gSignalConnect("toggled", 
+  discard hlCurrLineCheckBox.gSignalConnect("toggled",
     G_CALLBACK(hlCurrLine_Toggled), nil)
   hlCurrLineHBox.packStart(hlCurrLineCheckBox, false, false, 20)
   hlCurrLineCheckBox.show()
@@ -352,7 +352,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var showMarginCheckBox = checkButtonNew("Show right margin")
   showMarginCheckBox.setActive(win.globalSettings.rightMargin)
-  discard showMarginCheckBox.gSignalConnect("toggled", 
+  discard showMarginCheckBox.gSignalConnect("toggled",
     G_CALLBACK(showMargin_Toggled), nil)
   showMarginHBox.packStart(showMarginCheckBox, false, false, 20)
   showMarginCheckBox.show()
@@ -364,7 +364,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var brackMatchCheckBox = checkButtonNew("Enable bracket matching")
   brackMatchCheckBox.setActive(win.globalSettings.highlightMatchingBrackets)
-  discard brackMatchCheckBox.gSignalConnect("toggled", 
+  discard brackMatchCheckBox.gSignalConnect("toggled",
     G_CALLBACK(brackMatch_Toggled), nil)
   brackMatchHBox.packStart(brackMatchCheckBox, false, false, 20)
   brackMatchCheckBox.show()
@@ -376,7 +376,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var autoIndentCheckBox = checkButtonNew("Enable auto indent")
   autoIndentCheckBox.setActive(win.globalSettings.autoIndent)
-  discard autoIndentCheckBox.gSignalConnect("toggled", 
+  discard autoIndentCheckBox.gSignalConnect("toggled",
     G_CALLBACK(autoIndent_Toggled), nil)
   autoIndentHBox.packStart(autoIndentCheckBox, false, false, 20)
   autoIndentCheckBox.show()
@@ -388,7 +388,7 @@ proc initEditor(settingsTabs: PNotebook) =
   
   var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature")
   suggestFeatureCheckBox.setActive(win.globalSettings.suggestFeature)
-  discard suggestFeatureCheckBox.gSignalConnect("toggled", 
+  discard suggestFeatureCheckBox.gSignalConnect("toggled",
     G_CALLBACK(suggestFeature_Toggled), nil)
   suggestFeatureHBox.packStart(suggestFeatureCheckBox, false, false, 20)
   suggestFeatureCheckBox.show()
@@ -404,35 +404,35 @@ proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   win.globalSettings.activateErrorTabOnErrors = activateErrorTabOnErrorsCheckBox.getActive()
   
   # Shortcuts:
-  win.globalSettings.keyQuit = StrToKey($keyQuitEdit.getText())
-  win.globalSettings.keyCommentLines = StrToKey($keyCommentLinesEdit.getText())
-  win.globalSettings.keyDeleteLine = StrToKey($keyDeleteLineEdit.getText())
-  win.globalSettings.keyDuplicateLines = StrToKey($keyDuplicateLinesEdit.getText())
-  win.globalSettings.keyNewFile = StrToKey($keyNewFileEdit.getText())
-  win.globalSettings.keyOpenFile = StrToKey($keyOpenFileEdit.getText())
-  win.globalSettings.keySaveFile = StrToKey($keySaveFileEdit.getText())
-  win.globalSettings.keySaveFileAs = StrToKey($keySaveFileAsEdit.getText())
-  win.globalSettings.keySaveAll = StrToKey($keySaveAllEdit.getText())
-  win.globalSettings.keyUndo = StrToKey($keyUndoEdit.getText())
-  win.globalSettings.keyRedo = StrToKey($keyRedoEdit.getText())
-  win.globalSettings.keyCloseCurrentTab = StrToKey($keyCloseCurrentTabEdit.getText())
-  win.globalSettings.keyCloseAllTabs = StrToKey($keyCloseAllTabsEdit.getText())
-  win.globalSettings.keyFind = StrToKey($keyFindEdit.getText())
-  win.globalSettings.keyReplace = StrToKey($keyReplaceEdit.getText())
-  win.globalSettings.keyFindNext = StrToKey($keyFindNextEdit.getText())
-  win.globalSettings.keyFindPrevious = StrToKey($keyFindPreviousEdit.getText())
-  win.globalSettings.keyGoToLine = StrToKey($keyGoToLineEdit.getText())
-  win.globalSettings.keyGoToDef = StrToKey($keyGoToDefEdit.getText())
-  win.globalSettings.keyToggleBottomPanel = StrToKey($keyToggleBottomPanelEdit.getText())
-  win.globalSettings.keyCompileCurrent = StrToKey($keyCompileCurrentEdit.getText())
-  win.globalSettings.keyCompileRunCurrent = StrToKey($keyCompileRunCurrentEdit.getText())
-  win.globalSettings.keyCompileProject = StrToKey($keyCompileProjectEdit.getText())
-  win.globalSettings.keyCompileRunProject = StrToKey($keyCompileRunProjectEdit.getText())
-  win.globalSettings.keyStopProcess = StrToKey($keyStopProcessEdit.getText())
-  win.globalSettings.keyRunCustomCommand1 = StrToKey($keyRunCustomCommand1Edit.getText())
-  win.globalSettings.keyRunCustomCommand2 = StrToKey($keyRunCustomCommand2Edit.getText())
-  win.globalSettings.keyRunCustomCommand3 = StrToKey($keyRunCustomCommand3Edit.getText())
-  win.globalSettings.keyRunCheck = StrToKey($keyRunCheckEdit.getText())
+  setShortcutIfValid($keyQuitEdit.getText(), win.globalSettings.keyQuit)
+  setShortcutIfValid($keyCommentLinesEdit.getText(), win.globalSettings.keyCommentLines)
+  setShortcutIfValid($keyDeleteLineEdit.getText(), win.globalSettings.keyDeleteLine)
+  setShortcutIfValid($keyDuplicateLinesEdit.getText(), win.globalSettings.keyDuplicateLines)
+  setShortcutIfValid($keyNewFileEdit.getText(), win.globalSettings.keyNewFile)
+  setShortcutIfValid($keyOpenFileEdit.getText(), win.globalSettings.keyOpenFile)
+  setShortcutIfValid($keySaveFileEdit.getText(), win.globalSettings.keySaveFile)
+  setShortcutIfValid($keySaveFileAsEdit.getText(), win.globalSettings.keySaveFileAs)
+  setShortcutIfValid($keySaveAllEdit.getText(), win.globalSettings.keySaveAll)
+  setShortcutIfValid($keyUndoEdit.getText(), win.globalSettings.keyUndo)
+  setShortcutIfValid($keyRedoEdit.getText(), win.globalSettings.keyRedo)
+  setShortcutIfValid($keyCloseCurrentTabEdit.getText(), win.globalSettings.keyCloseCurrentTab)
+  setShortcutIfValid($keyCloseAllTabsEdit.getText(), win.globalSettings.keyCloseAllTabs)
+  setShortcutIfValid($keyFindEdit.getText(), win.globalSettings.keyFind)
+  setShortcutIfValid($keyReplaceEdit.getText(), win.globalSettings.keyReplace)
+  setShortcutIfValid($keyFindNextEdit.getText(), win.globalSettings.keyFindNext)
+  setShortcutIfValid($keyFindPreviousEdit.getText(), win.globalSettings.keyFindPrevious)
+  setShortcutIfValid($keyGoToLineEdit.getText(), win.globalSettings.keyGoToLine)
+  setShortcutIfValid($keyGoToDefEdit.getText(), win.globalSettings.keyGoToDef)
+  setShortcutIfValid($keyToggleBottomPanelEdit.getText(), win.globalSettings.keyToggleBottomPanel)
+  setShortcutIfValid($keyCompileCurrentEdit.getText(), win.globalSettings.keyCompileCurrent)
+  setShortcutIfValid($keyCompileRunCurrentEdit.getText(), win.globalSettings.keyCompileRunCurrent)
+  setShortcutIfValid($keyCompileProjectEdit.getText(), win.globalSettings.keyCompileProject)
+  setShortcutIfValid($keyCompileRunProjectEdit.getText(), win.globalSettings.keyCompileRunProject)
+  setShortcutIfValid($keyStopProcessEdit.getText(), win.globalSettings.keyStopProcess)
+  setShortcutIfValid($keyRunCustomCommand1Edit.getText(), win.globalSettings.keyRunCustomCommand1)
+  setShortcutIfValid($keyRunCustomCommand2Edit.getText(), win.globalSettings.keyRunCustomCommand2)
+  setShortcutIfValid($keyRunCustomCommand3Edit.getText(), win.globalSettings.keyRunCustomCommand3)
+  setShortcutIfValid($keyRunCheckEdit.getText(), win.globalSettings.keyRunCheck)
     
   # Tools:
   win.globalSettings.nimCmd = $nimEdit.getText()
@@ -442,7 +442,7 @@ proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   
   gtk2.PObject(dialog).destroy()
   
-proc addCheckBox(parent: PVBox, labelText: string, value: bool): PCheckButton = 
+proc addCheckBox(parent: PVBox, labelText: string, value: bool): PCheckButton =
   var Box = hboxNew(false, 0)
   parent.packStart(Box, false, false, 0)
   Box.show()
@@ -466,10 +466,10 @@ proc initGeneral(settingsTabs: PNotebook) =
   activateErrorTabOnErrorsCheckBox = addCheckBox(box, "Activate Error list tab on errors", win.globalSettings.activateErrorTabOnErrors)
   
   showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
-  discard showCloseOnAllTabsCheckBox.gSignalConnect("toggled", 
+  discard showCloseOnAllTabsCheckBox.gSignalConnect("toggled",
     G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
 
-proc removeDuplicateShortcut(entrySender: PEntry, entryToCheck: PEntry) = 
+proc removeDuplicateShortcut(entrySender: PEntry, entryToCheck: PEntry) =
   if entrySender != entryToCheck and $entrySender.getText() == $entryToCheck.getText():
     entryToCheck.setText("")
     
@@ -477,7 +477,12 @@ proc entryKeyRelease(entry: PEntry, EventKey: PEventKey) {.cdecl.} =
   if EventKey.keyval == KEY_Delete:
     entry.setText("")
   elif EventKey.keyval < 65505:
-    entry.setText(KeyToStr(TShortcutKey(keyval: EventKey.keyval, state: EventKey.state)))
+    let modMasks = MOD1_MASK or MOD2_MASK or MOD3_MASK or MOD4_MASK or
+        MOD5_MASK.guint
+    let shortcut = ShortcutKey(keyval: EventKey.keyval,
+        state: EventKey.state and (not modMasks))
+    if not shortcut.isValid(): return
+    entry.setText(getName(shortcut))
     removeDuplicateShortcut(entry, keyCommentLinesEdit)
     removeDuplicateShortcut(entry, keyDeleteLineEdit)
     removeDuplicateShortcut(entry, keyDuplicateLinesEdit)
@@ -508,21 +513,21 @@ proc entryKeyRelease(entry: PEntry, EventKey: PEventKey) {.cdecl.} =
     removeDuplicateShortcut(entry, keyRunCustomCommand3Edit)
     removeDuplicateShortcut(entry, keyRunCheckEdit)
         
-proc addKeyEdit(parent: PVBox, labelText: string, key: TShortcutKey): PEntry = 
+proc addKeyEdit(parent: PVBox, labelText: string, key: ShortcutKey): PEntry =
   var HBox = hboxNew(false, 0)
   parent.packStart(HBox, false, false, 0)
   HBox.show()
  
   var Label = labelNew(labelText)
   Label.setWidthChars(27)
-  Label.setAlignment(0, 0.5) 
+  Label.setAlignment(0, 0.5)
   HBox.packStart(Label, false, false, 5)
   Label.show()
     
   var entry = entryNew()
   entry.setEditable(false)
   entry.setWidthChars(16)
-  entry.setText(KeyToStr(key))
+  entry.setText(getName(key))
   discard entry.signalConnect("key-release-event", SIGNAL_FUNC(entryKeyRelease), nil)
   HBox.packStart(entry, false, false, 5)
   entry.show()
@@ -538,7 +543,7 @@ proc initShortcuts(settingsTabs: PNotebook) =
   HBox.show()
 
   var hint = labelNew("Use the Delete button to clear a shortcut. Changes will be active after restart")
-  hint.setAlignment(0, 0.5) 
+  hint.setAlignment(0, 0.5)
   hint.show()
   var Box2 = hboxNew(false, 0)
   VBox.packStart(Box2, false, false, 0)
@@ -571,7 +576,7 @@ proc initShortcuts(settingsTabs: PNotebook) =
   VBox.show()
 
   keyGoToLineEdit = addKeyEdit(VBox, "Go to line", win.globalSettings.keyGoToLine)
-  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", win.globalSettings.keyGoToDef)   
+  keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", win.globalSettings.keyGoToDef)
   keyQuitEdit = addKeyEdit(VBox, "Quit", win.globalSettings.keyQuit)
   keyToggleBottomPanelEdit = addKeyEdit(VBox, "Show/hide bottom panel", win.globalSettings.keyToggleBottomPanel)
   keyCompileCurrentEdit = addKeyEdit(VBox, "Compile current file", win.globalSettings.keyCompileCurrent)
@@ -622,11 +627,11 @@ proc showSettings*(aWin: var utils.MainWin) =
   bottomHBox.show()
   
   var closeBtn = buttonNewWithMnemonic("_Close")
-  discard closeBtn.gSignalConnect("clicked", 
+  discard closeBtn.gSignalConnect("clicked",
     G_CALLBACK(closeDialog), nil)
   bottomHBox.packEnd(closeBtn, false, false, 10)
   # Change the size of the close button
-  var rq1: TRequisition 
+  var rq1: TRequisition
   closeBtn.sizeRequest(addr(rq1))
   closeBtn.set_size_request(rq1.width + 10, rq1.height + 4)
   closeBtn.show()

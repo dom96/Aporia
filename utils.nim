@@ -14,7 +14,7 @@ from gdk2 import TRectangle, intersect, TColor, colorParse, TModifierType
 # Local imports:
 from CustomStatusBar import PCustomStatusBar, TStatusID
 
-import AboutDialog, ShortcutUtils
+import AboutDialog
 
 type
   TAutoSettings* = object # Settings which should not be set by the user manually
@@ -60,36 +60,39 @@ type
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
     activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
-    keyCommentLines*:      TShortcutKey
-    keyDeleteLine*:        TShortcutKey
-    keyDuplicateLines*:    TShortcutKey
-    keyQuit*:              TShortcutKey
-    keyNewFile*:           TShortcutKey
-    keyOpenFile*:          TShortcutKey
-    keySaveFile*:          TShortcutKey
-    keySaveFileAs*:        TShortcutKey
-    keySaveAll*:           TShortcutKey
-    keyUndo*:              TShortcutKey
-    keyRedo*:              TShortcutKey
-    keyCloseCurrentTab*:   TShortcutKey
-    keyCloseAllTabs*:      TShortcutKey
-    keyFind*:              TShortcutKey
-    keyReplace*:           TShortcutKey
-    keyFindNext*:          TShortcutKey
-    keyFindPrevious*:      TShortcutKey
-    keyGoToLine*:          TShortcutKey
-    keyGoToDef*:           TShortcutKey
-    keyToggleBottomPanel*: TShortcutKey
-    keyCompileCurrent*:    TShortcutKey
-    keyCompileRunCurrent*: TShortcutKey
-    keyCompileProject*:    TShortcutKey
-    keyCompileRunProject*: TShortcutKey
-    keyStopProcess*:       TShortcutKey
-    keyRunCustomCommand1*: TShortcutKey
-    keyRunCustomCommand2*: TShortcutKey
-    keyRunCustomCommand3*: TShortcutKey
-    keyRunCheck*:          TShortcutKey
+    keyCommentLines*:      ShortcutKey
+    keyDeleteLine*:        ShortcutKey
+    keyDuplicateLines*:    ShortcutKey
+    keyQuit*:              ShortcutKey
+    keyNewFile*:           ShortcutKey
+    keyOpenFile*:          ShortcutKey
+    keySaveFile*:          ShortcutKey
+    keySaveFileAs*:        ShortcutKey
+    keySaveAll*:           ShortcutKey
+    keyUndo*:              ShortcutKey
+    keyRedo*:              ShortcutKey
+    keyCloseCurrentTab*:   ShortcutKey
+    keyCloseAllTabs*:      ShortcutKey
+    keyFind*:              ShortcutKey
+    keyReplace*:           ShortcutKey
+    keyFindNext*:          ShortcutKey
+    keyFindPrevious*:      ShortcutKey
+    keyGoToLine*:          ShortcutKey
+    keyGoToDef*:           ShortcutKey
+    keyToggleBottomPanel*: ShortcutKey
+    keyCompileCurrent*:    ShortcutKey
+    keyCompileRunCurrent*: ShortcutKey
+    keyCompileProject*:    ShortcutKey
+    keyCompileRunProject*: ShortcutKey
+    keyStopProcess*:       ShortcutKey
+    keyRunCustomCommand1*: ShortcutKey
+    keyRunCustomCommand2*: ShortcutKey
+    keyRunCustomCommand3*: ShortcutKey
+    keyRunCheck*:          ShortcutKey
 
+  ShortcutKey* = object
+    keyval*: guint
+    state*: guint
 
   MainWin* = object
     # Widgets

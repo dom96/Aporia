@@ -9,13 +9,16 @@
 
 import utils, times, streams, parsecfg, strutils, os
 from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter,
-    WrapNone, WrapChar, WrapWord
+    WrapNone, WrapChar, WrapWord, acceleratorParse, acceleratorName,
+    acceleratorValid
 import gdk2
+import glib2
 from processes import addError
-import ShortcutUtils
 
 type
   ECFGParse* = object of E_Base
+
+const KEY_notSet = 0.guint
 
 proc defaultAutoSettings*(): TAutoSettings =
   result.search = SearchCaseInsens
@@ -28,7 +31,10 @@ proc defaultAutoSettings*(): TAutoSettings =
 proc defaultGlobalSettings*(): TGlobalSettings =
   result.selectHighlightAll = true
   result.searchHighlightAll = false
-  result.font = "Monospace 10"
+  when defined(macosx):
+    result.font = "Menlo 12"
+  else:
+    result.font = "Monospace 10"
   result.outputFont = "Monospace 10"
   result.colorSchemeID = "piekno"
   result.indentWidth = 2
@@ -50,36 +56,70 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.singleInstance = true
   result.restoreTabs = true
   result.activateErrorTabOnErrors = false
-  result.keyCommentLines      = TShortcutKey(keyval: KEY_slash, state: ControlMask)
-  result.keyDeleteLine        = TShortcutKey(keyval: KEY_d, state: ControlMask)
-  result.keyDuplicateLines    = TShortcutKey(keyval: KEY_unset, state: 0)
-  result.keyQuit              = TShortcutKey(keyval: KEY_q, state: ControlMask)
-  result.keyNewFile           = TShortcutKey(keyval: KEY_n, state: ControlMask)
-  result.keyOpenFile          = TShortcutKey(keyval: KEY_o, state: ControlMask)
-  result.keySaveFile          = TShortcutKey(keyval: KEY_s, state: ControlMask)
-  result.keySaveFileAs        = TShortcutKey(keyval: KEY_s, state: ControlMask or ShiftMask)
-  result.keySaveAll           = TShortcutKey(keyval: KEY_unset, state: ControlMask or ShiftMask)
-  result.keyUndo              = TShortcutKey(keyval: KEY_z, state: ControlMask)
-  result.keyRedo              = TShortcutKey(keyval: KEY_z, state: ControlMask or ShiftMask)
-  result.keyCloseCurrentTab   = TShortcutKey(keyval: KEY_w, state: ControlMask)
-  result.keyCloseAllTabs      = TShortcutKey(keyval: KEY_w, state: ControlMask or ShiftMask)
-  result.keyFind              = TShortcutKey(keyval: KEY_f, state: ControlMask)
-  result.keyReplace           = TShortcutKey(keyval: KEY_h, state: ControlMask)
-  result.keyFindNext          = TShortcutKey(keyval: KEY_unset, state: 0)
-  result.keyFindPrevious      = TShortcutKey(keyval: KEY_unset, state: 0)
-  result.keyGoToLine          = TShortcutKey(keyval: KEY_g, state: ControlMask)
-  result.keyGoToDef           = TShortcutKey(keyval: KEY_r, state: ControlMask or ShiftMask)
-  result.keyToggleBottomPanel = TShortcutKey(keyval: KEY_b, state: ControlMask or ShiftMask)
-  result.keyCompileCurrent    = TShortcutKey(keyval: KEY_F4, state: 0)
-  result.keyCompileRunCurrent = TShortcutKey(keyval: KEY_F5, state: 0)
-  result.keyCompileProject    = TShortcutKey(keyval: KEY_F8, state: 0)
-  result.keyCompileRunProject = TShortcutKey(keyval: KEY_F9, state: 0)
-  result.keyStopProcess       = TShortcutKey(keyval: KEY_F7, state: 0)
-  result.keyRunCustomCommand1 = TShortcutKey(keyval: KEY_F1, state: 0)
-  result.keyRunCustomCommand2 = TShortcutKey(keyval: KEY_F2, state: 0)
-  result.keyRunCustomCommand3 = TShortcutKey(keyval: KEY_F3, state: 0)
-  result.keyRunCheck          = TShortcutKey(keyval: KEY_F5, state: ControlMask)
-      
+  
+  when defined(macosx):
+    let mask: guint = MetaMask
+  else:
+    let mask: guint = ControlMask
+
+  result.keyCommentLines      = ShortcutKey(keyval: KEY_slash, state: mask)
+  result.keyDeleteLine        = ShortcutKey(keyval: KEY_d, state: mask)
+  result.keyDuplicateLines    = ShortcutKey(keyval: KEY_notSet, state: 0)
+  result.keyQuit              = ShortcutKey(keyval: KEY_q, state: mask)
+  result.keyNewFile           = ShortcutKey(keyval: KEY_n, state: mask)
+  result.keyOpenFile          = ShortcutKey(keyval: KEY_o, state: mask)
+  result.keySaveFile          = ShortcutKey(keyval: KEY_s, state: mask)
+  result.keySaveFileAs        = ShortcutKey(keyval: KEY_s, state: mask or ShiftMask)
+  result.keySaveAll           = ShortcutKey(keyval: KEY_notSet, state: mask or ShiftMask)
+  result.keyUndo              = ShortcutKey(keyval: KEY_z, state: mask)
+  result.keyRedo              = ShortcutKey(keyval: KEY_z, state: mask or ShiftMask)
+  result.keyCloseCurrentTab   = ShortcutKey(keyval: KEY_w, state: mask)
+  result.keyCloseAllTabs      = ShortcutKey(keyval: KEY_w, state: mask or ShiftMask)
+  result.keyFind              = ShortcutKey(keyval: KEY_f, state: mask)
+  result.keyReplace           = ShortcutKey(keyval: KEY_h, state: mask)
+  result.keyFindNext          = ShortcutKey(keyval: KEY_notSet, state: 0)
+  result.keyFindPrevious      = ShortcutKey(keyval: KEY_notSet, state: 0)
+  result.keyGoToLine          = ShortcutKey(keyval: KEY_g, state: mask)
+  result.keyGoToDef           = ShortcutKey(keyval: KEY_r, state: mask or ShiftMask)
+  result.keyToggleBottomPanel = ShortcutKey(keyval: KEY_b, state: mask or ShiftMask)
+  result.keyCompileCurrent    = ShortcutKey(keyval: KEY_F4, state: 0)
+  result.keyCompileRunCurrent = ShortcutKey(keyval: KEY_F5, state: 0)
+  result.keyCompileProject    = ShortcutKey(keyval: KEY_F8, state: 0)
+  result.keyCompileRunProject = ShortcutKey(keyval: KEY_F9, state: 0)
+  result.keyStopProcess       = ShortcutKey(keyval: KEY_F7, state: 0)
+  result.keyRunCustomCommand1 = ShortcutKey(keyval: KEY_F1, state: 0)
+  result.keyRunCustomCommand2 = ShortcutKey(keyval: KEY_F2, state: 0)
+  result.keyRunCustomCommand3 = ShortcutKey(keyval: KEY_F3, state: 0)
+  result.keyRunCheck          = ShortcutKey(keyval: KEY_F5, state: mask)
+
+proc getName*(shortcut: ShortcutKey): string =
+  return $acceleratorName(shortcut.keyval, shortcut.state)
+
+proc isValid*(shortcut: ShortcutKey): bool =
+  return acceleratorValid(shortcut.keyval, shortcut.state)
+
+proc toShortcutKey(shortcutStr: string): (ShortcutKey, bool) =
+  var key: guint = 0
+  var mods: guint = 0
+  acceleratorParse(shortcutStr, addr key, addr mods)
+  if key == 0 or mods == 0:
+    result[1] = false
+    return
+  if not acceleratorValid(key, mods):
+    result[1] = false
+    return
+  return (ShortcutKey(keyval: key, state: mods), true)
+
+proc toKeyOrDefault(shortcutStr: string, def: ShortcutKey): ShortcutKey =
+  let (key, valid) = toShortcutKey(shortcutStr)
+  if valid:
+    return key
+  else:
+    return def
+
+template setShortcutIfValid*(shortcutStr: string, shortcutField: untyped): stmt =
+  `shortcutField` = toKeyOrDefault(shortcutStr, `shortcutField`)
+
 proc writeSection(f: TFile, sectionName: string) =
   f.write("[")
   f.write(sectionName)
@@ -126,7 +166,7 @@ proc save(settings: TAutoSettings, win: var MainWin) =
     if settings.recentlyOpenedFiles.len() > 0:
       let frm = max(0, (settings.recentlyOpenedFiles.len-1)-19)
       let to  = settings.recentlyOpenedFiles.len()-1
-      f.writeKeyValRaw("recentlyOpenedFiles", 
+      f.writeKeyValRaw("recentlyOpenedFiles",
                     join(settings.recentlyOpenedFiles[frm..to], ";"))
 
     if win.tabs.len != 0:
@@ -163,7 +203,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("scheme", settings.colorSchemeID)
     f.writeKeyVal("indentWidth", settings.indentWidth)
     f.writeKeyVal("showLineNumbers", $settings.showLineNumbers)
-    f.writeKeyVal("highlightMatchingBrackets", 
+    f.writeKeyVal("highlightMatchingBrackets",
                   $settings.highlightMatchingBrackets)
     f.writeKeyVal("rightMargin", $settings.rightMargin)
     f.writeKeyVal("highlightCurrentLine", $settings.highlightCurrentLine)
@@ -198,35 +238,35 @@ proc save*(settings: TGlobalSettings) =
     
     f.writeSection("ShortcutKeys")
     
-    f.writeKeyVal("keyQuit", KeyToStr(settings.keyQuit))
-    f.writeKeyVal("keyCommentLines", KeyToStr(settings.keyCommentLines))
-    f.writeKeyVal("keydeleteline", KeyToStr(settings.keyDeleteLine))
-    f.writeKeyVal("keyduplicatelines", KeyToStr(settings.keyDuplicateLines))
-    f.writeKeyVal("keyNewFile", KeyToStr(settings.keyNewFile))
-    f.writeKeyVal("keyOpenFile", KeyToStr(settings.keyOpenFile))
-    f.writeKeyVal("keySaveFile", KeyToStr(settings.keySaveFile))
-    f.writeKeyVal("keySaveFileAs", KeyToStr(settings.keySaveFileAs))
-    f.writeKeyVal("keySaveAll", KeyToStr(settings.keySaveAll))
-    f.writeKeyVal("keyUndo", KeyToStr(settings.keyUndo))
-    f.writeKeyVal("keyRedo", KeyToStr(settings.keyRedo))
-    f.writeKeyVal("keyCloseCurrentTab", KeyToStr(settings.keyCloseCurrentTab))
-    f.writeKeyVal("keyCloseAllTabs", KeyToStr(settings.keyCloseAllTabs))
-    f.writeKeyVal("keyFind", KeyToStr(settings.keyFind))
-    f.writeKeyVal("keyReplace", KeyToStr(settings.keyReplace))
-    f.writeKeyVal("keyFindNext", KeyToStr(settings.keyFindNext))
-    f.writeKeyVal("keyFindPrevious", KeyToStr(settings.keyFindPrevious))
-    f.writeKeyVal("keyGoToLine", KeyToStr(settings.keyGoToLine))
-    f.writeKeyVal("keyGoToDef", KeyToStr(settings.keyGoToDef))
-    f.writeKeyVal("keyToggleBottomPanel", KeyToStr(settings.keyToggleBottomPanel))
-    f.writeKeyVal("keyCompileCurrent", KeyToStr(settings.keyCompileCurrent))
-    f.writeKeyVal("keyCompileRunCurrent", KeyToStr(settings.keyCompileRunCurrent))
-    f.writeKeyVal("keyCompileProject", KeyToStr(settings.keyCompileProject))
-    f.writeKeyVal("keyCompileRunProject", KeyToStr(settings.keyCompileRunProject))
-    f.writeKeyVal("keyStopProcess", KeyToStr(settings.keyStopProcess))
-    f.writeKeyVal("keyRunCustomCommand1", KeyToStr(settings.keyRunCustomCommand1))
-    f.writeKeyVal("keyRunCustomCommand2", KeyToStr(settings.keyRunCustomCommand2))
-    f.writeKeyVal("keyRunCustomCommand3", KeyToStr(settings.keyRunCustomCommand3))
-    f.writeKeyVal("keyRunCheck", KeyToStr(settings.keyRunCheck))
+    f.writeKeyValRaw("keyQuit", getName(settings.keyQuit))
+    f.writeKeyValRaw("keyCommentLines", getName(settings.keyCommentLines))
+    f.writeKeyValRaw("keydeleteline", getName(settings.keyDeleteLine))
+    f.writeKeyValRaw("keyduplicatelines", getName(settings.keyDuplicateLines))
+    f.writeKeyValRaw("keyNewFile", getName(settings.keyNewFile))
+    f.writeKeyValRaw("keyOpenFile", getName(settings.keyOpenFile))
+    f.writeKeyValRaw("keySaveFile", getName(settings.keySaveFile))
+    f.writeKeyValRaw("keySaveFileAs", getName(settings.keySaveFileAs))
+    f.writeKeyValRaw("keySaveAll", getName(settings.keySaveAll))
+    f.writeKeyValRaw("keyUndo", getName(settings.keyUndo))
+    f.writeKeyValRaw("keyRedo", getName(settings.keyRedo))
+    f.writeKeyValRaw("keyCloseCurrentTab", getName(settings.keyCloseCurrentTab))
+    f.writeKeyValRaw("keyCloseAllTabs", getName(settings.keyCloseAllTabs))
+    f.writeKeyValRaw("keyFind", getName(settings.keyFind))
+    f.writeKeyValRaw("keyReplace", getName(settings.keyReplace))
+    f.writeKeyValRaw("keyFindNext", getName(settings.keyFindNext))
+    f.writeKeyValRaw("keyFindPrevious", getName(settings.keyFindPrevious))
+    f.writeKeyValRaw("keyGoToLine", getName(settings.keyGoToLine))
+    f.writeKeyValRaw("keyGoToDef", getName(settings.keyGoToDef))
+    f.writeKeyValRaw("keyToggleBottomPanel", getName(settings.keyToggleBottomPanel))
+    f.writeKeyValRaw("keyCompileCurrent", getName(settings.keyCompileCurrent))
+    f.writeKeyValRaw("keyCompileRunCurrent", getName(settings.keyCompileRunCurrent))
+    f.writeKeyValRaw("keyCompileProject", getName(settings.keyCompileProject))
+    f.writeKeyValRaw("keyCompileRunProject", getName(settings.keyCompileRunProject))
+    f.writeKeyValRaw("keyStopProcess", getName(settings.keyStopProcess))
+    f.writeKeyValRaw("keyRunCustomCommand1", getName(settings.keyRunCustomCommand1))
+    f.writeKeyValRaw("keyRunCustomCommand2", getName(settings.keyRunCustomCommand2))
+    f.writeKeyValRaw("keyRunCustomCommand3", getName(settings.keyRunCustomCommand3))
+    f.writeKeyValRaw("keyRunCheck", getName(settings.keyRunCheck))
       
     f.close()
 
@@ -238,7 +278,7 @@ proc save*(win: var MainWin) =
     removeFile(os.getConfigDir() / "Aporia" / "config.ini")
 
 
-proc istrue(s: string): bool = 
+proc istrue(s: string): bool =
   result = cmpIgnoreStyle(s, "true") == 0
 
 proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
@@ -246,7 +286,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
   var filename = os.getConfigDir() / "Aporia" / "config.ini"
   var input = newFileStream(filename, fmRead)
   open(p, input, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
-  # It is important to initialize every field, because some fields may not 
+  # It is important to initialize every field, because some fields may not
   # be set in the configuration file:
   result.a = defaultAutoSettings()
   result.g = defaultGlobalSettings()
@@ -262,7 +302,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "scheme": result.g.colorSchemeID = e.value
       of "indentwidth": result.g.indentWidth = int32(e.value.parseInt())
       of "showlinenumbers": result.g.showLineNumbers = isTrue(e.value)
-      of "highlightmatchingbrackets": 
+      of "highlightmatchingbrackets":
         result.g.highlightMatchingBrackets = isTrue(e.value)
       of "rightmargin": result.g.rightMargin = isTrue(e.value)
       of "highlightcurrentline": result.g.highlightCurrentLine = isTrue(e.value)
@@ -292,7 +332,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: 
+            if count > 19:
               cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.a.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
@@ -317,7 +357,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
   var pAuto: TCfgParser
   var autoStream = newFileStream(filename, fmRead)
   open(pAuto, autoStream, filename)
-  # It is important to initialize every field, because some fields may not 
+  # It is important to initialize every field, because some fields may not
   # be set in the configuration file:
   while true:
     var e = next(pAuto)
@@ -341,7 +381,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
       of "recentlyopenedfiles":
         for count, file in pairs(e.value.split(';')):
           if file != "":
-            if count > 19: 
+            if count > 19:
               cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
@@ -374,7 +414,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "scheme": result.colorSchemeID = e.value
       of "indentwidth": result.indentWidth = int32(e.value.parseInt())
       of "showlinenumbers": result.showLineNumbers = isTrue(e.value)
-      of "highlightmatchingbrackets": 
+      of "highlightmatchingbrackets":
         result.highlightMatchingBrackets = isTrue(e.value)
       of "rightmargin": result.rightMargin = isTrue(e.value)
       of "highlightcurrentline": result.highlightCurrentLine = isTrue(e.value)
@@ -396,36 +436,36 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       of "customcmd3": result.customCmd3 = e.value
       of "compileunsavedsave":
         result.compileUnsavedSave = isTrue(e.value)
-      of "keyquit": result.keyQuit = StrToKey(e.value)
-      of "keycommentlines": result.keyCommentLines = StrToKey(e.value)
-      of "keydeleteline": result.keyDeleteLine = StrToKey(e.value)
-      of "keyduplicatelines": result.keyDuplicateLines = StrToKey(e.value)
-      of "keynewfile": result.keyNewFile = StrToKey(e.value)
-      of "keyopenfile": result.keyOpenFile = StrToKey(e.value)
-      of "keysavefile": result.keySaveFile = StrToKey(e.value)
-      of "keysavefileas": result.keySaveFileAs = StrToKey(e.value)
-      of "keysaveall": result.keySaveAll = StrToKey(e.value)
-      of "keyundo": result.keyUndo = StrToKey(e.value)
-      of "keyredo": result.keyRedo = StrToKey(e.value)
-      of "keyclosecurrenttab": result.keyCloseCurrentTab = StrToKey(e.value)
-      of "keyclosealltabs": result.keyCloseAllTabs = StrToKey(e.value)
-      of "keyfind": result.keyFind = StrToKey(e.value)
-      of "keyreplace": result.keyReplace = StrToKey(e.value)
-      of "keyfindnext": result.keyFindNext = StrToKey(e.value)
-      of "keyfindprevious": result.keyFindPrevious = StrToKey(e.value)
-      of "keygotoline": result.keyGoToLine = StrToKey(e.value)
-      of "keygotodef": result.keyGoToDef = StrToKey(e.value)
-      of "keytogglebottompanel": result.keyToggleBottomPanel = StrToKey(e.value)
-      of "keycompilecurrent": result.keyCompileCurrent = StrToKey(e.value)
-      of "keycompileruncurrent": result.keyCompileRunCurrent = StrToKey(e.value)
-      of "keycompileproject": result.keyCompileProject = StrToKey(e.value)
-      of "keycompilerunproject": result.keyCompileRunProject = StrToKey(e.value)
-      of "keystopprocess": result.keyStopProcess = StrToKey(e.value)
-      of "keyruncustomcommand1": result.keyRunCustomCommand1 = StrToKey(e.value)
-      of "keyruncustomcommand2": result.keyRunCustomCommand2 = StrToKey(e.value)
-      of "keyruncustomcommand3": result.keyRunCustomCommand3 = StrToKey(e.value)
-      of "keyruncheck": result.keyRunCheck = StrToKey(e.value)
-            
+      of "keyquit": result.keyQuit = toKeyOrDefault(e.value, result.keyQuit)
+      of "keycommentlines": result.keyCommentLines = toKeyOrDefault(e.value, result.keyCommentLines)
+      of "keydeleteline": result.keyDeleteLine = toKeyOrDefault(e.value, result.keyDeleteLine)
+      of "keyduplicatelines": result.keyDuplicateLines = toKeyOrDefault(e.value, result.keyDuplicateLines)
+      of "keynewfile": result.keyNewFile = toKeyOrDefault(e.value, result.keyNewFile)
+      of "keyopenfile": result.keyOpenFile = toKeyOrDefault(e.value, result.keyOpenFile)
+      of "keysavefile": result.keySaveFile = toKeyOrDefault(e.value, result.keySaveFile)
+      of "keysavefileas": result.keySaveFileAs = toKeyOrDefault(e.value, result.keySaveFileAs)
+      of "keysaveall": result.keySaveAll = toKeyOrDefault(e.value, result.keySaveAll)
+      of "keyundo": result.keyUndo = toKeyOrDefault(e.value, result.keyUndo)
+      of "keyredo": result.keyRedo = toKeyOrDefault(e.value, result.keyRedo)
+      of "keyclosecurrenttab": result.keyCloseCurrentTab = toKeyOrDefault(e.value, result.keyCloseCurrentTab)
+      of "keyclosealltabs": result.keyCloseAllTabs = toKeyOrDefault(e.value, result.keyCloseAllTabs)
+      of "keyfind": result.keyFind = toKeyOrDefault(e.value, result.keyFind)
+      of "keyreplace": result.keyReplace = toKeyOrDefault(e.value, result.keyReplace)
+      of "keyfindnext": result.keyFindNext = toKeyOrDefault(e.value, result.keyFindNext)
+      of "keyfindprevious": result.keyFindPrevious = toKeyOrDefault(e.value, result.keyFindPrevious)
+      of "keygotoline": result.keyGoToLine = toKeyOrDefault(e.value, result.keyGoToLine)
+      of "keygotodef": result.keyGoToDef = toKeyOrDefault(e.value, result.keyGoToDef)
+      of "keytogglebottompanel": result.keyToggleBottomPanel = toKeyOrDefault(e.value, result.keyToggleBottomPanel)
+      of "keycompilecurrent": result.keyCompileCurrent = toKeyOrDefault(e.value, result.keyCompileCurrent)
+      of "keycompileruncurrent": result.keyCompileRunCurrent = toKeyOrDefault(e.value, result.keyCompileRunCurrent)
+      of "keycompileproject": result.keyCompileProject = toKeyOrDefault(e.value, result.keyCompileProject)
+      of "keycompilerunproject": result.keyCompileRunProject = toKeyOrDefault(e.value, result.keyCompileRunProject)
+      of "keystopprocess": result.keyStopProcess = toKeyOrDefault(e.value, result.keyStopProcess)
+      of "keyruncustomcommand1": result.keyRunCustomCommand1 = toKeyOrDefault(e.value, result.keyRunCustomCommand1)
+      of "keyruncustomcommand2": result.keyRunCustomCommand2 = toKeyOrDefault(e.value, result.keyRunCustomCommand2)
+      of "keyruncustomcommand3": result.keyRunCustomCommand3 = toKeyOrDefault(e.value, result.keyRunCustomCommand3)
+      of "keyruncheck": result.keyRunCheck = toKeyOrDefault(e.value, result.keyRunCheck)
+
       of "nimpath", "nimrodpath":
         result.nimPath = e.value
       of "wrapmode":
@@ -448,7 +488,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
       nil
   close(pGlobal)
 
-proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] = 
+proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
   if existsFile(os.getConfigDir() / "Aporia" / "config.ini"):
     return loadOld(cfgErrors, lastSession)
   else:

@@ -1,12 +1,12 @@
 # Aporia
-Aporia is an IDE for the Nim programming language. Aporia uses GTK as the 
+Aporia is an IDE for the Nim programming language. Aporia uses GTK as the
 default toolkit, and the gtksourceview for the text editor component.
 
 ![Aporia on Windows 7](https://github.com/nim-lang/Aporia/raw/master/screenshots/windows.png "Aporia on Windows 7")
 
 ## Compiling
 To compile Aporia you need the latest version of the nim compiler, preferably
-the unstable release from github. Aporia sometimes relies on bug fixes 
+the unstable release from github. Aporia sometimes relies on bug fixes
 which have not yet made it to a stable release.
 
 You can build it by running ``nim c aporia`` or by using nimble ``nimble build``.
@@ -36,18 +36,18 @@ This is because there are no 64 bit GTK+ binaries available, see discussion [her
 If you already have GTK+ on your system, you don't need to do anything. Just
 make sure GTK+ is in your PATH.
 
-If you don't have GTK+ installed then you need to install it. You can get the 
+If you don't have GTK+ installed then you need to install it. You can get the
 latest version from [here](http://sourceforge.net/projects/gtk-win/ "GTK+ Runtime").
 Make sure that the installer adds GTK+ to the PATH.
 #### GtkSourceView
-The GtkSourceView doesn't have an installer, however binaries are available 
+The GtkSourceView doesn't have an installer, however binaries are available
 from [here](http://ftp.acc.umu.se/pub/gnome/binaries/win32/gtksourceview/ "GtkSourceView")
  (these are 32 bit only!). Just pick
 the latest version and download the archive then copy the files/folders
 in the archive into the 'bin' directory in gtk's directory
 (Most likely: ``C:\Program Files\GTK2-Runtime\bin``).
 #### libxml2-2
-GtkSourceView depends on libxml2-2. This should be downloaded from 
+GtkSourceView depends on libxml2-2. This should be downloaded from
 [here](http://ftp.gnome.org/pub/GNOME/binaries/win32/dependencies/ "dependencies")
  (these are 32 bit only!).
 And the contents of it should be copied the same 'bin' directory as GtkSourceView above.
@@ -80,3 +80,5 @@ dependencies might have changed and you could need to ``port install`` another
 package (tell us this is broken [creating an
 issue](https://github.com/nim-lang/Aporia/issues) and we will update the
 documentation).
+
+You can force a GTK theme by using ``GTK2_RC_FILES=./themes/Quartz/gtk-2.0/gtkrc``.
