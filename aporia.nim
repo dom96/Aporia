@@ -2416,6 +2416,10 @@ proc initControls() =
       aporia.exit()
 
   discard win.w.signalConnect("destroy", SIGNAL_FUNC(winDestroy), nil)
+  when defined(macosx):
+    let app = gtkmacintegration.get()
+    discard app.gSignalConnect("NSApplicationBlockTermination",
+      GCallback(aporia.delete_event), nil)
   discard win.w.signalConnect("delete_event",
     SIGNAL_FUNC(aporia.delete_event), nil)
   discard win.w.signalConnect("window-state-event",
