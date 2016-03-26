@@ -290,7 +290,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
     win.outputTextView.addText("> " & exec.command & "\l", normalTag)
 
   # Add a function which will be called when the UI is idle.
-  win.tempStuff.idleFuncId = gIdleAdd(peekProcOutput, addr(win))
+  win.tempStuff.idleFuncId = gTimeoutAdd(50, peekProcOutput, addr(win))
 
   win.tempStuff.progressStatusID = win.statusbar.setProgress("Executing")
   win.statusbar.progressbar.pulse()
