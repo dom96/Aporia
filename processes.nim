@@ -327,6 +327,31 @@ proc cmdToArgs(cmd: string): tuple[bin: string, args: seq[string]] =
   for i in 1 .. <spl.len:
     result.args.add(spl[i])
 
+proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream) =
+  for i in 0..tasks-1:
+    var task: TExecThrTask = execThrTaskChan.recv()
+    case task.typ
+    of ThrRun:
+      if not started:
+        let (bin, args) = cmdToArgs(task.command)
+        p = startProcess(bin, task.workDir, args,
+                         options = {poStdErrToStdOut, poUseShell})
+        createExecThrEvent(EvStarted):
+          event.p = p
+        o = p.outputStream
+        started = true
+      else:
+        echod("[Thread] Process already running")
+    of ThrStop:
+      echod("[Thread] Stopping process.")
+      p.terminate()
+      started = false
+      o.close()
+      var exitCode = p.waitForExit()
+      createExecThrEvent(EvStopped):
+        event.exitCode = exitCode
+      p.close()
+
 proc execThreadProc(){.thread.} =
   var p: PProcess
   var o: PStream
@@ -335,29 +360,17 @@ proc execThreadProc(){.thread.} =
     var tasks = execThrTaskChan.peek()
     if tasks == 0 and not started: tasks = 1
     if tasks > 0:
-      for i in 0..tasks-1:
-        var task: TExecThrTask = execThrTaskChan.recv()
-        case task.typ
-        of ThrRun:
-          if not started:
-            let (bin, args) = cmdToArgs(task.command)
-            p = startProcess(bin, task.workDir, args,
-                             options = {poStdErrToStdOut, poUseShell})
-            createExecThrEvent(EvStarted):
-              event.p = p
-            o = p.outputStream
-            started = true
-          else:
-            echod("[Thread] Process already running")
-        of ThrStop:
-          echod("[Thread] Stopping process.")
-          p.terminate()
-          started = false
-          o.close()
-          var exitCode = p.waitForExit()
+      try:
+        dispatchTasks(tasks, started, p, o)
+      except:
+        echo(getCurrentException().repr)
+        block:
+          createExecThrEvent(EvRecv):
+            event.line = "Error: Problem occurred during execution: " &
+                getCurrentExceptionMsg()
+        block:
           createExecThrEvent(EvStopped):
-            event.exitCode = exitCode
-          p.close()
+            event.exitCode = QuitFailure
 
     # Check if process exited.
     if started:
@@ -381,6 +394,8 @@ proc execThreadProc(){.thread.} =
       var line = o.readLine()
       createExecThrEvent(EvRecv):
         event.line = line
+
+  
 
 proc createProcessThreads*(win: var MainWin) =
   createThread[void](win.tempStuff.execThread, execThreadProc)
