@@ -2356,6 +2356,8 @@ proc initSocket() =
       var client: PAsyncSocket
       new(client)
       s.accept(client)
+      # Let the connecting instance know that this instance is alive.
+      client.send("ALIVE\c\l")
       #FIXME: threadAnalysis is set to off to work around this anonymous proc not being gc safe
       client.handleRead =
         proc (c: PAsyncSocket) {.closure, gcsafe.} =
@@ -2476,26 +2478,80 @@ proc initControls() =
         proc (dummy: pointer): bool =
           result = win.IODispatcher.poll(5), nil, nil)
 
+{.pop.}
 proc checkAlreadyRunning(): bool =
+  # How long to wait for a reply from other instance (in secs)
+  const waitTime = 2
+
   result = false
-  var client = socket()
+  let ioDispatcher = newDispatcher()
+  var client = asyncSocket()
+  ioDispatcher.register(client)
   try:
     client.connect("localhost", TPort(win.globalSettings.singleInstancePort.toU16))
   except EOS:
     return false
-  echo("An instance of aporia is already running.")
-  if loadFiles.len() > 0:
-    for file in loadFiles:
-      var filepath = file
-      if not filepath.isAbsolute():
-        filepath = getCurrentDir() / filepath
-      client.send(filepath & "\c\L")
-    client.close()
-    result = true
-  else:
-    result = true
-    client.send("\c\L")
-    client.close()
+
+  var launch = true
+  var waiting = true
+  var waitingSince = epochTime()
+
+  proc onConnect(c: PAsyncSocket) {.closure.} =
+    echo("Checking for other instances of Aporia.")
+    echo("Waiting for instance confirmation (for ", waitTime, " seconds)...")
+
+  proc onRead(c: PAsyncSocket) {.closure, gcsafe.} =
+    var line = ""
+    if c.readLine(line):
+      if line == "":
+        echo("Aporia instance disconnected during confirmation.")
+        waiting = false
+        launch = true
+      elif line == "ALIVE":
+        waiting = false
+        launch = false
+        echo("An instance of Aporia is already running.")
+      else:
+        echo("Received strange message from other instance: ", line)
+        waiting = false
+        launch = false
+
+    waiting = false
+    launch = false
+
+  client.handleConnect = onConnect
+  client.handleRead = onRead
+  while waiting:
+    try:
+      if not ioDispatcher.poll(5): break
+    except OSError:
+      let connRefused = 61
+      if (ref OSError)(getCurrentException()).errorCode != connRefused:
+        echo("Failed to determine single instance. Error: ",
+            getCurrentExceptionMsg())
+      launch = true
+      break
+
+    if epochTime() - waitingSince > waitTime:
+      echo("No response. Proceeding with startup.")
+      break
+
+  result = not launch
+  if not launch:
+    # Send the files specified on the cmd-line to the other instance.
+    if loadFiles.len() > 0:
+      for file in loadFiles:
+        var filepath = file
+        if not filepath.isAbsolute():
+          filepath = getCurrentDir() / filepath
+        client.send(filepath & "\c\L")
+      client.close()
+      result = true
+    else:
+      result = true
+      client.send("\c\L")
+      client.close()
+{.push cdecl.}
 
 var versionReply = checkVersion(GTKVerReq[0], GTKVerReq[1], GTKVerReq[2])
 if versionReply != nil:
