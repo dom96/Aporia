@@ -12,6 +12,10 @@ import glib2, gtk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import gdk2 except `delete` # Don't import delete to avoid "ambiguous identifier" error under Windows
 import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
 import tables, algorithm
+
+when defined(macosx):
+  import gtkmacintegration
+
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes,
        CustomStatusBar, AutoComplete
@@ -335,6 +339,7 @@ proc cycleTab(win: var MainWin) =
   # select next tab
   win.sourceViewTabs.setCurrentPage(current)
 
+proc fileMenuItem_Activate(menu: PMenuItem, user_data: Pgpointer)
 proc closeTab(tab: int) =
   proc recentlyOpenedAdd(filename: string) =
     for i in 0 .. win.autoSettings.recentlyOpenedFiles.len-1:
@@ -342,6 +347,10 @@ proc closeTab(tab: int) =
         system.delete(win.autoSettings.recentlyOpenedFiles, i)
         break
     win.autoSettings.recentlyOpenedFiles.add(filename)
+    when defined(macosx):
+      # FIXME: This is a small workaround because the activate event isn't
+      # triggered through OSX's top menu bar.
+      fileMenuItem_Activate(nil, nil)
 
   var close = askCloseTab(tab)
 
@@ -887,10 +896,10 @@ proc addTab(name, filename: string, setCurrent: bool = true,
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer)
 proc fileMenuItem_Activate(menu: PMenuItem, user_data: Pgpointer) =
+  # TODO: This proc is called hackishly on Mac OS X, don't rely on `menu`.
   if win.tempStuff.recentFileMenuItems.len > 0:
     for i in win.tempStuff.recentFileMenuItems:
       PWidget(i).destroy()
-
   win.tempStuff.recentFileMenuItems = @[]
 
   const insertOffset = 7
@@ -1757,12 +1766,13 @@ proc initTopMenu(mainBox: PBox) =
                                    win.globalSettings.keyCloseAllTabs.state, "")
 
   createSeparator(win.FileMenu)
-  let quitAporia =
-    proc (menuItem: PMenuItem, user_data: pointer) =
-      if not deleteEvent(menuItem, nil, nil):
-        aporia.exit()
-  win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyQuit.keyval,
-    quitAporia, win.globalSettings.keyQuit.state,  StockQuit)
+  when not defined(macosx):
+    let quitAporia =
+      proc (menuItem: PMenuItem, user_data: pointer) =
+        if not deleteEvent(menuItem, nil, nil):
+          aporia.exit()
+    win.FileMenu.createAccelMenuItem(accGroup, "", win.globalSettings.keyQuit.keyval,
+      quitAporia, win.globalSettings.keyQuit.state,  StockQuit)
 
   var FileMenuItem = menuItemNewWithMnemonic("_File")
   discard signalConnect(FileMenuItem, "activate",
@@ -1789,17 +1799,18 @@ proc initTopMenu(mainBox: PBox) =
       DuplicateLines_Activate, win.globalSettings.keyDuplicateLines.state, "")
   createSeparator(EditMenu)
 
-  EditMenu.createMenuItem("Raw Preferences",
-    proc (i: PMenuItem, p: pointer) {.cdecl.} =
-      try:
-        discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.global.ini"))
-      except EIO:
-        win.statusBar.setTemp(getCurrentExceptionMsg(), UrgError)
-  )
+  proc rawPreferences_onActivate(i: PMenuItem, p: pointer) {.cdecl.} =
+    try:
+      discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.global.ini"))
+    except EIO:
+      win.statusBar.setTemp(getCurrentExceptionMsg(), UrgError)
 
+  when not defined(macosx):
+    # Raw preferences
+    EditMenu.createMenuItem("Raw Preferences", rawPreferences_onActivate)
+    # Preferences
+    EditMenu.createImageMenuItem(StockPreferences, aporia.settings_Activate)
 
-  # Settings
-  EditMenu.createImageMenuItem(StockPreferences, aporia.settings_Activate)
   var EditMenuItem = menuItemNewWithMnemonic("_Edit")
   EditMenuItem.setSubMenu(EditMenu)
   EditMenuItem.show()
@@ -1930,7 +1941,8 @@ proc initTopMenu(mainBox: PBox) =
   discard signal_connect(MemMenuItem, "activate",
                          SIGNAL_FUNC(aporia.memUsage_click), nil)
 
-  HelpMenu.createImageMenuItem(StockAbout, aporia.about_click)
+  when not defined(macosx):
+    HelpMenu.createImageMenuItem(StockAbout, aporia.about_click)
 
   var HelpMenuItem = menuItemNewWithMnemonic("_Help")
 
@@ -1938,8 +1950,35 @@ proc initTopMenu(mainBox: PBox) =
   HelpMenuItem.show()
   TopMenu.append(HelpMenuItem)
 
-  mainBox.packStart(TopMenu, false, false, 0)
-  TopMenu.show()
+  when defined(macosx):
+    let app = gtkmacintegration.get()
+    app.setMenuBar(TopMenu)
+
+    # NB. The "App" menu needs to be initialised after the call to setMenuBar.
+    # Add about first.
+    let about = menu_item_new("About")
+    discard signalConnect(about, "activate",
+        SIGNALFUNC(aporia.about_click), nil)
+    app.insert_app_menu_item(about, 0)
+
+    app.insert_app_menu_item(separator_menu_item_new(), 1)
+
+    let rawPreferences = menuItemNew("Raw Preferences")
+    discard signalConnect(rawPreferences, "activate",
+        SIGNALFUNC(rawPreferences_onActivate), nil)
+    app.insert_app_menu_item(rawPreferences, 2)
+
+    let preferences = menuItemNew("Preferences")
+    discard signalConnect(preferences, "activate",
+        SIGNALFUNC(aporia.settings_Activate), nil)
+    app.insert_app_menu_item(preferences, 3)
+
+    # Add the recently opened files to the menu which have just been loaded
+    # from the config.
+    fileMenuItem_Activate(nil, nil)
+  else:
+    mainBox.packStart(TopMenu, false, false, 0)
+    TopMenu.show()
 
 proc initToolBar(mainBox: PBox) =
   # Create top ToolBar
@@ -2466,6 +2505,15 @@ when not defined(noSingleInstance):
       quit(QuitSuccess)
 
 createProcessThreads(win)
-nimrod_init()
+nim_init()
+
+when defined(macosx):
+  # Initialise GtkOSXApplication
+  discard g_object_new(gtkmacintegration.getType(), nil)
+
 initControls()
+
+when defined(macosx):
+  gtkmacintegration.get().ready()
+
 main()
