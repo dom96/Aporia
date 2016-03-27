@@ -386,7 +386,7 @@ proc initEditor(settingsTabs: PNotebook) =
   editorVBox.packStart(suggestFeatureHBox, false, false, 0)
   suggestFeatureHBox.show()
   
-  var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature")
+  var suggestFeatureCheckBox = checkButtonNew("Enable suggest feature (experimental)")
   suggestFeatureCheckBox.setActive(win.globalSettings.suggestFeature)
   discard suggestFeatureCheckBox.gSignalConnect("toggled",
     G_CALLBACK(suggestFeature_Toggled), nil)
