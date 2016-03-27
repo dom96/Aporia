@@ -433,11 +433,16 @@ proc rstToPango(r: PRstNode, result: var string) =
     result.add("<span font_weight=\"heavy\">")
     iterTrees(r, result)
     result.add("</span>")
+  of rnHyperlink, rnStandaloneHyperlink:
+    result.add("<span foreground=\"blue\">")
+    iterTrees(r.sons[0], result)
+    result.add("</span>")
   of rnCodeBlock:
     result.add("\n")
+    #echo renderRstToJson(r)
     assert r.sons[0].kind == rnDirArg
     #let lang = r.sons[0].sons[0].text
-    assert r.sons[1] == nil
+    #assert r.sons[1] == nil
     assert r.sons[2].kind == rnLiteralBlock
     # TODO: Highlighting?
     result.add("<tt>")
