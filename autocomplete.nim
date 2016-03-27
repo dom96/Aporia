@@ -137,7 +137,7 @@ proc startNimSuggest*(self: AutoComplete, projectFile: string) =
 
 proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
   result = true
-  if not self.taskRunning:
+  if not self.taskRunning and results.peek() == 0:
     # There is no suggest task running, so end this idle proc.
     echod("[AutoComplete] idleproc exiting")
     return false
@@ -148,12 +148,13 @@ proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
       break
     let cmd = msg.split("\t")[0]
     echod("[AutoComplete] SuggestOutput: Cmd: ", cmd.repr)
+    echod("[AutoComplete] SuggestOutput:    Full: ", msg.repr)
     case cmd & '\t'
     of endToken:
       self.nimSuggestRunning = false
       self.taskRunning = false
       self.onSugExit(0)
-      return false
+      return results.peek() != 0
     of stopToken:
       self.taskRunning = false
       self.onSugExit(0)
@@ -165,11 +166,18 @@ proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
   if not result:
     echod("[AutoComplete] idle exiting")
 
+proc clear(chan: var Channel[string]) =
+  while true:
+    let (available, msg) = tryRecv(chan)
+    if not available: break
+    echod("[AutoComplete] Skipped: ", msg)
+
 proc startTask*(self: AutoComplete, task: string,
                onSugLine: proc (line: string) {.closure.},
                onSugExit: proc (exit: int) {.closure.},
                onSugError: proc (error: string) {.closure.}) =
   ## Sends a new task to nimsuggest.
+  echod("[AutoComplete] Starting new task: ", task)
   assert(not self.taskRunning)
   assert(self.nimSuggestRunning)
   self.taskRunning = true
@@ -180,7 +188,10 @@ proc startTask*(self: AutoComplete, task: string,
   # Add a function which will be called when the UI is idle.
   discard gIdleAdd(peekSuggestOutput, cast[pointer](self))
 
-  echod("[AutoComplete] idleAdd")
+  echod("[AutoComplete] idleAdd(peekSuggestOutput)")
+
+  # Ensure that there is no stale results from old task.
+  results.clear()
 
   # Send the task
   suggestTasks.send(task)

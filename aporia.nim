@@ -646,8 +646,6 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
 
   proc onSugLine(win: var MainWin, line: string) {.closure.} =
-    if win.tempStuff.gotDefinition:
-      return
     var def: TSuggestItem
     if parseIDEToolsLine("def", line, def):
       win.tempStuff.gotDefinition = true
@@ -667,7 +665,8 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
 
       win.forceScrollToInsert()
 
-      echod(def.repr())
+      echod("goToDef, parsed definition as:")
+      echod(def)
 
   proc onSugExit(win: var MainWin, exitCode: int) {.closure.} =
     if not win.tempStuff.gotDefinition:
@@ -678,6 +677,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
       win.statusbar.setTemp("Definition retrieval failed: " & error,
           UrgError, 5000)
 
+  win.tempStuff.gotDefinition = false
   var err = win.asyncGetDef(tab.filename, getLine(addr cursor),
                   getLineOffset(addr cursor), onSugLine, onSugExit, onSugError)
   if err != "":
