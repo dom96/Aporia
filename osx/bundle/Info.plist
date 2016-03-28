@@ -11,7 +11,7 @@
     <key>CFBundleGetInfoString</key>
     <string>3.2</string>
     <key>CFBundleIconFile</key>
-    <string>hexchat.icns</string>
+    <string>Aporia.icns</string>
     <key>CFBundleIdentifier</key>
     <string>org.aporia</string>
     <key>CFBundleInfoDictionaryVersion</key>
