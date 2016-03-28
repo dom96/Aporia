@@ -22,6 +22,7 @@ var
   pegLineError = peg"{[^(]*} '(' {\d+} ', ' \d+ ') Error:' \s* {.*}"
   pegLineWarning = peg"{[^(]*} '(' {\d+} ', ' \d+ ') ' ('Warning:'/'Hint:') \s* {.*}"
   pegOtherError = peg"'Error:' \s* {.*}"
+  pegSegFault = peg"'SIGSEGV:' \s* {.*}"
   pegSuccess = peg"'Hint: operation successful'.*"
   pegOtherHint = peg"'Hint: '.*"
   reLineMessage = re".+\(\d+,\s\d+\)"
@@ -167,6 +168,9 @@ proc printProcOutput(win: var MainWin, line: string) =
     elif line =~ pegLineWarning:
       win.outputTextView.addText(line & "\l", warningTag)
       paErr()
+    elif line =~ pegSegFault:
+      win.outputTextView.addText(line & "\l", errorTag)    
+      win.tempStuff.compileSuccess = false      
     else:
       win.outputTextView.addText(line & "\l", normalTag)
   of ExecRun, ExecCustom:
