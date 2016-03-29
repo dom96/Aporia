@@ -170,8 +170,9 @@ if /bin/expr "x$1" : '^x-psn_' > /dev/null; then
     shift 1
 fi
 
+mkdir -p /tmp/aporia/logs/
 PID=$$
-LOG_FILENAME=/tmp/aporia_run_$PID.log
+LOG_FILENAME=/tmp/aporia/logs/aporia_run_$PID.log
 EXIT_CODE=1
 { $EXEC "$bundle_contents/MacOS/$name-bin" "$@" $EXTRA_ARGS 2>&1 && EXIT_CODE=$?; } | tee "$LOG_FILENAME"
 
