@@ -177,6 +177,7 @@ $EXEC "$bundle_contents/MacOS/$name-bin" "$@" $EXTRA_ARGS 2>&1 | tee "$LOG_FILEN
 
 if [ ${PIPESTATUS[0]} -ne 0 ]; then
   ESCAPED_LOG="`tail -n 10 $LOG_FILENAME`"
+  ESCAPED_LOG=${ESCAPED_LOG//$'\"'/$'\\"'}
   MESSAGE="Excerpt from log:\n$ESCAPED_LOG\n\nTo see full log open: $LOG_FILENAME"
   osascript -e "display alert \""$name" seems to have had a problem. Please report this crash to aporia@nim-lang.org or http://forum.nim-lang.org.\" message \"$MESSAGE\" as critical"
 fi
