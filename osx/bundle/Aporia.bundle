@@ -72,6 +72,8 @@
 
   <binary>${prefix}/lib/libfontconfig.1.dylib</binary>
   <binary>${prefix}/lib/libfreetype.6.dylib</binary>
+  <binary>${prefix}/lib/libgdk_pixbuf-2.0.0.dylib</binary>
+  <!--<binary>${prefix}/lib/libcairo.2.dylib</binary>-->
 
   <!-- Copy in GTK+ theme engines and print backends. Note the use of the
        "${pkg:module:variable}" macro, which evaluates to a pkg-config
