@@ -1,9 +1,9 @@
 # Building GTK on Mac OS X
 
-Before you start know this: building GTK on OS X is no picnic. It took me a 
+Before you start, know this: building GTK on OS X is no picnic. It took me a 
 solid week to build ``.dylib``'s which worked. Throughout my time attempting
 to get the damn thing to work I ran into many issues. Some of which I hope I
-can document here for future reference as well as to help others like yourself.
+can document here for future reference, as well as to help others like yourself.
 
 **Note:** I am writing this mostly from memory, so you will likely need to
 tinker this a bit.
@@ -84,4 +84,43 @@ Hope that helps. Unfortunately this takes a lot of trial and error, and the
 errors you will get on your system will likely be completely different to the
 errors I got on mine. If all else fails grab the binaries that I am using in
 the Aporia bundle, I hope that they work on most OS X machines (time will tell).
+
+## Some other random info
+
+The ``jhbuildrc-custom`` file specifies versions for gtk2 and its dependencies.
+I have used the versions specified by Homebrew, as those versions worked for
+Aporia when I built it all via Homebrew.
+
+You can use ``otool -L <blah.dylib>`` to get some information about what
+``blah.dylib`` depends on. This can be very useful for solving problems. For
+example, here is output for ``otool -L libgtk-quartz-2.0.0.dylib``:
+
+```
+Contents/Resources/lib/libgtk-quartz-2.0.0.dylib:
+  /Users/gtk/gtk/inst/lib/libgtk-quartz-2.0.0.dylib (compatibility version 2401.0.0, current version 2401.30.0)
+  @executable_path/../Resources/lib/libgdk-quartz-2.0.0.dylib (compatibility version 2401.0.0, current version 2401.30.0)
+  @executable_path/../Resources/lib/libgmodule-2.0.0.dylib (compatibility version 4601.0.0, current version 4601.2.0)
+  @executable_path/../Resources/lib/libpangocairo-1.0.0.dylib (compatibility version 3801.0.0, current version 3801.1.0)
+  @executable_path/../Resources/lib/libpango-1.0.0.dylib (compatibility version 3801.0.0, current version 3801.1.0)
+  @executable_path/../Resources/lib/libatk-1.0.0.dylib (compatibility version 21810.0.0, current version 21810.1.0)
+  @executable_path/../Resources/lib/libcairo.2.dylib (compatibility version 11403.0.0, current version 11403.6.0)
+  @executable_path/../Resources/lib/libgdk_pixbuf-2.0.0.dylib (compatibility version 3201.0.0, current version 3201.3.0)
+  @executable_path/../Resources/lib/libgio-2.0.0.dylib (compatibility version 4601.0.0, current version 4601.2.0)
+  @executable_path/../Resources/lib/libgobject-2.0.0.dylib (compatibility version 4601.0.0, current version 4601.2.0)
+  @executable_path/../Resources/lib/libglib-2.0.0.dylib (compatibility version 4601.0.0, current version 4601.2.0)
+  /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1226.10.1)
+  @executable_path/../Resources/lib/libintl.8.dylib (compatibility version 10.0.0, current version 10.3.0)
+  /System/Library/Frameworks/Cocoa.framework/Versions/A/Cocoa (compatibility version 1.0.0, current version 22.0.0)
+  /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit (compatibility version 45.0.0, current version 1404.32.0)
+  /System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices (compatibility version 1.0.0, current version 48.0.0)
+  /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 1256.14.0)
+  /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 1256.1.0)
+  /usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+```
+
+## What do I do after everything is built?
+
+You will need to run the ``gtk-mac-bundler`` tool. This tool will modify each
+``.dylib``, ensuring that it correctly references its dependencies (yep, 
+OS X's dylib resolution is interesting).
 
