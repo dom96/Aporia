@@ -25,6 +25,8 @@
     <property name="mimetypes">text/x-nim</property>
     <property name="globs">*.nim</property>
     <property name="line-comment-start">#</property>
+    <property name="block-comment-start">#[</property>
+    <property name="block-comment-end">]#</property>
   </metadata>
 
   <styles>
@@ -102,10 +104,20 @@
       </include>
     </context>
 
+   <context id="multiline-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
+      <start>#\[</start>
+      <end>\]#</end>
+      <include>
+        <context ref="def:in-comment"/>
+      </include>
+    </context>
+
     <context id="nim">
       <include>
+        <context ref="multiline-comment"/>
         <context ref="def:shebang"/>
         <context ref="def:shell-like-comment"/>
+
 
         <context ref="multiline-double-quoted-string"/>
         <context ref="double-quoted-string"/>
