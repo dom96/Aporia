@@ -268,6 +268,20 @@ proc confirmUnsaved(win: var MainWin, t: Tab): int =
   result = askSave.run()
   gtk2.destroy(PWidget(askSave))
 
+when false:
+  # not used yet
+  proc confirmReload(win: var MainWin, t: Tab): int =
+    var askSave = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
+
+    askSave.setTransientFor(win.w)
+    doAssert t.filename != ""
+    let name = t.filename.extractFilename
+    askSave.setMarkup(name & " has been modified, what would you like to do?")
+    askSave.addButtons("Reload", ResponseAccept, STOCK_CANCEL, ResponseCancel,
+                       nil)
+    result = askSave.run()
+    gtk2.destroy(PWidget(askSave))
+
 proc askCloseTab(tab: int): bool =
   result = true
   if not win.tabs[tab].saved and not win.tabs[tab].isTemporary:
@@ -634,7 +648,13 @@ proc sourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
 proc sourceViewMousePress(sourceView: PWidget, ev: PEvent, usr: gpointer): gboolean =
   win.suggest.hide()
 
-proc addTab(name, filename: string, setCurrent: bool = true, encoding = "utf-8"): int
+type
+  AddTabOption = enum
+    tabSetCurrent,
+    tabTryToReload
+
+proc addTab(name, filename: string, options = {tabSetCurrent},
+            encoding = "utf-8"): int
 proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   let currentPage = win.sourceViewTabs.getCurrentPage()
   let tab = win.tabs[currentPage]
@@ -653,7 +673,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
       if existingTab != -1:
         win.sourceViewTabs.setCurrentPage(existingTab.gint)
       else:
-        doAssert addTab("", def.file, true) != -1
+        doAssert addTab("", def.file) != -1
 
       let currentPage = win.sourceViewTabs.getCurrentPage()
       # Go to that line/col
@@ -769,7 +789,27 @@ proc initSourceView(sourceView: var PSourceView, scrollWindow: var PScrolledWind
   # -- Set the syntax highlighter scheme
   buffer.setScheme(win.scheme)
 
-proc addTab(name, filename: string, setCurrent: bool = true,
+proc loadFileIntoTab(nTab: Tab; buffer: PSourceBuffer; filename, encoding: string): bool =
+  var fileTxt = readFile(filename)
+  if encoding.toLower() != "utf-8":
+    fileTxt = convert(fileTxt, "UTF-8", encoding)
+  if not g_utf8_validate(fileTxt, fileTxt.len().gssize, nil):
+    win.tempStuff.pendingFilename = filename
+    win.statusbar.setTemp("Could not open file with " &
+                          encoding & " encoding.", UrgError, 5000)
+    win.infobar.show()
+    return false
+  # Detect line endings.
+  nTab.lineEnding = detectLineEndings(fileTxt)
+
+  # Normalize to LF to fix extra newline after copying issue on Windows.
+  fileTxt = normalize(leLf, fileTxt)
+
+  # Read in the file.
+  buffer.set_text(fileTxt, len(fileTxt).int32)
+  return true
+
+proc addTab(name, filename: string, options = {tabSetCurrent},
             encoding = "utf-8"): int =
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
@@ -783,10 +823,16 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
 
   if filename != nil and filename != "":
-    if setCurrent:
+    if tabSetCurrent in options:
       # If a tab with the same filename already exists select it.
       var existingTab = win.findTab(filename)
       if existingTab != -1:
+        if tabTryToReload in options:
+          #if win.tabs[existingTab].saved or
+          #        win.confirmReload(win.tabs[existingTab]) == RESPONSE_ACCEPT:
+          discard loadFileIntoTab(win.tabs[existingTab],
+                                  win.tabs[existingTab].buffer,
+                                  filename, encoding)
         # Select the existing tab
         win.sourceViewTabs.setCurrentPage(int32(existingTab))
         return existingTab
@@ -816,24 +862,8 @@ proc addTab(name, filename: string, setCurrent: bool = true,
 
     # Read the file first so that we can affirm its encoding.
     try:
-      var fileTxt: string = readFile(filename)
-      if encoding.toLower() != "utf-8":
-        fileTxt = convert(fileTxt, "UTF-8", encoding)
-      if not g_utf8_validate(fileTxt, fileTxt.len().gssize, nil):
-        win.tempStuff.pendingFilename = filename
-        win.statusbar.setTemp("Could not open file with " &
-                              encoding & " encoding.", UrgError, 5000)
-        win.infobar.show()
+      if not loadFileIntoTab(nTab, buffer, filename, encoding):
         return -1
-      # Detect line endings.
-      nTab.lineEnding = detectLineEndings(fileTxt)
-
-      # Normalize to LF to fix extra newline after copying issue on Windows.
-      fileTxt = normalize(leLf, fileTxt)
-
-      # Read in the file.
-      buffer.set_text(fileTxt, len(fileTxt).int32)
-
     except EIO: raise
     finally:
       # Enable the undo/redo manager.
@@ -886,7 +916,7 @@ proc addTab(name, filename: string, setCurrent: bool = true,
     discard sourceView.signalConnect("size-allocate",
         SIGNALFUNC(sourceView_sizeAllocate), addr nTab.spbInfo)
 
-  if setCurrent:
+  if tabSetCurrent in options:
     # Select the newly created tab
     win.sourceViewTabs.setCurrentPage(int32(win.tabs.len())-1)
   return win.tabs.len()-1
@@ -943,7 +973,7 @@ proc fileMenuItem_Activate(menu: PMenuItem, user_data: Pgpointer) =
       win.FileMenu.insert(moreMenuItem, gint(insertOffset+10))
       win.tempStuff.recentFileMenuItems.add(moreMenuItem)
 
-proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "", true)
+proc newFile(menuItem: PMenuItem, user_data: pointer) = discard addTab("", "")
 
 proc openFile(menuItem: PMenuItem, user_data: pointer) =
   var startpath = ""
@@ -961,7 +991,7 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
   if files.len() > 0:
     for f in items(files):
       try:
-        discard addTab("", f, true)
+        discard addTab("", f)
       except EIO:
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
@@ -993,7 +1023,7 @@ proc closeAllTabs_Activate(menuItem: PMenuItem, user_data: pointer) =
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
   try:
-    discard addTab("", filename, true)
+    discard addTab("", filename)
   except EIO:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
@@ -1417,7 +1447,7 @@ proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
     assert active >= 0 and active <= UTF16LE.int
     comboBox.setActive(0) # Reset selection.
     infobar.hide()
-    discard addTab("", win.tempStuff.pendingFilename, true,
+    discard addTab("", win.tempStuff.pendingFilename, {tabSetCurrent},
            $TEncodingsAvailable(active))
     # addTab may set pendingFilename so we can't reset it here.
     # bad things shouldn't happen if it doesn't get reset though.
@@ -1450,7 +1480,7 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
     else:
       if ev.x < galloc.x.float: return # Didn't click on empty space.
 
-    discard addTab("", "", true)
+    discard addTab("", "")
 
 proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
                  user_data: Pgpointer) =
@@ -1496,7 +1526,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
           if existingTab != -1:
             win.sourceViewTabs.setCurrentPage(int32(existingTab))
           else:
-            discard addTab("", path, true)
+            discard addTab("", path)
       success = true
     else: echod("dragDataReceived: Unknown `info`")
 
@@ -1519,7 +1549,7 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
   if item.file == "":
     win.statusbar.setTemp("Could not find correct tab.", UrgError, 5000)
     return
-  var existingTab = addTab("", item.file, true)
+  var existingTab = addTab("", item.file)
   if existingTab == -1:
     assert (not existsFile(item.file))
 
@@ -2080,7 +2110,8 @@ proc initsourceViewTabs() =
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
-        let newTab = addTab("", filename, win.autoSettings.lastSelectedTab == filename)
+        let newTab = addTab("", filename,
+            if win.autoSettings.lastSelectedTab == filename: {tabSetCurrent} else: {})
         inc(count)
         if newTab == -1: continue # Error adding tab, ``addTab`` will update the status bar with more info
         var iter: TTextIter
@@ -2106,7 +2137,7 @@ proc initsourceViewTabs() =
       quit(QuitFailure)
 
   if count == 0:
-    discard addTab("", "", false)
+    discard addTab("", "", {})
 
 proc initBottomTabs() =
   win.bottomPanelTabs = notebookNew()
@@ -2372,7 +2403,7 @@ proc initSocket() =
               if not filePath.isAbsolute():
                 filePath = getCurrentDir() / filePath
               if existsFile(filepath):
-                discard addTab("", filepath, true)
+                discard addTab("", filepath, {tabSetCurrent, tabTryToReload})
                 win.w.present()
               else:
                 win.w.error("File not found: " & filepath)
