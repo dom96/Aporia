@@ -83,7 +83,8 @@ proc suggestThread() {.thread.} =
         echod("[AutoComplete] Project file for NimSuggest: ", projectFileNorm)
         p = startProcess(findExe("nimsuggest"), nimPath,
                              ["--port:" & $port, projectFileNorm],
-                             options = {poStdErrToStdOut, poUseShell})
+                             options = {poStdErrToStdOut, poUseShell,
+                                        poInteractive})
         echod("[AutoComplete] NimSuggest started on port ", port)
         o = p.outputStream
 
