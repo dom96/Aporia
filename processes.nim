@@ -335,7 +335,7 @@ proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream)
       if not started:
         let (bin, args) = cmdToArgs(task.command)
         p = startProcess(bin, task.workDir, args,
-                         options = {poStdErrToStdOut, poUseShell})
+                         options = {poStdErrToStdOut, poUseShell, poInteractive})
         createExecThrEvent(EvStarted):
           event.p = p
         o = p.outputStream
@@ -395,7 +395,7 @@ proc execThreadProc(){.thread.} =
       createExecThrEvent(EvRecv):
         event.line = line
 
-  
+
 
 proc createProcessThreads*(win: var MainWin) =
   createThread[void](win.tempStuff.execThread, execThreadProc)
