@@ -18,7 +18,7 @@ when defined(macosx):
 
 # Local imports:
 import settings, utils, cfg, search, suggest, AboutDialog, processes,
-       CustomStatusBar, AutoComplete
+       CustomStatusBar, autocomplete
 {.push callConv:cdecl.}
 
 const
