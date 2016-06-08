@@ -1,3 +1,9 @@
+08/06/2016 - Version 0.4.1
+==========================
+
+This is a hot fix release which fixes compilation on case sensitive file
+systems.
+
 08/06/2016 - Version 0.4.0
 ==========================
 
