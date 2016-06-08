@@ -23,7 +23,7 @@ import settings, utils, cfg, search, suggest, AboutDialog, processes,
 
 const
   GTKVerReq = (2'i32, 24'i32, 0'i32) # Version of GTK required for Aporia to run.
-  aporiaVersion = "0.1.3"
+  aporiaVersion = "0.4.0"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
   -h  --help Shows this message
