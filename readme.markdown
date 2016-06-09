@@ -107,6 +107,16 @@ export GTK2_RC_FILES=$(nimble path aporia | tail -n 1)/share/themes/Quartz/gtk-2
 
 You can put those in your ``.bash_rc`` file or similar to make it system-wide.
 
+For El Capitan Mac OSX
+
+```bash
+brew tap homebrew/dupes
+brew install libiconv
+cd /usr/local/lib/
+sudo ln -s libgdk-quartz-2.0.dylib libgdk-x11-2.0.dylib
+sudo ln -s libgtk-quartz-2.0.dylib libgtk-x11-2.0.dylib
+```
+
 **Note:** For this to work you must have Aporia installed via Nimble.
 
 If running ``aporia`` now tells you about a missing dynamic library,
