@@ -36,10 +36,10 @@ using immediately!
 For your convenience, here is the app bundle for Aporia v0.4.0:
 https://github.com/nim-lang/Aporia/releases/download/v0.4.0/Aporia_0.4.0_MacOSX.zip
 
-### Linux
+### Linux/BSD
 
-Some Linux distributions may package Aporia so make sure to search for it using
-your favourite package manager. For example, AUR offers an
+Some Linux/BSD distributions may package Aporia so make sure to search for it
+using your favourite package manager. For example, AUR offers an
 [``aporia-git``](https://aur.archlinux.org/packages/aporia-git/) package.
 
 In most cases, you will need to compile and install Aporia manually. The
@@ -65,7 +65,7 @@ If Aporia fails to start with an error similar to the following:
 could not load: libgtk2.so
 ```
 
-Then you will need to use your Linux distribution's package manager to
+Then you will need to use your Linux/BSD distribution's package manager to
 install Aporia's dependencies. These include ``gtk2``, ``gtksourceview``
 (version 2, not 3), and ``pcre``. More information about these can be found
 in the [#dependencies](#dependencies) section.
