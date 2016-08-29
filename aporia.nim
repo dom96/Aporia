@@ -10,7 +10,7 @@
 # Stdlib imports:
 import glib2, gtk2, gtksourceview, dialogs, os, pango, osproc, strutils
 import gdk2 except `delete` # Don't import delete to avoid "ambiguous identifier" error under Windows
-import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings
+import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings, unicode
 import tables, algorithm
 
 when defined(macosx):
@@ -177,7 +177,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
     win.tabs[tabNr].lineEnding.addExtraNL(text)
 
     # Save it to a file
-    var f: TFile
+    var f: File
     if open(f, path, fmWrite):
       f.write(text)
       f.close()
@@ -491,11 +491,10 @@ proc onChanged(buffer: PTextBuffer, sv: PSourceView) =
 proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
                           userData: Pgpointer): gboolean =
   result = false
-  let ctrlPressed = (event.state and ControlMask) != 0
   let keyNameCString = keyval_name(event.keyval)
   if keyNameCString == nil: return
   let key = $keyNameCString
-  case key.toLower()
+  case unicode.toLower(key)
   of "up", "down", "page_up", "page_down":
     if win.globalSettings.suggestFeature and win.suggest.shown:
       var selection = win.suggest.treeview.getSelection()
@@ -504,7 +503,7 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
 
       let childrenLen = TreeModel.iter_n_children(nil)
 
-      # Get current tab(For tooltip)
+      # Get current tab (for tooltip)
       var current = win.sourceViewTabs.getCurrentPage()
       var tab     = win.tabs[current]
 
@@ -521,7 +520,7 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         var selectedPath = TreeModel.getPath(addr(selectedIter))
 
         var moved = false
-        case key.toLower():
+        case unicode.toLower(key):
         of "up":
           moved = prev(selectedPath)
         of "down":
@@ -571,7 +570,7 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         var index = selectedPath.getIndices()[]
         win.insertSuggestItem(index)
 
-        return key.toLower() != "period"
+        return unicode.toLower(key) != "period"
 
   of "backspace":
     if win.globalSettings.suggestFeature and win.suggest.shown:
@@ -601,7 +600,7 @@ proc sourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
   let keyNameCString = keyval_name(event.keyval)
   if keyNameCString == nil: return
   let key = $keyNameCString
-  case key.toLower()
+  case unicode.toLower(key)
   of "period":
     discard
     # TODO: Disable implicit invocation of suggest until it's more stable.
@@ -618,14 +617,14 @@ proc sourceViewKeyRelease(sourceView: PWidget, event: PEventKey,
       win.doMoveSuggest()
   of "space":
     if win.globalSettings.suggestFeature and not win.suggest.shown and
-        key.toLower() == "space" and ctrlPressed and
+        unicode.toLower(key) == "space" and ctrlPressed and
         win.getCurrentLanguage() == "nim":
       if win.suggest.items.len() != 0: win.suggest.clear()
       doSuggest(win)
       result = false
       #win.filterSuggest()
   else:
-    if key.toLower() notin ["up", "down", "page_up", "page_down", "home", "end"]:
+    if unicode.toLower(key) notin ["up", "down", "page_up", "page_down", "home", "end"]:
 
       if win.globalSettings.suggestFeature and win.suggest.shown:
         win.filterSuggest()
@@ -774,7 +773,7 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   ## Adds a tab. If filename is not "", a file is read and set as the content
   ## of the new tab. If name is "" it will be either "Unknown" or the last part
   ## of the filename.
-  ## If filename doesn't exist EIO is raised.
+  ## If filename doesn't exist IOError is raised.
   ##
   ## Returns the index of the added tab (or existing tab if setCurrent is true).
   ## ``-1`` is returned upon error.
@@ -817,7 +816,7 @@ proc addTab(name, filename: string, setCurrent: bool = true,
     # Read the file first so that we can affirm its encoding.
     try:
       var fileTxt: string = readFile(filename)
-      if encoding.toLower() != "utf-8":
+      if unicode.toLower(encoding) != "utf-8":
         fileTxt = convert(fileTxt, "UTF-8", encoding)
       if not g_utf8_validate(fileTxt, fileTxt.len().gssize, nil):
         win.tempStuff.pendingFilename = filename
@@ -834,7 +833,7 @@ proc addTab(name, filename: string, setCurrent: bool = true,
       # Read in the file.
       buffer.set_text(fileTxt, len(fileTxt).int32)
 
-    except EIO: raise
+    except IOError: raise
     finally:
       # Enable the undo/redo manager.
       buffer.end_not_undoable_action()
@@ -962,7 +961,7 @@ proc openFile(menuItem: PMenuItem, user_data: pointer) =
     for f in items(files):
       try:
         discard addTab("", f, true)
-      except EIO:
+      except IOError:
         error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
 proc saveFile_Activate(menuItem: PMenuItem, user_data: pointer) =
@@ -994,7 +993,7 @@ proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
   try:
     discard addTab("", filename, true)
-  except EIO:
+  except IOError:
     error(win.w, "Unable to read from file: " & getCurrentExceptionMsg())
 
 proc undo(menuItem: PMenuItem, user_data: pointer) =
@@ -1157,7 +1156,6 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
      return
 
   if cb.getSelectionBounds(addr(start), addr(theEnd)):
-    var startOldLineOffset = (addr start).getLineOffset()
 
     (addr start).setLineOffset(0) # Move to start of line.
     if (addr start).getLine() == (addr theEnd).getLine() and
@@ -1521,7 +1519,7 @@ proc errorList_RowActivated(tv: PTreeView, path: PTreePath,
     return
   var existingTab = addTab("", item.file, true)
   if existingTab == -1:
-    assert (not existsFile(item.file))
+    assert(not existsFile(item.file))
 
     win.statusbar.setTemp(item.file & " does not exist.", UrgError, 5000)
     return
@@ -1708,7 +1706,7 @@ proc goLineClose_clicked(button: PButton, user_data: Pgpointer) =
 # GUI Initialization
 
 proc loadLanguageSections():
-      tables.TOrderedTable[string, seq[PSourceLanguage]] =
+      tables.OrderedTable[string, seq[PSourceLanguage]] =
   result = initOrderedTable[string, seq[PSourceLanguage]]()
   var langMan = languageManagerGetDefault()
   var languages = langMan.getLanguageIDs()
@@ -1719,11 +1717,11 @@ proc loadLanguageSections():
     let section = $lang.getSection()
     if not result.hasKey(section):
       result[section] = @[]
-    result.mget(section).add(lang)
+    result[section].add(lang)
 
   for k, v in mpairs(result):
     v.sort do (x, y: PSourceLanguage) -> int {.closure.}:
-      return cmp(toLower($x.getName()), toLower($y.getName()))
+      return cmp(unicode.toLower($x.getName()), unicode.toLower($y.getName()))
 
   #let cmpB = proc (x, y: tuple[key: string, val: seq[PSourceLanguage]]): int {.closure.} =
   #  return cmp(x.key, y.key)
@@ -1802,7 +1800,7 @@ proc initTopMenu(mainBox: PBox) =
   proc rawPreferences_onActivate(i: PMenuItem, p: pointer) {.cdecl.} =
     try:
       discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.global.ini"))
-    except EIO:
+    except IOError:
       win.statusBar.setTemp(getCurrentExceptionMsg(), UrgError)
 
   when not defined(macosx):
@@ -2352,15 +2350,15 @@ proc initSocket() =
   win.IODispatcher = newDispatcher()
   win.oneInstSock = asyncSocket()
   win.oneInstSock.handleAccept =
-    proc (s: PAsyncSocket) =
-      var client: PAsyncSocket
+    proc (s: AsyncSocket) =
+      var client: AsyncSocket
       new(client)
       s.accept(client)
       # Let the connecting instance know that this instance is alive.
       client.send("ALIVE\c\l")
       #FIXME: threadAnalysis is set to off to work around this anonymous proc not being gc safe
       client.handleRead =
-        proc (c: PAsyncSocket) {.closure, gcsafe.} =
+        proc (c: AsyncSocket) {.closure, gcsafe.} =
           var line = ""
           if c.readLine(line):
             if line == "":
@@ -2382,7 +2380,7 @@ proc initSocket() =
       win.IODispatcher.register(client)
 
   win.IODispatcher.register(win.oneInstSock)
-  win.oneInstSock.bindAddr(TPort(win.globalSettings.singleInstancePort.toU16), "localhost")
+  win.oneInstSock.bindAddr(Port(win.globalSettings.singleInstancePort.toU16), "localhost")
   win.oneInstSock.listen()
 {.push cdecl.}
 
@@ -2488,19 +2486,19 @@ proc checkAlreadyRunning(): bool =
   var client = asyncSocket()
   ioDispatcher.register(client)
   try:
-    client.connect("localhost", TPort(win.globalSettings.singleInstancePort.toU16))
-  except EOS:
+    client.connect("localhost", Port(win.globalSettings.singleInstancePort.toU16))
+  except OSError:
     return false
 
   var launch = true
   var waiting = true
   var waitingSince = epochTime()
 
-  proc onConnect(c: PAsyncSocket) {.closure.} =
+  proc onConnect(c: AsyncSocket) {.closure.} =
     echo("Checking for other instances of Aporia.")
     echo("Waiting for instance confirmation (for ", waitTime, " seconds)...")
 
-  proc onRead(c: PAsyncSocket) {.closure, gcsafe.} =
+  proc onRead(c: AsyncSocket) {.closure, gcsafe.} =
     var line = ""
     if c.readLine(line):
       if line == "":

@@ -12,9 +12,9 @@ import gtk2, glib2
 import utils, CustomStatusBar
 
 # Threading channels
-var execThrTaskChan: TChannel[TExecThrTask]
+var execThrTaskChan: Channel[TExecThrTask]
 execThrTaskChan.open()
-var execThrEventChan: TChannel[TExecThrEvent]
+var execThrEventChan: Channel[TExecThrEvent]
 execThrEventChan.open()
 # Threading channels END
 
@@ -335,7 +335,7 @@ proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream)
       if not started:
         let (bin, args) = cmdToArgs(task.command)
         p = startProcess(bin, task.workDir, args,
-                         options = {poStdErrToStdOut, poUseShell, poInteractive})
+                         options = {poStdErrToStdOut, poUsePath, poInteractive})
         createExecThrEvent(EvStarted):
           event.p = p
         o = p.outputStream
@@ -353,8 +353,8 @@ proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream)
       p.close()
 
 proc execThreadProc(){.thread.} =
-  var p: PProcess
-  var o: PStream
+  var p: Process
+  var o: Stream
   var started = false
   while true:
     var tasks = execThrTaskChan.peek()

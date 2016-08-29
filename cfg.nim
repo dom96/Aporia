@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import utils, times, streams, parsecfg, strutils, os
+import utils, times, streams, parsecfg, strutils, os, osproc
 from gtk2 import getInsert, getOffset, getIterAtMark, TTextIter,
     WrapNone, WrapChar, WrapWord, acceleratorParse, acceleratorName,
     acceleratorValid
@@ -16,7 +16,7 @@ import glib2
 from processes import addError
 
 type
-  ECFGParse* = object of E_Base
+  ECFGParse* = object of Exception
 
 const KEY_notSet = 0.guint
 
@@ -120,25 +120,25 @@ proc toKeyOrDefault(shortcutStr: string, def: ShortcutKey): ShortcutKey =
 template setShortcutIfValid*(shortcutStr: string, shortcutField: untyped): stmt =
   `shortcutField` = toKeyOrDefault(shortcutStr, `shortcutField`)
 
-proc writeSection(f: TFile, sectionName: string) =
+proc writeSection(f: File, sectionName: string) =
   f.write("[")
   f.write(sectionName)
   f.write("]\n")
 
-proc writeKeyVal(f: TFile, key, val: string) =
+proc writeKeyVal(f: File, key, val: string) =
   f.write(key)
   f.write(" = ")
   if val.len == 0: f.write("\"\"")
-  else: f.write(quoteIfContainsWhite(val))
+  else: f.write(osproc.quoteShell(val))
   f.write("\n")
 
-proc writeKeyVal(f: TFile, key: string, val: int) =
+proc writeKeyVal(f: File, key: string, val: int) =
   f.write(key)
   f.write(" = ")
   f.write(val)
   f.write("\n")
 
-proc writeKeyValRaw(f: TFile, key: string, val: string) =
+proc writeKeyValRaw(f: File, key: string, val: string) =
   f.write(key)
   f.write(" = r")
   if val.len == 0: f.write("\"\"")
@@ -149,7 +149,7 @@ proc save(settings: TAutoSettings, win: var MainWin) =
   if not os.existsDir(os.getConfigDir() / "Aporia"):
     os.createDir(os.getConfigDir() / "Aporia")
   
-  var f: TFile
+  var f: File
   if open(f, joinPath(os.getConfigDir(), "Aporia", "config.auto.ini"), fmWrite):
     var confInfo = "; Aporia automatically generated configuration file - Last modified: "
     confInfo.add($getTime())
@@ -192,7 +192,7 @@ proc save*(settings: TGlobalSettings) =
     os.createDir(os.getConfigDir() / "Aporia")
   
   # Save the settings to file.
-  var f: TFile
+  var f: File
   if open(f, joinPath(os.getConfigDir(), "Aporia", "config.global.ini"), fmWrite):
     var confInfo = "; Aporia global configuration file - Last modified: "
     confInfo.add($getTime())
@@ -282,7 +282,7 @@ proc istrue(s: string): bool =
   result = cmpIgnoreStyle(s, "true") == 0
 
 proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
-  var p: TCfgParser
+  var p: CfgParser
   var filename = os.getConfigDir() / "Aporia" / "config.ini"
   var input = newFileStream(filename, fmRead)
   open(p, input, joinPath(os.getConfigDir(), "Aporia", "config.ini"))
@@ -346,7 +346,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
     of cfgError:
       cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
-      nil
+      discard
   input.close()
   p.close()
 
@@ -354,7 +354,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
   result = defaultAutoSettings()
   let filename = os.getConfigDir() / "Aporia" / "config.auto.ini"
   if not existsFile(filename): return
-  var pAuto: TCfgParser
+  var pAuto: CfgParser
   var autoStream = newFileStream(filename, fmRead)
   open(pAuto, autoStream, filename)
   # It is important to initialize every field, because some fields may not
@@ -391,15 +391,15 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
     of cfgError:
       cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
-      nil
+      discard
 
   autoStream.close()
   pAuto.close()
 
-proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
+proc loadGlobal*(cfgErrors: var seq[TError], input: Stream): TGlobalSettings =
   result = defaultGlobalSettings()
   if input == nil: return
-  var pGlobal: TCfgParser
+  var pGlobal: CfgParser
   var filename = os.getConfigDir() / "Aporia" / "config.global.ini"
   open(pGlobal, input, filename)
   while true:
@@ -485,7 +485,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
     of cfgError:
       cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
-      nil
+      discard
   close(pGlobal)
 
 proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
