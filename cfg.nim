@@ -129,7 +129,7 @@ proc writeKeyVal(f: File, key, val: string) =
   f.write(key)
   f.write(" = ")
   if val.len == 0: f.write("\"\"")
-  else: f.write(osproc.quoteShell(val))
+  else: f.write(quoteIfContainsWhite(val))
   f.write("\n")
 
 proc writeKeyVal(f: File, key: string, val: int) =
@@ -497,3 +497,4 @@ proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: T
     result.g = loadGlobal(cfgErrors, globalStream)
     if globalStream != nil:
       globalStream.close()
+

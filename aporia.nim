@@ -1300,7 +1300,7 @@ proc compileRun(filename: string, shouldRun: bool) =
   let workDir = filename.splitFile.dir
   if shouldRun:
     let ifSuccess = changeFileExt(filename, os.ExeExt)
-    runAfter = newExec(osproc.quoteShell(ifSuccess), workDir, ExecRun)
+    runAfter = newExec(quoteIfContainsWhite(ifSuccess), workDir, ExecRun)
   win.execProcAsync newExec(cmd, workDir, ExecNim, runAfter = runAfter)
 
 proc CompileCurrent_Activate(menuitem: PMenuItem, user_data: pointer) =

@@ -600,7 +600,7 @@ proc setHighlightSyntax*(win: var MainWin, tab: int, doHighlight: bool) =
 proc getCmd*(win: var MainWin, cmd, filename: string): string =
   ## ``cmd`` specifies the format string. ``findExe(exe)`` is allowed as well
   ## as ``#$``. The ``#$`` is replaced by ``filename``.
-  var f = osproc.quoteShell(filename)
+  var f = quoteIfContainsWhite(filename)
   proc promptNimPath(win: var MainWin): string =
     ## If ``settings.nimPath`` is not set, prompts the user for the nim path.
     ## Otherwise returns ``settings.nimPath``.
@@ -610,9 +610,9 @@ proc getCmd*(win: var MainWin, cmd, filename: string): string =
     result = win.globalSettings.nimPath
 
   if cmd =~ peg"\s* '$' y'findExe' '(' {[^)]+} ')' {.*}":
-    var exe = osproc.quoteShell(findExe(matches[0]))
+    var exe = quoteIfContainsWhite(findExe(matches[0]))
     if matches[0].normalize == "nim" and exe.len == 0:
-      exe = osproc.quoteShell(promptNimPath(win))
+      exe = quoteIfContainsWhite(promptNimPath(win))
 
     if exe.len == 0: exe = matches[0]
     result = exe & " " & matches[1] % f
