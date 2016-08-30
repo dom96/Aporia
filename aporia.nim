@@ -375,7 +375,8 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
       return true
     of KeyW:
       # Ctrl + W
-      closeTab(win.sourceViewTabs.getCurrentPage())
+      if win.sourceViewTabs.getNPages() > 1:
+        closeTab(win.sourceViewTabs.getCurrentPage())
       return true
     else:
       discard
