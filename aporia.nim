@@ -375,7 +375,8 @@ proc window_keyPress(widg: PWidget, event: PEventKey,
       return true
     of KeyW:
       # Ctrl + W
-      closeTab(win.sourceViewTabs.getCurrentPage())
+      if win.sourceViewTabs.getNPages() > 1:
+        closeTab(win.sourceViewTabs.getCurrentPage())
       return true
     else:
       discard
@@ -989,6 +990,7 @@ proc closeCurrentTab_Activate(menuItem: PMenuItem, user_data: pointer) =
 proc closeAllTabs_Activate(menuItem: PMenuItem, user_data: pointer) =
   while win.tabs.len() > 0:
     closeTab(win.sourceViewTabs.getCurrentPage())
+  discard addTab("", "", true)
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
