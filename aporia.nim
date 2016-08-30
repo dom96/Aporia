@@ -990,6 +990,7 @@ proc closeCurrentTab_Activate(menuItem: PMenuItem, user_data: pointer) =
 proc closeAllTabs_Activate(menuItem: PMenuItem, user_data: pointer) =
   while win.tabs.len() > 0:
     closeTab(win.sourceViewTabs.getCurrentPage())
+  discard addTab("", "", true)
 
 proc recentFile_Activate(menuItem: PMenuItem, file: gpointer) =
   let filename = cast[string](file)
