@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, glib2, gtksourceview, gdk2, pegs, re, strutils
+import gtk2, glib2, gtksourceview, gdk2, pegs, re, strutils, unicode
 import utils, CustomStatusBar
 
 {.push callConv:cdecl.}
@@ -380,6 +380,18 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
   
   var iter: TTextIter
   buffer.getStartIter(addr(iter))
+
+  # Check how many occurrences there are of the search string.
+  var startIter: TTextIter
+  buffer.getStartIter(addr(startIter))
+  var endIter: TTextIter
+  buffer.getEndIter(addr(endIter))
+  var text = $buffer.getText(addr(startIter), addr(endIter), false)
+  var maxCount : int
+  if win.autoSettings.search == SearchCaseInsens or win.autoSettings.search == SearchStyleInsens:
+    maxCount = count(unicode.toLower(text), unicode.toLower($find))
+  else:
+    maxCount = count(text, $find)
   
   # Disable bracket matching and status bar updates - for a speed up
   win.tempStuff.stopSBUpdates = true
@@ -389,7 +401,7 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
   
   # Replace all
   var found = true
-  while found:
+  while found and count <= maxCount:
     case win.autoSettings.search
     of SearchCaseInsens, SearchCaseSens:
       var options = getSearchOptions(win.autoSettings.search)
