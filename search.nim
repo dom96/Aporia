@@ -380,18 +380,6 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
   
   var iter: TTextIter
   buffer.getStartIter(addr(iter))
-
-  # Check how many occurrences there are of the search string.
-  var startIter: TTextIter
-  buffer.getStartIter(addr(startIter))
-  var endIter: TTextIter
-  buffer.getEndIter(addr(endIter))
-  var text = $buffer.getText(addr(startIter), addr(endIter), false)
-  var maxCount : int
-  if win.autoSettings.search == SearchCaseInsens or win.autoSettings.search == SearchStyleInsens:
-    maxCount = count(unicode.toLower(text), unicode.toLower($find))
-  else:
-    maxCount = count(text, $find)
   
   # Disable bracket matching and status bar updates - for a speed up
   win.tempStuff.stopSBUpdates = true
@@ -401,7 +389,8 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
   
   # Replace all
   var found = true
-  while found and count <= maxCount:
+  var lastPos : int = -1
+  while found:
     case win.autoSettings.search
     of SearchCaseInsens, SearchCaseSens:
       var options = getSearchOptions(win.autoSettings.search)
@@ -415,6 +404,9 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
       found = ret[2]
   
     if found:
+      if addr(startMatch).getOffset() < lastPos:
+        break
+      lastPos = addr(startMatch).getOffset()
       inc(count)
       gtk2.delete(buffer, addr(startMatch), addr(endMatch))
       buffer.insert(addr(startMatch), replace, int32(replaceLen))
