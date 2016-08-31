@@ -404,7 +404,7 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
       found = ret[2]
   
     if found:
-      if addr(startMatch).getOffset() < lastPos:
+      if addr(startMatch).getOffset() <= lastPos:
         break
       lastPos = addr(startMatch).getOffset()
       inc(count)
