@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import gtk2, glib2, gtksourceview, gdk2, pegs, re, strutils, unicode
+import gtk2, glib2, gtksourceview, gdk2, pegs, re, strutils
 import utils, CustomStatusBar
 
 {.push callConv:cdecl.}
