@@ -389,6 +389,7 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
   
   # Replace all
   var found = true
+  var lastPos : int = -1
   while found:
     case win.autoSettings.search
     of SearchCaseInsens, SearchCaseSens:
@@ -403,6 +404,9 @@ proc replaceAll*(win: var utils.MainWin, find, replace: cstring): int =
       found = ret[2]
   
     if found:
+      if addr(startMatch).getOffset() <= lastPos:
+        break
+      lastPos = addr(startMatch).getOffset()
       inc(count)
       gtk2.delete(buffer, addr(startMatch), addr(endMatch))
       buffer.insert(addr(startMatch), replace, int32(replaceLen))
