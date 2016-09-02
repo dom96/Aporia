@@ -360,6 +360,7 @@ proc closeTab(tab: int) =
       recentlyOpenedAdd(win.tabs[tab].filename)
     system.delete(win.tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
+    win.save()
 
 proc window_keyPress(widg: PWidget, event: PEventKey,
                           userData: Pgpointer): gboolean =
@@ -780,6 +781,9 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   ## Returns the index of the added tab (or existing tab if setCurrent is true).
   ## ``-1`` is returned upon error.
   assert(win.nimLang != nil)
+
+  # Save the preferences before the tab is opened.
+  win.save()
 
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
 
@@ -2080,7 +2084,11 @@ proc initsourceViewTabs() =
   if win.globalSettings.restoreTabs and lastSession.len > 0:
     for i in 0 .. lastSession.len-1:
       var splitUp = lastSession[i].split('|')
-      var (filename, offset) = (splitUp[0], splitUp[1])
+      var filename, offset: string
+      if len(splitUp) == 2:
+        (filename, offset) = (splitUp[0], splitUp[1])
+      else:
+        (filename, offset) = ("", "0")
       if existsFile(filename):
         let newTab = addTab("", filename, win.autoSettings.lastSelectedTab == filename)
         inc(count)
