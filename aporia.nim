@@ -782,9 +782,6 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   ## ``-1`` is returned upon error.
   assert(win.nimLang != nil)
 
-  # Save the preferences before the tab is opened.
-  win.save()
-
   var buffer: PSourceBuffer = sourceBufferNew(win.nimLang)
 
   if filename != nil and filename != "":
@@ -894,6 +891,9 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   if setCurrent:
     # Select the newly created tab
     win.sourceViewTabs.setCurrentPage(int32(win.tabs.len())-1)
+  
+  win.save()
+
   return win.tabs.len()-1
 
 # GTK Events Contd.
@@ -2084,11 +2084,7 @@ proc initsourceViewTabs() =
   if win.globalSettings.restoreTabs and lastSession.len > 0:
     for i in 0 .. lastSession.len-1:
       var splitUp = lastSession[i].split('|')
-      var filename, offset: string
-      if len(splitUp) == 2:
-        (filename, offset) = (splitUp[0], splitUp[1])
-      else:
-        (filename, offset) = ("", "0")
+      var (filename, offset) = (splitUp[0], splitUp[1])
       if existsFile(filename):
         let newTab = addTab("", filename, win.autoSettings.lastSelectedTab == filename)
         inc(count)
