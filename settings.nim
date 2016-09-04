@@ -441,7 +441,7 @@ proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   win.globalSettings.customCmd3 = $custom3Edit.getText()
   
   # Save the preferences.
-  cast[ptr utils.MainWin](win)[].save()
+  win[].save()
   
   gtk2.PObject(dialog).destroy()
   
