@@ -440,6 +440,9 @@ proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   win.globalSettings.customCmd2 = $custom2Edit.getText()
   win.globalSettings.customCmd3 = $custom3Edit.getText()
   
+  # Save the preferences.
+  win[].save()
+  
   gtk2.PObject(dialog).destroy()
   
 proc addCheckBox(parent: PVBox, labelText: string, value: bool): PCheckButton =
@@ -591,7 +594,7 @@ proc initShortcuts(settingsTabs: PNotebook) =
           
 proc showSettings*(aWin: var utils.MainWin) =
   win = addr(aWin)  # This has to be a pointer
-                    # Because i need the settings to be changed
+                    # Because I need the settings to be changed
                     # in aporia.nim not in here.
 
   dialog = windowNew(gtk2.WINDOW_TOPLEVEL)

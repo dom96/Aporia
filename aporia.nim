@@ -360,6 +360,7 @@ proc closeTab(tab: int) =
       recentlyOpenedAdd(win.tabs[tab].filename)
     system.delete(win.tabs, tab)
     win.sourceViewTabs.removePage(int32(tab))
+    win.save()
 
 proc window_keyPress(widg: PWidget, event: PEventKey,
                           userData: Pgpointer): gboolean =
@@ -890,6 +891,9 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   if setCurrent:
     # Select the newly created tab
     win.sourceViewTabs.setCurrentPage(int32(win.tabs.len())-1)
+  
+  win.save()
+
   return win.tabs.len()-1
 
 # GTK Events Contd.
