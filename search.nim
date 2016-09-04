@@ -116,6 +116,7 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
     
   var matches: array[0..re.MaxSubpatterns, string]
   var match = (-1, 0)
+  var singleChar = false
   if forward:
     match = findBoundsGen($text, newPattern, isRegex, reOptions)
   else: # Backward search.
@@ -123,9 +124,15 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
     # Yeah. I know inefficient, but that's the only way I know how to do this.
     var newMatch = (-1, 0)
     while true:
+      if match[0] == match[1]:
+        inc(match[1])
+        singleChar = true
       newMatch = findBoundsGen($text, newPattern, isRegex, reOptions, match[1])
       if newMatch != (-1, 0): match = newMatch
       else: break
+
+  if singleChar:
+    dec(match[1])
 
   var startMatch, endMatch: TTextIter
   
