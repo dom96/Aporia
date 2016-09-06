@@ -124,6 +124,8 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
     # Yeah. I know inefficient, but that's the only way I know how to do this.
     var newMatch = (-1, 0)
     while true:
+      # This stops Aporia from getting stuck on the same character, as otherwise the
+      # starting position will not change.
       if match[0] == match[1]:
         inc(match[1])
         singleChar = true
@@ -131,7 +133,7 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
       if newMatch != (-1, 0): match = newMatch
       else: break
 
-  if singleChar:
+  if not forward and singleChar:
     dec(match[1])
 
   var startMatch, endMatch: TTextIter
