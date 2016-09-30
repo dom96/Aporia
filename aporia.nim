@@ -186,6 +186,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
 
       # Change the tab name and .Tabs.filename etc.
       win.tabs[tabNr].filename = path
+      win.tabs[tabNr].lastEdit = getFileInfo(win.tabs[tabNr].filename).lastWriteTime
 
       if updateGUI:
         win.tabs[tabNr].saved = true
@@ -803,6 +804,7 @@ proc addTab(name, filename: string, setCurrent: bool = true,
 
   # Init tab
   var nTab: Tab; new(nTab)
+  
 
   # Init the sourceview
   var sourceView: PSourceView
@@ -846,6 +848,12 @@ proc addTab(name, filename: string, setCurrent: bool = true,
 
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow, filename)
 
+  # Get the last file edit, if applicable.
+  var lastEdit: Time
+  if filename != "":
+    var newInfo: FileInfo = getFileInfo(filename)
+    lastEdit = newInfo.lastWriteTime
+
   # Add a tab
   nTab.buffer = buffer
   nTab.sourceView = sourceView
@@ -856,8 +864,10 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   nTab.highlighted = newNoHighlightAll()
   if not win.globalSettings.showCloseOnAllTabs:
     nTab.closeBtn.hide()
+  if lastEdit != fromSeconds(0):
+    nTab.lastEdit = lastEdit
   win.tabs.add(nTab)
-
+  
   # Set the tooltip
   setTabTooltip(win.tabs[win.tabs.len-1])
 
@@ -1485,6 +1495,28 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   # Toggle the "Syntax Highlighting" check menu item based in the new tabs
   # syntax highlighting.
   plCheckUpdate(pageNum)
+  
+  # If the file changed outside the program, tell the user.
+  if win.tabs[pageNum].filename != "":
+    var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
+    if win.tabs[pageNum].lastEdit != changedInfo.lastWriteTime:
+    
+      var askUpdate = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
+      askUpdate.setTransientFor(win.w)
+      
+      askUpdate.setMarkup("This file has been been edited outside Aporia. Update to latest revision of the file?")
+      askUpdate.addButtons("_Update", ResponseAccept, "_Ignore", ResponseReject, nil)
+      
+      var updateResponse = askUpdate.run()
+      gtk2.destroy(PWidget(askUpdate))
+      
+      if updateResponse == ResponseAccept:
+        var fileTxt: string = readFile(win.tabs[pageNum].filename)
+        win.tabs[pageNum].buffer.set_text(fileTxt, len(fileTxt).int32)
+        win.tabs[pageNum].saved = true
+      else:
+        win.tabs[pageNum].saved = false
+        win.tabs[pageNum].lastEdit = changedInfo.lastWriteTime
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext,
                         x: gint, y: gint, data: PSelectionData, info: guint,
