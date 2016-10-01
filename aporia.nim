@@ -129,7 +129,7 @@ proc updateTabUI(t: Tab) =
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   ## If tab's filename is ``""`` and the user clicks "Cancel", the filename will
   ## remain ``""``.
-
+  
   # TODO: Refactor this function. It's a disgrace.
   if tabNr < 0: return
   if win.tabs[tabNr].saved: return
@@ -1810,12 +1810,19 @@ proc initTopMenu(mainBox: PBox) =
       discard addTab("", joinPath(os.getConfigDir(), "Aporia", "config.global.ini"))
     except EIO:
       win.statusBar.setTemp(getCurrentExceptionMsg(), UrgError)
+  
+  proc reloadPreferences_onActivate(i: PMenuItem, p: pointer) {.cdecl.} =
+    var cfgErrors: seq[TError] = @[]
+    let (auto, global) = cfg.load(cfgErrors, lastSession)
+    win.globalSettings = global
 
   when not defined(macosx):
-    # Raw preferences
-    EditMenu.createMenuItem("Raw Preferences", rawPreferences_onActivate)
     # Preferences
     EditMenu.createImageMenuItem(StockPreferences, aporia.settings_Activate)
+    # Raw preferences
+    EditMenu.createMenuItem("Raw Preferences", rawPreferences_onActivate)
+    # Reload preferences
+    EditMenu.createMenuItem("Reload Preferences", reloadPreferences_onActivate)
 
   var EditMenuItem = menuItemNewWithMnemonic("_Edit")
   EditMenuItem.setSubMenu(EditMenu)
