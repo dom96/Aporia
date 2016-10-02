@@ -125,10 +125,42 @@ proc updateTabUI(t: Tab) =
   else:
     t.label.setText(name)
   setTabTooltip(t)
+ 
+proc checkFileUpdate(pageNum : int): bool = 
+  ## Checks if the current tab open has been updated outside of Aporia.
+  ## Returns ``true`` if the file is up to date, and ``false`` otherwise.
+
+  var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
+  result = true
+  if win.tabs[pageNum].lastEdit != changedInfo.lastWriteTime:
+
+    var askUpdate = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
+    askUpdate.setTransientFor(win.w)
+    
+    askUpdate.setMarkup("This file has been been edited outside Aporia. Update to latest revision of the file?")
+    askUpdate.addButtons("_Update", ResponseAccept, "_Ignore", ResponseReject, nil)
+    
+    var updateResponse = askUpdate.run()
+    gtk2.destroy(PWidget(askUpdate))
+    
+    if updateResponse == ResponseAccept:
+      var fileTxt: string = readFile(win.tabs[pageNum].filename)
+      win.tabs[pageNum].buffer.set_text(fileTxt, len(fileTxt).int32)
+      win.tabs[pageNum].saved = true
+      result = true
+    else:
+      win.tabs[pageNum].saved = false
+      win.tabs[pageNum].lastEdit = changedInfo.lastWriteTime
+      result = false
 
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   ## If tab's filename is ``""`` and the user clicks "Cancel", the filename will
   ## remain ``""``.
+  
+  # Check if the file changed outside the program.
+  if win.tabs[tabNr].filename != "":
+    if checkFileUpdate(tabNr):
+      return
   
   # TODO: Refactor this function. It's a disgrace.
   if tabNr < 0: return
@@ -1496,27 +1528,9 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   # syntax highlighting.
   plCheckUpdate(pageNum)
   
-  # If the file changed outside the program, tell the user.
+  # Check if the file changed outside the program.
   if win.tabs[pageNum].filename != "":
-    var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
-    if win.tabs[pageNum].lastEdit != changedInfo.lastWriteTime:
-    
-      var askUpdate = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
-      askUpdate.setTransientFor(win.w)
-      
-      askUpdate.setMarkup("This file has been been edited outside Aporia. Update to latest revision of the file?")
-      askUpdate.addButtons("_Update", ResponseAccept, "_Ignore", ResponseReject, nil)
-      
-      var updateResponse = askUpdate.run()
-      gtk2.destroy(PWidget(askUpdate))
-      
-      if updateResponse == ResponseAccept:
-        var fileTxt: string = readFile(win.tabs[pageNum].filename)
-        win.tabs[pageNum].buffer.set_text(fileTxt, len(fileTxt).int32)
-        win.tabs[pageNum].saved = true
-      else:
-        win.tabs[pageNum].saved = false
-        win.tabs[pageNum].lastEdit = changedInfo.lastWriteTime
+    discard checkFileUpdate(pageNum)
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext,
                         x: gint, y: gint, data: PSelectionData, info: guint,
