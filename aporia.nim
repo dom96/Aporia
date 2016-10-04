@@ -126,9 +126,46 @@ proc updateTabUI(t: Tab) =
     t.label.setText(name)
   setTabTooltip(t)
 
+  setTabTooltip(t)
+ 
+proc checkFileUpdate(pageNum : int): int = 
+  ## Checks if the current tab open has been updated outside of Aporia.
+  ## Returns ``1`` if the file has been updated, ``0`` if not, and ``-1``
+  ## if there has been no change
+
+  var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
+  result = -1
+  if win.tabs[pageNum].lastEdit != changedInfo.lastWriteTime:
+
+    var filename: string = extractFilename(win.tabs[pageNum].filename)
+    var askUpdate = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
+    askUpdate.setTransientFor(win.w)
+    
+    askUpdate.setMarkup("The file \"" & filename & "\" has been been edited outside Aporia.\n\n" & 
+                        "Update to latest revision of the file?")
+    askUpdate.addButtons("_Update", ResponseAccept, "_Ignore", ResponseReject, nil)
+    
+    var updateResponse = askUpdate.run()
+    gtk2.destroy(PWidget(askUpdate))
+    
+    if updateResponse == ResponseAccept:
+      var fileTxt: string = readFile(win.tabs[pageNum].filename)
+      win.tabs[pageNum].buffer.set_text(fileTxt, len(fileTxt).int32)
+      win.tabs[pageNum].saved = true
+      result = 1
+    else:
+      win.tabs[pageNum].saved = false
+      result = 0
+    win.tabs[pageNum].lastEdit = changedInfo.lastWriteTime
+
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   ## If tab's filename is ``""`` and the user clicks "Cancel", the filename will
   ## remain ``""``.
+  
+  # Check if the file changed outside the program.
+  if win.tabs[tabNr].filename != "":
+    if checkFileUpdate(tabNr) == 1:
+      return
   
   # TODO: Refactor this function. It's a disgrace.
   if tabNr < 0: return
@@ -186,6 +223,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
 
       # Change the tab name and .Tabs.filename etc.
       win.tabs[tabNr].filename = path
+      win.tabs[tabNr].lastEdit = getFileInfo(win.tabs[tabNr].filename).lastWriteTime
 
       if updateGUI:
         win.tabs[tabNr].saved = true
@@ -845,7 +883,13 @@ proc addTab(name, filename: string, setCurrent: bool = true,
     nam = extractFilename(filename)
 
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow, filename)
-
+  
+  # Get the last file edit, if applicable.
+  var lastEdit: Time
+  if filename != "":
+    var newInfo: FileInfo = getFileInfo(filename)
+    lastEdit = newInfo.lastWriteTime
+  
   # Add a tab
   nTab.buffer = buffer
   nTab.sourceView = sourceView
@@ -856,6 +900,8 @@ proc addTab(name, filename: string, setCurrent: bool = true,
   nTab.highlighted = newNoHighlightAll()
   if not win.globalSettings.showCloseOnAllTabs:
     nTab.closeBtn.hide()
+  if lastEdit != fromSeconds(0):
+    nTab.lastEdit = lastEdit
   win.tabs.add(nTab)
 
   # Set the tooltip
@@ -1466,8 +1512,6 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
     win.tabs[win.tempStuff.lastTab].closeBtn.hide()
 
   win.tempStuff.lastTab = pageNum
-  updateMainTitle(pageNum)
-  updateStatusBar(win.tabs[pageNum].buffer)
   # Set the lastSavedDir
   if win.tabs.len > pageNum:
     if win.tabs[pageNum].filename.len != 0:
@@ -1485,6 +1529,21 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   # Toggle the "Syntax Highlighting" check menu item based in the new tabs
   # syntax highlighting.
   plCheckUpdate(pageNum)
+  
+  updateMainTitle(pageNum)
+  updateStatusBar(win.tabs[pageNum].buffer)
+
+proc onAfterSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
+                      user_data: Pgpointer) = 
+  ## After tab switch; required so the tab is visible when the check for
+  ## modification has run.
+    
+  # Check if the file changed outside the program.
+  if win.tabs[pageNum].filename != "":
+    discard checkFileUpdate(pageNum)
+  
+  updateMainTitle(pageNum)
+  updateStatusBar(win.tabs[pageNum].buffer)
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext,
                         x: gint, y: gint, data: PSelectionData, info: guint,
@@ -2067,6 +2126,8 @@ proc initsourceViewTabs() =
   win.sourceViewTabs = notebookNew()
   discard win.sourceViewTabs.signalConnect(
           "switch-page", SIGNAL_FUNC(onSwitchTab), nil)
+  discard win.sourceViewTabs.signalConnectAfter(
+          "switch-page", SIGNAL_FUNC(onAfterSwitchTab), nil)
   win.sourceViewTabs.set_scrollable(true)
 
   # Drag and Drop setup

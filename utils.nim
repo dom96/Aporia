@@ -8,7 +8,7 @@
 #
 
 # Stdlib imports:
-import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
+import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils, times
 import tables, os, dialogs, pegs
 from gdk2 import TRectangle, intersect, TColor, colorParse, TModifierType
 # Local imports:
@@ -213,6 +213,7 @@ type
     highlighted*: THighlightAll
     spbInfo*: tuple[lastUpper, value: float] # Scroll past bottom info
     lineEnding*: TLineEnding
+    lastEdit*: Time
 
   TSuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string
