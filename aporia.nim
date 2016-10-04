@@ -125,8 +125,6 @@ proc updateTabUI(t: Tab) =
   else:
     t.label.setText(name)
   setTabTooltip(t)
-
-  setTabTooltip(t)
  
 proc checkFileUpdate(pageNum : int): int = 
   ## Checks if the current tab open has been updated outside of Aporia.
