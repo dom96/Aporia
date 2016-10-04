@@ -104,6 +104,7 @@ type
     statusBar*: PCustomStatusBar
 
     infobar*: PInfoBar ## For encoding selection
+    filecheckbar*: PInfoBar ## For accepting or rejecting file changes
 
     toolBar*: PToolBar # \
     # FIXME: should be notebook?
