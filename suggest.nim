@@ -191,7 +191,7 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
   var winPtr = addr win
 
   proc onSugLine(line: string) {.closure.} =
-    template win: expr = winPtr[]
+    template win: untyped = winPtr[]
     var item: TSuggestItem
     if parseIDEToolsLine("sug", line, item):
       win.suggest.allItems.add(item)
@@ -254,7 +254,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     var alreadySaved: seq[string] = @[]
     for t in items(win.tabs):
       if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
-        var f: TFile
+        var f: File
         var fileSplit = splitFile(t.filename)
         if fileSplit.ext != ".nim": continue
         echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
@@ -297,7 +297,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
                     start.getLineOffset())
   else:
     # Unsaved tab.
-    var f: TFile
+    var f: File
     var filename = prefixDir / "unknown.nim"
     echod("Saving ", filename)
     if f.open(filename, fmWrite):

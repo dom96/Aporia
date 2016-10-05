@@ -49,12 +49,11 @@ proc getSearchOptions(mode: TSearchEnum): TTextSearchFlags =
     assert(false)
 
 proc styleInsensitive(s: string): string = 
-  template addx: stmt = 
+  template addx: typed = 
     result.add(s[i])
     inc(i)
   result = ""
   var i = 0
-  var brackets = 0
   while i < s.len:
     case s[i]
     of 'A'..'Z', 'a'..'z', '0'..'9': 
@@ -74,19 +73,19 @@ proc styleInsensitive(s: string): string =
     else: addx()
 
 proc findBoundsGen(text, pattern: string,
-                   rePattern: bool, reOptions: system.set[TRegExFlag],
+                   rePattern: bool, reOptions: system.set[RegexFlag],
                    start: int = 0): 
     tuple[first: int, last: int] =
   if rePattern:
     try:
       result = re.findBounds(text, re(pattern, reOptions), start)
-    except EInvalidRegex:
+    except RegexError:
       result = (-1, 0)
   else:
     var matches: array[0..re.MaxSubpatterns-1, string]
     try:
       result = pegs.findBounds(text, peg(pattern), matches, start)
-    except EInvalidPeg, EAssertionFailed:
+    except EInvalidPeg, AssertionError:
       result = (-1, 0)
 
   if result[0] == -1 or result[1] == -1: return (-1, 0)
@@ -114,7 +113,6 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
     newPattern = styleInsensitive(newPattern)
     isRegex = true  
     
-  var matches: array[0..re.MaxSubpatterns, string]
   var match = (-1, 0)
   if forward:
     match = findBoundsGen($text, newPattern, isRegex, reOptions)

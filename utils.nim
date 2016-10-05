@@ -9,7 +9,7 @@
 
 # Stdlib imports:
 import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
-import tables, os, dialogs, pegs
+import tables, os, dialogs, pegs, osproc
 from gdk2 import TRectangle, intersect, TColor, colorParse, TModifierType
 # Local imports:
 from CustomStatusBar import PCustomStatusBar, TStatusID
@@ -131,8 +131,8 @@ type
 
     autoSettings*: TAutoSettings
     globalSettings*: TGlobalSettings
-    oneInstSock*: PAsyncSocket
-    IODispatcher*: PDispatcher
+    oneInstSock*: AsyncSocket
+    IODispatcher*: Dispatcher
 
   TSuggestDialog* = object
     dialog*: gtk2.PWindow
@@ -173,7 +173,7 @@ type
   TExecThrEvent* = object
     case typ*: TExecThrEventType
     of EvStarted:
-      p*: PProcess
+      p*: Process
     of EvRecv:
       line*: string
     of EvStopped:
@@ -185,8 +185,8 @@ type
 
     currentExec*: PExecOptions # nil if nothing is being executed.
     compileSuccess*: bool
-    execThread*: TThread[void]
-    execProcess*: PProcess
+    execThread*: Thread[void]
+    execProcess*: Process
     idleFuncId*: int32
     progressStatusID*: TStatusID
     lastProgressPulse*: float
@@ -200,7 +200,7 @@ type
     lastTab*: int # For reordering tabs, the last tab that was selected.
     commentSyntax*: tuple[line: string, blockStart: string, blockEnd: string]
     pendingFilename*: string # Filename which could not be opened due to encoding.
-    plMenuItems*: tables.TTable[string, tuple[mi: PCheckMenuItem, id: string]]
+    plMenuItems*: tables.Table[string, tuple[mi: PCheckMenuItem, id: string]]
     stopPLToggle*: bool
     currentToggledLang*: string # ID of the currently active pl
 
@@ -246,8 +246,8 @@ type
     idleID*: int32
 
   AutoComplete* = ref object
-    thread*: TThread[void]
-    sockThread*: TThread[void]
+    thread*: Thread[void]
+    sockThread*: Thread[void]
     taskRunning*, nimSuggestRunning*: bool
     onSugLine*: proc (line: string) {.closure.}
     onSugExit*: proc (exit: int) {.closure.}

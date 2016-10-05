@@ -12,9 +12,9 @@ import gtk2, glib2
 import utils, CustomStatusBar
 
 # Threading channels
-var execThrTaskChan: TChannel[TExecThrTask]
+var execThrTaskChan: Channel[TExecThrTask]
 execThrTaskChan.open()
-var execThrEventChan: TChannel[TExecThrEvent]
+var execThrEventChan: Channel[TExecThrEvent]
 execThrEventChan.open()
 # Threading channels END
 
@@ -141,7 +141,7 @@ proc printProcOutput(win: var MainWin, line: string) =
   ## continuous errors should be received, errors which span multiple lines
   ## should be received as one continuous message.
   echod("Printing: ", line.repr)
-  template paErr(): stmt =
+  template paErr(): typed =
     var parseRes: TError
     parseError(line, parseRes)
 
@@ -312,7 +312,7 @@ proc newExec*(command: string, workDir: string, mode: TExecMode, output = true,
   result.runAfter = runAfter
   result.runAfterSuccess = runAfterSuccess
 
-template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt {.immediate.} =
+template createExecThrEvent(t: TExecThrEventType, todo: typed): typed {.immediate.} =
   ## Sends a thrEvent of type ``t``, does ``todo`` before sending.
   var event {.inject.}: TExecThrEvent
   event.typ = t
@@ -335,7 +335,7 @@ proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream)
       if not started:
         let (bin, args) = cmdToArgs(task.command)
         p = startProcess(bin, task.workDir, args,
-                         options = {poStdErrToStdOut, poUseShell, poInteractive})
+                         options = {poStdErrToStdOut, poUsePath, poInteractive})
         createExecThrEvent(EvStarted):
           event.p = p
         o = p.outputStream
@@ -353,8 +353,8 @@ proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream)
       p.close()
 
 proc execThreadProc(){.thread.} =
-  var p: PProcess
-  var o: PStream
+  var p: Process
+  var o: Stream
   var started = false
   while true:
     var tasks = execThrTaskChan.peek()
