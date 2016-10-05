@@ -49,7 +49,7 @@ proc getSearchOptions(mode: TSearchEnum): TTextSearchFlags =
     assert(false)
 
 proc styleInsensitive(s: string): string = 
-  template addx: stmt = 
+  template addx: typed = 
     result.add(s[i])
     inc(i)
   result = ""

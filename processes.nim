@@ -141,7 +141,7 @@ proc printProcOutput(win: var MainWin, line: string) =
   ## continuous errors should be received, errors which span multiple lines
   ## should be received as one continuous message.
   echod("Printing: ", line.repr)
-  template paErr(): stmt =
+  template paErr(): typed =
     var parseRes: TError
     parseError(line, parseRes)
 
@@ -312,7 +312,7 @@ proc newExec*(command: string, workDir: string, mode: TExecMode, output = true,
   result.runAfter = runAfter
   result.runAfterSuccess = runAfterSuccess
 
-template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt {.immediate.} =
+template createExecThrEvent(t: TExecThrEventType, todo: typed): typed {.immediate.} =
   ## Sends a thrEvent of type ``t``, does ``todo`` before sending.
   var event {.inject.}: TExecThrEvent
   event.typ = t

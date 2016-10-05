@@ -400,7 +400,7 @@ proc updateHighlightAll(buffer: PTextBuffer, markName: string = "") =
     let toLn = getLine(addr(selectBound)) + 1
     # Highlighting
     if frmLn == toLn and win.globalSettings.selectHighlightAll:
-      template h: expr = win.tabs[getCurrentTab(win)].highlighted
+      template h: untyped = win.tabs[getCurrentTab(win)].highlighted
       # Same line.
       var term = buffer.getText(addr(insert), addr(selectBound), false)
       highlightAll(win, $term, false)
@@ -507,11 +507,11 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
       var current = win.sourceViewTabs.getCurrentPage()
       var tab     = win.tabs[current]
 
-      template nextTimes(t: expr): stmt {.immediate.} =
+      template nextTimes(t: untyped): typed {.immediate.} =
         for i in 0..t:
           if selectedPath.getIndices[]+1 < childrenLen:
             next(selectedPath)
-      template prevTimes(t: expr): stmt {.immediate.} =
+      template prevTimes(t: untyped): typed {.immediate.} =
         for i in 0..t:
           discard prev(selectedPath)
 
@@ -1061,7 +1061,7 @@ proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.goLineBar.entry.grabFocus()
 
 proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
-  template cb(): expr = win.tabs[currentPage].buffer
+  template cb(): untyped = win.tabs[currentPage].buffer
   var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
   proc toggleSingle() =
@@ -1173,7 +1173,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
 proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Delete Line menu point. Removes the current line
   ## at the cursor, or all marked lines in case text is selected
-  template textBuffer(): expr = win.tabs[currentPage].buffer
+  template textBuffer(): untyped = win.tabs[currentPage].buffer
   var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
 
@@ -1192,7 +1192,7 @@ proc DeleteLine_Activate(menuitem: PMenuItem, user_data: pointer) =
 
 proc DuplicateLines_Activate(menuitem: PMenuItem, user_data: pointer) =
   ## Callback for the Duplicate Lines menu point. Duplicates the current/selected line(s)
-  template textBuffer(): expr = win.tabs[currentPage].buffer
+  template textBuffer(): untyped = win.tabs[currentPage].buffer
   var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
 
@@ -1676,7 +1676,7 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   if parseBiggestInt($line, lineNum) != 0:
     # Get current tab
     var current = win.sourceViewTabs.getCurrentPage()
-    template buffer: expr = win.tabs[current].buffer
+    template buffer: untyped = win.tabs[current].buffer
     if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
       var iter: TTextIter
       buffer.getIterAtLine(addr(iter), int32(lineNum)-1)

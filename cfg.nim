@@ -117,7 +117,7 @@ proc toKeyOrDefault(shortcutStr: string, def: ShortcutKey): ShortcutKey =
   else:
     return def
 
-template setShortcutIfValid*(shortcutStr: string, shortcutField: untyped): stmt =
+template setShortcutIfValid*(shortcutStr: string, shortcutField: untyped): typed =
   `shortcutField` = toKeyOrDefault(shortcutStr, `shortcutField`)
 
 proc writeSection(f: File, sectionName: string) =
