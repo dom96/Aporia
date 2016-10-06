@@ -53,12 +53,13 @@ proc parseArgs(): seq[string] =
       case key
       of "help", "h": writeHelp()
       of "version", "v": writeVersion()
+      else: discard
     of cmdEnd: assert(false) # cannot happen
 
 var loadFiles = parseArgs()
 
 # Load the settings
-var cfgErrors: seq[TError] = @[]
+var cfgErrors: seq[AporiaError] = @[]
 let (auto, global) = cfg.load(cfgErrors, lastSession)
 win.autoSettings = auto
 win.globalSettings = global
@@ -532,6 +533,8 @@ proc sourceViewKeyPress(sourceView: PWidget, event: PEventKey,
         of "page_down":
           moved = true
           nextTimes(5)
+        else:
+          discard
 
         if moved:
           # selectedPath is now the next or prev path.
@@ -645,7 +648,7 @@ proc goToDef_Activate(i: PMenuItem, p: pointer) {.cdecl.} =
   tab.buffer.getIterAtMark(addr(cursor), tab.buffer.getInsert())
 
   proc onSugLine(win: var MainWin, line: string) {.closure.} =
-    var def: TSuggestItem
+    var def: SuggestItem
     if parseIDEToolsLine("def", line, def):
       win.tempStuff.gotDefinition = true
       let existingTab = win.findTab(def.file, true)
@@ -1296,7 +1299,7 @@ proc compileRun(filename: string, shouldRun: bool) =
 
   # Execute the compiled application if compiled successfully.
   # ifSuccess is the filename of the compiled app.
-  var runAfter: PExecOptions = nil
+  var runAfter: ExecOptions = nil
   let workDir = filename.splitFile.dir
   if shouldRun:
     let ifSuccess = changeFileExt(filename, os.ExeExt)
@@ -1416,7 +1419,7 @@ proc InfoBar_Response(infobar: PInfoBar, respID: gint, cb: pointer) =
     comboBox.setActive(0) # Reset selection.
     infobar.hide()
     discard addTab("", win.tempStuff.pendingFilename, true,
-           $TEncodingsAvailable(active))
+           $EncodingsAvailable(active))
     # addTab may set pendingFilename so we can't reset it here.
     # bad things shouldn't happen if it doesn't get reset though.
   of ResponseCancel:

@@ -2,19 +2,17 @@ import gtk2
 from gdk2 import WINDOW_TYPE_HINT_MENU
 
 type
-  TAboutDialog* = object
+  AboutDialog* = ref object
     dialog: PWindow
     titleLabel: PLabel
     descLabel: PLabel
     copyrightLabel: PLabel
 
-  PAboutDialog* = ref TAboutDialog
-
 proc closeBtn_click(btn: PButton, dummy: pointer) {.cdecl.} =
   # Kinda hackish.
   btn.parent.parent.parent.destroy()
 
-proc newAboutDialog*(title, desc, copyright: string): PAboutDialog =
+proc newAboutDialog*(title, desc, copyright: string): AboutDialog =
   new(result)
   result.dialog = windowNew(WINDOW_TOPLEVEL)
   result.dialog.setTitle("About Aporia")
@@ -53,5 +51,5 @@ proc newAboutDialog*(title, desc, copyright: string): PAboutDialog =
   discard closeBtn.signalConnect("clicked", 
       SIGNAL_FUNC(closeBtn_click), nil)
 
-proc show*(about: PAboutDialog) =
+proc show*(about: AboutDialog) =
   about.dialog.show()

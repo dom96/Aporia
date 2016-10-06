@@ -162,6 +162,8 @@ proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
       return false
     of errorToken:
       self.onSugError(msg.split("\t")[1])
+    else:
+      discard
     self.onSugLine(msg)
 
   if not result:
