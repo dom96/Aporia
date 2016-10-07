@@ -128,8 +128,6 @@ proc updateTabUI(t: Tab) =
  
 proc checkFileUpdate(pageNum: int) = 
   ## Checks if the currently opened tab has been updated outside of Aporia.
-  ## Returns ``1`` if the file has been updated, ``0`` if not, and ``-1``
-  ## if there has been no change
 
   var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
   if win.tabs[pageNum].filename != "" and
