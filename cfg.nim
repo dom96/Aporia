@@ -16,11 +16,11 @@ import glib2
 from processes import addError
 
 type
-  ECFGParse* = object of Exception
+  CFGParseError* = object of Exception
 
 const KEY_notSet = 0.guint
 
-proc defaultAutoSettings*(): TAutoSettings =
+proc defaultAutoSettings*(): AutoSettings =
   result.search = SearchCaseInsens
   result.wrapAround = true
   result.winWidth = 800
@@ -28,7 +28,7 @@ proc defaultAutoSettings*(): TAutoSettings =
 
   result.recentlyOpenedFiles = @[]
 
-proc defaultGlobalSettings*(): TGlobalSettings =
+proc defaultGlobalSettings*(): GlobalSettings =
   result.selectHighlightAll = true
   result.searchHighlightAll = false
   when defined(macosx):
@@ -145,7 +145,7 @@ proc writeKeyValRaw(f: File, key: string, val: string) =
   else: f.write("\"" & val & "\"")
   f.write("\n")
 
-proc save(settings: TAutoSettings, win: var MainWin) =
+proc save(settings: AutoSettings, win: var MainWin) =
   if not os.existsDir(os.getConfigDir() / "Aporia"):
     os.createDir(os.getConfigDir() / "Aporia")
   
@@ -187,7 +187,7 @@ proc save(settings: TAutoSettings, win: var MainWin) =
       f.writeKeyValRaw("lastSelectedTab", win.tabs[current].filename)
     f.close()
 
-proc save*(settings: TGlobalSettings) =
+proc save*(settings: GlobalSettings) =
   if not os.existsDir(os.getConfigDir() / "Aporia"):
     os.createDir(os.getConfigDir() / "Aporia")
   
@@ -281,7 +281,7 @@ proc save*(win: var MainWin) =
 proc istrue(s: string): bool =
   result = cmpIgnoreStyle(s, "true") == 0
 
-proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
+proc loadOld(cfgErrors: var seq[AporiaError], lastSession: var seq[string]): tuple[a: AutoSettings, g: GlobalSettings] =
   var p: CfgParser
   var filename = os.getConfigDir() / "Aporia" / "config.ini"
   var input = newFileStream(filename, fmRead)
@@ -309,7 +309,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "autoindent": result.g.autoIndent = isTrue(e.value)
       of "suggestfeature": result.g.suggestFeature = isTrue(e.value)
       of "showcloseonalltabs": result.g.showCloseOnAllTabs = isTrue(e.value)
-      of "searchmethod": result.a.search = TSearchEnum(e.value.parseInt())
+      of "searchmethod": result.a.search = SearchEnum(e.value.parseInt())
       of "selecthighlightall": result.g.selectHighlightAll = isTrue(e.value)
       of "searchhighlightall": result.g.searchHighlightAll = isTrue(e.value)
       of "singleinstanceport":
@@ -333,7 +333,7 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
         for count, file in pairs(e.value.split(';')):
           if file != "":
             if count > 19:
-              cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
+              cfgErrors.add(AporiaError(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.a.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.a.lastSelectedTab = e.value
@@ -342,15 +342,15 @@ proc loadOld(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a:
       of "nimpath", "nimrodpath":
         result.g.nimPath = e.value
       else:
-        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
+        cfgErrors.add(AporiaError(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
+      cfgErrors.add(AporiaError(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       discard
   input.close()
   p.close()
 
-proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSettings =
+proc loadAuto(cfgErrors: var seq[AporiaError], lastSession: var seq[string]): AutoSettings =
   result = defaultAutoSettings()
   let filename = os.getConfigDir() / "Aporia" / "config.auto.ini"
   if not existsFile(filename): return
@@ -366,7 +366,7 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
       break
     of cfgKeyValuePair:
       case normalize(e.key):
-      of "searchmethod": result.search = TSearchEnum(e.value.parseInt())
+      of "searchmethod": result.search = SearchEnum(e.value.parseInt())
       of "wraparound": result.wrapAround = isTrue(e.value)
       of "winmaximized": result.winMaximized = isTrue(e.value)
       of "vpanedpos": result.VPanedPos = int32(e.value.parseInt())
@@ -382,21 +382,21 @@ proc loadAuto(cfgErrors: var seq[TError], lastSession: var seq[string]): TAutoSe
         for count, file in pairs(e.value.split(';')):
           if file != "":
             if count > 19:
-              cfgErrors.add(Terror(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
+              cfgErrors.add(AporiaError(kind: TETError, desc: "Too many recent files", file: filename, line: "", column: ""))
             result.recentlyOpenedFiles.add(file)
       of "lastselectedtab":
         result.lastSelectedTab = e.value
       else:
-        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
+        cfgErrors.add(AporiaError(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
+      cfgErrors.add(AporiaError(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       discard
 
   autoStream.close()
   pAuto.close()
 
-proc loadGlobal*(cfgErrors: var seq[TError], input: Stream): TGlobalSettings =
+proc loadGlobal*(cfgErrors: var seq[AporiaError], input: Stream): GlobalSettings =
   result = defaultGlobalSettings()
   if input == nil: return
   var pGlobal: CfgParser
@@ -477,18 +477,18 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: Stream): TGlobalSettings =
         of "word":
           result.wrapMode = WrapWord
         else:
-          cfgErrors.add(Terror(kind: TETError, desc: "WrapMode invalid, got: '" & e.value & "'", file: filename, line: "", column: ""))
+          cfgErrors.add(AporiaError(kind: TETError, desc: "WrapMode invalid, got: '" & e.value & "'", file: filename, line: "", column: ""))
       of "scrollpastbottom":
         result.scrollPastBottom = isTrue(e.value)
       else:
-        cfgErrors.add(Terror(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
+        cfgErrors.add(AporiaError(kind: TETError, desc: "Key \"" & e.key & "\" is invalid.", file: filename, line: "", column: ""))
     of cfgError:
-      cfgErrors.add(Terror(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
+      cfgErrors.add(AporiaError(kind: TETError, desc: e.msg, file: filename, line: "", column: ""))
     of cfgSectionStart, cfgOption:
       discard
   close(pGlobal)
 
-proc load*(cfgErrors: var seq[TError], lastSession: var seq[string]): tuple[a: TAutoSettings, g: TGlobalSettings] =
+proc load*(cfgErrors: var seq[AporiaError], lastSession: var seq[string]): tuple[a: AutoSettings, g: GlobalSettings] =
   if existsFile(os.getConfigDir() / "Aporia" / "config.ini"):
     return loadOld(cfgErrors, lastSession)
   else:

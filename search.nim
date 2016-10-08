@@ -18,13 +18,13 @@ const
                        '{', '}', '`', '[', ']', ',', ';'} +
                       strutils.Whitespace + {'\t'}
 
-proc newHighlightAll*(text: string, forSearch: bool, idleID: int32): THighlightAll =
+proc newHighlightAll*(text: string, forSearch: bool, idleID: int32): HighlightAll =
   result.isHighlighted = true
   result.text = text
   result.forSearch = forSearch
   result.idleID = idleID
 
-proc newNoHighlightAll*(): THighlightAll =
+proc newNoHighlightAll*(): HighlightAll =
   result.isHighlighted = false
   result.text = ""
 
@@ -37,7 +37,7 @@ proc canBeHighlighted(term: string): bool =
   for i in 1..term.len-1:
     if term[i] in NonHighlightChars: return false
   
-proc getSearchOptions(mode: TSearchEnum): TTextSearchFlags =
+proc getSearchOptions(mode: SearchEnum): TTextSearchFlags =
   case mode
   of SearchCaseInsens:
     result = TEXT_SEARCH_TEXT_ONLY or 
@@ -91,7 +91,7 @@ proc findBoundsGen(text, pattern: string,
   if result[0] == -1 or result[1] == -1: return (-1, 0)
 
 proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
-               buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
+               buffer: PTextBuffer, pattern: string, mode: SearchEnum,
                wrappedAround = false):
     tuple[startMatch, endMatch: TTextIter, found: bool] =
   var text: cstring
@@ -151,7 +151,7 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
     return (startMatch, endMatch, false)
 
 proc findSimple(win: var utils.MainWin, forward: bool, startIter: PTextIter,
-                buffer: PTextBuffer, pattern: string, mode: TSearchEnum,
+                buffer: PTextBuffer, pattern: string, mode: SearchEnum,
                 wrappedAround = false):
                 tuple[startMatch, endMatch: TTextIter, found: bool] =
   var options = getSearchOptions(mode)
@@ -177,7 +177,7 @@ proc findSimple(win: var utils.MainWin, forward: bool, startIter: PTextIter,
   return (startMatch, endMatch, matchFound.bool)
 
 iterator findTerm(win: var utils.MainWin, buffer: PSourceBuffer, term: string,
-    mode: TSearchEnum): tuple[startMatch, endMatch: TTextIter] {.closure.} =
+    mode: SearchEnum): tuple[startMatch, endMatch: TTextIter] {.closure.} =
   const CurrentSearchPosName = "CurrentSearchPosMark"
   var searchPosMark = buffer.getMark(CurrentSearchPosName)
   var startIter: TTextIter
@@ -250,9 +250,9 @@ proc highlightAll*(w: var MainWin, term: string, forSearch: bool, mode = SearchC
       win: utils.MainWin
       buffer: PSourceBuffer
       term: string 
-      mode: TSearchEnum
+      mode: SearchEnum
       findIter: iterator (win: var utils.MainWin, buffer: PSourceBuffer, 
-                          term: string, mode: TSearchEnum): 
+                          term: string, mode: SearchEnum): 
                         tuple[startMatch, endMatch: TTextIter] {.closure.}
     
   var idleParam: ref TIdleParam; new(idleParam)
