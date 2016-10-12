@@ -56,6 +56,7 @@ proc defaultGlobalSettings*(): TGlobalSettings =
   result.singleInstance = true
   result.restoreTabs = true
   result.activateErrorTabOnErrors = false
+  result.truncateLongTitles = true
   
   when defined(macosx):
     let mask: guint = MetaMask
@@ -218,6 +219,7 @@ proc save*(settings: TGlobalSettings) =
     f.writeKeyVal("compileUnsavedSave", $settings.compileUnsavedSave)
     f.writeKeyVal("restoreTabs", $settings.restoreTabs)
     f.writeKeyVal("activateErrorTabOnErrors", $settings.activateErrorTabOnErrors)
+    f.writeKeyVal("truncateLongTitles", $settings.truncateLongTitles)
     f.writeKeyValRaw("nimPath", $settings.nimPath)
     f.writeKeyVal("toolBarVisible", $settings.toolBarVisible)
     f.writeKeyVal("wrapMode",
@@ -428,6 +430,7 @@ proc loadGlobal*(cfgErrors: var seq[TError], input: PStream): TGlobalSettings =
         result.singleInstancePort = int32(e.value.parseInt())
       of "restoretabs": result.restoreTabs = isTrue(e.value)
       of "activateerrortabonerrors": result.activateErrorTabOnErrors = isTrue(e.value)
+      of "truncatelongtitles": result.truncateLongTitles = isTrue(e.value)
       of "toolbarvisible": result.toolBarVisible = isTrue(e.value)
       of "compilesaveall": result.compileSaveAll = isTrue(e.value)
       of "nimcmd", "nimrodcmd": result.nimCmd = e.value

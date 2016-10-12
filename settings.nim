@@ -125,6 +125,7 @@ var
   compileSaveAllCheckBox: PCheckButton
   showCloseOnAllTabsCheckBox: PCheckButton
   activateErrorTabOnErrorsCheckBox: PCheckButton
+  truncateLongTitlesCheckbox: PCheckButton
   # Shortcuts:
   keyCommentLinesEdit: PEntry
   keyDeleteLineEdit: PEntry
@@ -402,6 +403,7 @@ proc closeDialog(widget: PWidget, user_data: Pgpointer) =
   win.globalSettings.singleInstance = singleInstanceCheckBox.getActive()
   win.globalSettings.compileSaveAll = compileSaveAllCheckBox.getActive()
   win.globalSettings.activateErrorTabOnErrors = activateErrorTabOnErrorsCheckBox.getActive()
+  win.globalSettings.truncateLongTitles = truncateLongTitlesCheckbox.getActive()
   
   # Shortcuts:
   setShortcutIfValid($keyQuitEdit.getText(), win.globalSettings.keyQuit)
@@ -469,6 +471,9 @@ proc initGeneral(settingsTabs: PNotebook) =
   activateErrorTabOnErrorsCheckBox = addCheckBox(box, "Activate Error list tab on errors", win.globalSettings.activateErrorTabOnErrors)
   
   showCloseOnAllTabsCheckBox = addCheckBox(box, "Show close button on all tabs", win.globalSettings.showCloseOnAllTabs)
+
+  truncateLongTitlesCheckbox = addCheckBox(box, "Truncate long titles", win.globalSettings.truncateLongTitles)
+
   discard showCloseOnAllTabsCheckBox.gSignalConnect("toggled",
     G_CALLBACK(showCloseOnAllTabs_Toggled), nil)
 
