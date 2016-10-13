@@ -1813,7 +1813,7 @@ proc initTopMenu(mainBox: PBox) =
       win.statusBar.setTemp(getCurrentExceptionMsg(), UrgError)
   
   proc reloadPreferences_onActivate(i: PMenuItem, p: pointer) {.cdecl.} =
-    var cfgErrors: seq[TError] = @[]
+    var cfgErrors: seq[AporiaError] = @[]
     let (auto, global) = cfg.load(cfgErrors, lastSession)
     win.globalSettings = global
 
