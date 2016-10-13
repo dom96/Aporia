@@ -82,6 +82,42 @@ proc updateMainTitle(pageNum: int) =
     title.add(" - Aporia")
     win.w.setTitle(title)
 
+proc updateSettings(settings: string) = 
+  ## Updates the settings from the given string.
+  
+  var schemeMan = schemeManagerGetDefault()
+  win.scheme = schemeMan.getScheme(win.globalSettings.colorSchemeID)
+  var font = fontDescriptionFromString(win.globalSettings.font)
+  for i in 0..high(win.tabs):
+    var tab = win.tabs[i]
+
+    # Color scheme:
+    tab.buffer.setScheme(win.scheme)
+    # Font:
+    tab.sourceView.modifyFont(font)
+
+    # Line numbers:
+    tab.sourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
+    # Highlight current line:
+    tab.sourceView.setHighlightCurrentLine(win.globalSettings.highlightCurrentLine)
+    # Show right margin:
+    tab.sourceView.setShowRightMargin(win.globalSettings.rightMargin)
+    # Bracket matching:
+    tab.buffer.setHighlightMatchingBrackets(win.globalSettings.highlightMatchingBrackets)
+    # Indent width:
+    tab.sourceView.setIndentWidth(win.globalSettings.indentWidth)
+    # Auto indent:
+    tab.sourceView.setAutoIndent(win.globalSettings.autoIndent)
+
+    # Tab close buttons:
+    if win.globalSettings.showCloseOnAllTabs:
+      tab.closeBtn.show()
+    else:
+      if i == win.sourceViewTabs.getCurrentPage():
+        tab.closeBtn.show()
+      else:
+        tab.closeBtn.hide()
+
 proc plCheckUpdate(pageNum: int) =
   ## Updates the 'check state' of the syntax highlighting CheckMenuItems,
   ## depending on the syntax highlighting language that has been set.
@@ -164,13 +200,14 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
 
     var config = false
     if path == os.getConfigDir() / "Aporia" / "config.global.ini":
-      # If we are overwriting Aporia's config file. Validate it.
+      # If we are overwriting Aporia's config file, validate it.
       cfgErrors = @[]
       var newSettings = cfg.loadGlobal(cfgErrors, newStringStream($text))
       if cfgErrors.len > 0:
         showConfigErrors()
         return
       win.globalSettings = newSettings
+      updateSettings($text)
       config = true
 
     # Handle text before saving
