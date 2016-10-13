@@ -60,7 +60,7 @@ type
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
     activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
-    truncateLongTItles*: bool # Whether to truncate long titles to 20 characters
+    truncateLongTitles*: bool # Whether to truncate long titles to 20 characters
     keyCommentLines*:      ShortcutKey
     keyDeleteLine*:        ShortcutKey
     keyDuplicateLines*:    ShortcutKey
