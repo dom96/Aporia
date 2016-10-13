@@ -846,6 +846,10 @@ proc addTab(name, filename: string, setCurrent: bool = true,
     # Get the name.ext of the filename, for the tabs title
     nam = extractFilename(filename)
 
+  # Truncate title to 20 chars
+  if win.globalSettings.truncateLongTitles:
+    if len(nam) > 20: nam = nam[0..16] & "..."
+
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow, filename)
 
   # Add a tab
