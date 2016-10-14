@@ -1703,16 +1703,26 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
     # Get current tab
     var current = win.sourceViewTabs.getCurrentPage()
     template buffer: untyped = win.tabs[current].buffer
+    
+    # If the line is negative, start counting from the end.
+    if lineNum < 0:
+      lineNum = buffer.getLineCount() + 1 + lineNum
+    
     if lineNum-1 >= 0 and lineNum <= buffer.getLineCount():
-
+      
+      # Verify the column is within the line.
       var startIter, endIter: TTextIter
       buffer.getIterAtLineOffset(addr(startIter), int32(lineNum)-1, 0)
       buffer.getIterAtLine(addr(endIter), int32(lineNum)-1)
       discard forward_to_line_end(addr(endIter))
-      
+
       var lineText = $buffer.getText(addr(startIter), addr(endIter), false)
       if getLine(addr(startIter)) != getLine(addr(endIter)):
         lineText = ""
+
+      # If the column is negative, start counting from the end.
+      if column < 0:
+        column = len(lineText) + 1 + column
 
       if column >= 0 and column < len(lineText)+1:
 
