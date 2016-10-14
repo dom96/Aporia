@@ -82,6 +82,53 @@ proc updateMainTitle(pageNum: int) =
     title.add(" - Aporia")
     win.w.setTitle(title)
 
+proc plCheckUpdate(pageNum: int) =
+  ## Updates the 'check state' of the syntax highlighting CheckMenuItems,
+  ## depending on the syntax highlighting language that has been set.
+  let currentToggledLang = win.tempStuff.currentToggledLang
+  let newLang = win.getCurrentLanguage(pageNum)
+  assert win.tempStuff.plMenuItems.hasKey(currentToggledLang)
+  assert win.tempStuff.plMenuItems.hasKey(newLang)
+  win.tempStuff.stopPLToggle = true
+  win.tempStuff.plMenuItems[currentToggledLang].mi.itemSetActive(false)
+  win.tempStuff.plMenuItems[newLang].mi.itemSetActive(true)
+  win.tempStuff.currentToggledLang = newLang
+  win.tempStuff.stopPLToggle = false
+
+proc setTabTooltip(t: Tab) =
+  ## (Re)sets the tab tooltip text.
+  if t.filename != "":
+    var tooltip = "<b>Path: </b> " & t.filename & "\n" &
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer) & "\n" &
+                  "<b>Line Ending: </b> " & $t.lineEnding
+    if t.filename.startsWith(getTempDir()):
+      tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
+    t.label.setTooltipMarkup(tooltip)
+  else:
+    var tooltip = "<i>Tab is not saved.</i>\n" &
+                  "<b>Language: </b> " & getLanguageName(win, t.buffer) & "\n" &
+                  "<b>Line Ending: </b> " & $t.lineEnding
+    t.label.setTooltipMarkup(tooltip)
+
+proc updateTabUI(t: Tab) =
+  ## Updates Tab's label and tooltip. Call this when the tab's filename or
+  ## language changes.
+  var name = ""
+  if t.filename == "":
+    name = "Untitled"
+  else:
+    name = extractFilename(t.filename)
+  if win.globalSettings.truncateLongTitles:
+    if len(name) > 20: name = name[0..16] & "..."
+  if not t.saved:
+    name.add(" *")
+
+  if t.saved and t.isTemporary:
+    t.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
+  else:
+    t.label.setText(name)
+  setTabTooltip(t)
+
 proc updateSettings() = 
   ## Updates the settings.
 
@@ -136,50 +183,8 @@ proc updateSettings() =
       else:
         tab.closeBtn.hide()
 
-proc plCheckUpdate(pageNum: int) =
-  ## Updates the 'check state' of the syntax highlighting CheckMenuItems,
-  ## depending on the syntax highlighting language that has been set.
-  let currentToggledLang = win.tempStuff.currentToggledLang
-  let newLang = win.getCurrentLanguage(pageNum)
-  assert win.tempStuff.plMenuItems.hasKey(currentToggledLang)
-  assert win.tempStuff.plMenuItems.hasKey(newLang)
-  win.tempStuff.stopPLToggle = true
-  win.tempStuff.plMenuItems[currentToggledLang].mi.itemSetActive(false)
-  win.tempStuff.plMenuItems[newLang].mi.itemSetActive(true)
-  win.tempStuff.currentToggledLang = newLang
-  win.tempStuff.stopPLToggle = false
-
-proc setTabTooltip(t: Tab) =
-  ## (Re)sets the tab tooltip text.
-  if t.filename != "":
-    var tooltip = "<b>Path: </b> " & t.filename & "\n" &
-                  "<b>Language: </b> " & getLanguageName(win, t.buffer) & "\n" &
-                  "<b>Line Ending: </b> " & $t.lineEnding
-    if t.filename.startsWith(getTempDir()):
-      tooltip.add("\n<i>File is saved in temporary files and may be deleted.</i>")
-    t.label.setTooltipMarkup(tooltip)
-  else:
-    var tooltip = "<i>Tab is not saved.</i>\n" &
-                  "<b>Language: </b> " & getLanguageName(win, t.buffer) & "\n" &
-                  "<b>Line Ending: </b> " & $t.lineEnding
-    t.label.setTooltipMarkup(tooltip)
-
-proc updateTabUI(t: Tab) =
-  ## Updates Tab's label and tooltip. Call this when the tab's filename or
-  ## language changes.
-  var name = ""
-  if t.filename == "":
-    name = "Untitled"
-  else:
-    name = extractFilename(t.filename)
-  if not t.saved:
-    name.add(" *")
-
-  if t.saved and t.isTemporary:
-    t.label.setMarkup(name & "<span color=\"#CC0E0E\"> *</span>")
-  else:
-    t.label.setText(name)
-  setTabTooltip(t)
+    # Tab titles:
+    updateTabUI(tab)
 
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   ## If tab's filename is ``""`` and the user clicks "Cancel", the filename will
