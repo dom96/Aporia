@@ -84,6 +84,22 @@ proc updateMainTitle(pageNum: int) =
 
 proc updateSettings() = 
   ## Updates the settings.
+
+  # Toggle toolbar:
+  if win.globalSettings.toolBarVisible:
+    win.toolBar.show()
+  else:
+    win.toolBar.hide()
+
+  # Toggle bottom panel:
+  if win.autoSettings.bottomPanelVisible:
+    win.bottomPanelTabs.show()
+  else:
+    win.bottomPanelTabs.hide()
+
+  # Output font:
+  var outputFont = font_description_from_string(win.globalSettings.outputFont)
+  win.outputTextView.modifyFont(outputFont)
   
   var schemeMan = schemeManagerGetDefault()
   win.scheme = schemeMan.getScheme(win.globalSettings.colorSchemeID)
@@ -108,6 +124,8 @@ proc updateSettings() =
     tab.sourceView.setIndentWidth(win.globalSettings.indentWidth)
     # Auto indent:
     tab.sourceView.setAutoIndent(win.globalSettings.autoIndent)
+    # Wrap mode:
+    tab.sourceView.setWrapMode(win.globalSettings.wrapMode)
 
     # Tab close buttons:
     if win.globalSettings.showCloseOnAllTabs:
