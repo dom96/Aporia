@@ -1686,13 +1686,27 @@ proc extraBtn_Clicked(button: PButton, user_data: Pgpointer) =
 proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var line = win.goLineBar.entry.getText()
   var lineNum: BiggestInt = -1
-  if parseBiggestInt($line, lineNum) != 0:
+  var column: BiggestInt = 0
+  var validLine = 0 # debug: was -1
+  var validColumn = 0 #debug: was -1
+  var columnEntered = false
+
+  if ($line).count(":") == 1:
+    var lineComponents = ($line).split(":")
+    validLine = parseBiggestInt(lineComponents[0].strip(), lineNum)
+    validColumn = parseBiggestInt(lineComponents[1].strip(), column)
+    columnEntered = true
+  elif ($line).count(":") == 0:
+    validLine = parseBiggestInt(($line).strip(), lineNum)
+
+  if validLine != 0 and (not columnEntered or columnEntered and validColumn != 0):
     # Get current tab
     var current = win.sourceViewTabs.getCurrentPage()
     template buffer: untyped = win.tabs[current].buffer
-    if not (lineNum-1 < 0 or (lineNum > buffer.getLineCount())):
+    var line = #GET THE LINE
+    if lineNum-1 >= 0 and lineNum <= buffer.getLineCount()) and column <= high($line):
       var iter: TTextIter
-      buffer.getIterAtLine(addr(iter), int32(lineNum)-1)
+      buffer.getIterAtLineOffset(addr(iter), int32(lineNum)-1, int32(column))
 
       buffer.moveMarkByName("insert", addr(iter))
       buffer.moveMarkByName("selection_bound", addr(iter))
