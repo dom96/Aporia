@@ -82,8 +82,8 @@ proc updateMainTitle(pageNum: int) =
     title.add(" - Aporia")
     win.w.setTitle(title)
 
-proc updateSettings(settings: string) = 
-  ## Updates the settings from the given string.
+proc updateSettings() = 
+  ## Updates the settings.
   
   var schemeMan = schemeManagerGetDefault()
   win.scheme = schemeMan.getScheme(win.globalSettings.colorSchemeID)
@@ -207,7 +207,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
         showConfigErrors()
         return
       win.globalSettings = newSettings
-      updateSettings($text)
+      updateSettings()
       config = true
 
     # Handle text before saving
