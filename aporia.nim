@@ -1703,20 +1703,28 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
     # Get current tab
     var current = win.sourceViewTabs.getCurrentPage()
     template buffer: untyped = win.tabs[current].buffer
-    var line = #GET THE LINE
-    if lineNum-1 >= 0 and lineNum <= buffer.getLineCount()) and column <= high($line):
-      var iter: TTextIter
-      buffer.getIterAtLineOffset(addr(iter), int32(lineNum)-1, int32(column))
+    if lineNum-1 >= 0 and lineNum <= buffer.getLineCount():
 
-      buffer.moveMarkByName("insert", addr(iter))
-      buffer.moveMarkByName("selection_bound", addr(iter))
-      discard PTextView(win.tabs[current].sourceView).
-          scrollToIter(addr(iter), 0.2, false, 0.0, 0.0)
+      var startIter, endIter: TTextIter
+      buffer.getIterAtLineOffset(addr(startIter), int32(lineNum)-1, 0)
+      buffer.getIterAtLine(addr(endIter), int32(lineNum)-1)
+      discard forward_to_line_end(addr(endIter))
+      var lineText = $buffer.getText(addr(startIter), addr(endIter), false)
 
-      # Reset entry color.
-      win.goLineBar.entry.modifyBase(STATE_NORMAL, nil)
-      win.goLineBar.entry.modifyText(STATE_NORMAL, nil)
-      return # Success
+      if column >= 0 and column < len(lineText)+1:
+
+        var iter: TTextIter
+        buffer.getIterAtLineOffset(addr(iter), int32(lineNum)-1, int32(column))
+
+        buffer.moveMarkByName("insert", addr(iter))
+        buffer.moveMarkByName("selection_bound", addr(iter))
+        discard PTextView(win.tabs[current].sourceView).
+            scrollToIter(addr(iter), 0.2, false, 0.0, 0.0)
+
+        # Reset entry color.
+        win.goLineBar.entry.modifyBase(STATE_NORMAL, nil)
+        win.goLineBar.entry.modifyText(STATE_NORMAL, nil)
+        return # Success
 
   # Make entry red.
   var red: gdk2.TColor
