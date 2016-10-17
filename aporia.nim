@@ -1690,12 +1690,6 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var validLine = 0
   var validColumn = 0
   var columnEntered = false
-  var validChars = true
-
-  for c in $line:
-    if c notin {'0'..'9', '-', ':'}:
-      validChars = false
-      break
 
   if ($line).count(":") == 1:
     var lineComponents = ($line).split(":")
@@ -1705,7 +1699,7 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   elif ($line).count(":") == 0:
     validLine = parseBiggestInt(($line).strip(), lineNum)
 
-  if validChars and validLine != 0 and (not columnEntered or columnEntered and validColumn != 0):
+  if validLine != 0 and (not columnEntered or columnEntered and validColumn != 0):
     # Get current tab
     var current = win.sourceViewTabs.getCurrentPage()
     template buffer: untyped = win.tabs[current].buffer
