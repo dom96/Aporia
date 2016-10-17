@@ -1687,8 +1687,8 @@ proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var line = win.goLineBar.entry.getText()
   var lineNum: BiggestInt = -1
   var column: BiggestInt = 0
-  var validLine = 0 # debug: was -1
-  var validColumn = 0 #debug: was -1
+  var validLine = 0
+  var validColumn = 0
   var columnEntered = false
   var validChars = true
 
