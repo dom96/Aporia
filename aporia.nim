@@ -2094,6 +2094,7 @@ proc initsourceViewTabs() =
   var count = 0
 
   if win.globalSettings.restoreTabs and lastSession.len > 0:
+    var missingFilenames: seq[string] = @[]
     for i in 0 .. lastSession.len-1:
       var splitUp = lastSession[i].split('|')
       var (filename, offset) = (splitUp[0], splitUp[1])
@@ -2110,7 +2111,16 @@ proc initsourceViewTabs() =
 
         win.forceScrollToInsert(int32(newTab))
 
-      else: dialogs.error(win.w, "Could not restore file from session, file not found: " & filename)
+      else: missingFilenames.add(filename)
+
+    if len(missingFilenames) > 0:
+      var filenames = ""
+      if len(missingFilenames) > 5:
+        var numNotShown = len(missingFilenames) - 5
+        filenames = missingFilenames[0..4].join("\n") & "\nand " & intToStr(numNotShown) & " more files"
+      else:
+        filenames = missingFilenames.join("\n")
+      dialogs.error(win.w, "Could not restore files from session, files not found:\n\n" & filenames)
 
   for f in loadFiles:
     if existsFile(f):
