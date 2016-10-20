@@ -9,16 +9,16 @@
 
 # Stdlib imports:
 import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
-import tables, os, dialogs, pegs
+import tables, os, dialogs, pegs, osproc
 from gdk2 import TRectangle, intersect, TColor, colorParse, TModifierType
 # Local imports:
-from CustomStatusBar import PCustomStatusBar, TStatusID
+from CustomStatusBar import CustomStatusBar, StatusID
 
 import AboutDialog
 
 type
-  TAutoSettings* = object # Settings which should not be set by the user manually
-    search*: TSearchEnum # Search mode.
+  AutoSettings* = object # Settings which should not be set by the user manually
+    search*: SearchEnum # Search mode.
     wrapAround*: bool # Whether to wrap the search around.
 
     winMaximized*: bool # Whether the MainWindow is maximized on startup
@@ -32,7 +32,7 @@ type
 
     bottomPanelVisible*: bool # Whether the bottom panel is shown
 
-  TGlobalSettings* = object
+  GlobalSettings* = object
     selectHighlightAll*: bool # Whether to highlight all occurrences upon selection
     searchHighlightAll*: bool # Whether to highlight all occurrences of the currently searched text
     font*: string # font used by the sourceview
@@ -60,6 +60,7 @@ type
     singleInstance*: bool # Whether the program runs as single instance.
     restoreTabs*: bool    # Whether the program loads the tabs from the last session
     activateErrorTabOnErrors*: bool    # Whether the Error list tab will be shown when an error ocurs
+    truncateLongTitles*: bool # Whether to truncate long titles to 20 characters
     keyCommentLines*:      ShortcutKey
     keyDeleteLine*:        ShortcutKey
     keyDuplicateLines*:    ShortcutKey
@@ -97,11 +98,11 @@ type
   MainWin* = object
     # Widgets
     w*: gtk2.PWindow
-    suggest*: TSuggestDialog
+    suggest*: SuggestDialog
     nimLang*: PSourceLanguage
     scheme*: PSourceStyleScheme # color scheme the sourceview is meant to use
     sourceViewTabs*: PNotebook # Tabs which hold the sourceView
-    statusBar*: PCustomStatusBar
+    statusBar*: CustomStatusBar
 
     infobar*: PInfoBar ## For encoding selection
 
@@ -118,7 +119,7 @@ type
     replaceBtn*: PButton
     replaceAllBtn*: PButton
 
-    goLineBar*: TGoLineBar
+    goLineBar*: GoLineBar
 
     FileMenu*: PMenu
 
@@ -129,51 +130,50 @@ type
 
     tempStuff*: Temp # Just things to remember. TODO: Rename to `other' ?
 
-    autoSettings*: TAutoSettings
-    globalSettings*: TGlobalSettings
-    oneInstSock*: PAsyncSocket
-    IODispatcher*: PDispatcher
+    autoSettings*: AutoSettings
+    globalSettings*: GlobalSettings
+    oneInstSock*: AsyncSocket
+    IODispatcher*: Dispatcher
 
-  TSuggestDialog* = object
+  SuggestDialog* = object
     dialog*: gtk2.PWindow
     treeView*: PTreeView
-    items*: seq[TSuggestItem] ## Visible items (In the treeview)
-    allItems*: seq[TSuggestItem] ## All items found in current context.
+    items*: seq[SuggestItem] ## Visible items (In the treeview)
+    allItems*: seq[SuggestItem] ## All items found in current context.
     shown*: bool
     gotAll*: bool # Whether all suggest items have been read.
     currentFilter*: string
     tooltip*: gtk2.PWindow
     tooltipLabel*: PLabel
 
-  TExecMode* = enum
+  ExecMode* = enum
     ExecNim, ExecRun, ExecCustom
 
-  PExecOptions* = ref TExecOptions
-  TExecOptions* = object
+  ExecOptions* = ref object
     command*: string
     workDir*: string
-    mode*: TExecMode
+    mode*: ExecMode
     output*: bool
-    onLine*: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.}
-    onExit*: proc (win: var MainWin, opts: PExecOptions, exitcode: int) {.closure.}
+    onLine*: proc (win: var MainWin, opts: ExecOptions, line: string) {.closure.}
+    onExit*: proc (win: var MainWin, opts: ExecOptions, exitcode: int) {.closure.}
     runAfterSuccess*: bool # If true, ``runAfter`` will only be ran on success.
-    runAfter*: PExecOptions
+    runAfter*: ExecOptions
 
-  TExecThrTaskType* = enum
+  ExecThrTaskType* = enum
     ThrRun, ThrStop
-  TExecThrTask* = object
-    case typ*: TExecThrTaskType
+  ExecThrTask* = object
+    case typ*: ExecThrTaskType
     of ThrRun:
       command*: string
       workDir*: string
     of ThrStop: nil
 
-  TExecThrEventType* = enum
+  ExecThrEventType* = enum
     EvStarted, EvRecv, EvStopped
-  TExecThrEvent* = object
-    case typ*: TExecThrEventType
+  ExecThrEvent* = object
+    case typ*: ExecThrEventType
     of EvStarted:
-      p*: PProcess
+      p*: Process
     of EvRecv:
       line*: string
     of EvStopped:
@@ -183,16 +183,16 @@ type
     lastSaveDir*: string # Last saved directory/last active directory
     stopSBUpdates*: bool
 
-    currentExec*: PExecOptions # nil if nothing is being executed.
+    currentExec*: ExecOptions # nil if nothing is being executed.
     compileSuccess*: bool
-    execThread*: TThread[void]
-    execProcess*: PProcess
+    execThread*: Thread[void]
+    execProcess*: Process
     idleFuncId*: int32
-    progressStatusID*: TStatusID
+    progressStatusID*: StatusID
     lastProgressPulse*: float
     errorMsgStarted*: bool
     compilationErrorBuffer*: string # holds error msg if it spans multiple lines.
-    errorList*: seq[TError]
+    errorList*: seq[AporiaError]
     gotDefinition*: bool
     autoComplete*: AutoComplete
 
@@ -200,7 +200,7 @@ type
     lastTab*: int # For reordering tabs, the last tab that was selected.
     commentSyntax*: tuple[line: string, blockStart: string, blockEnd: string]
     pendingFilename*: string # Filename which could not be opened due to encoding.
-    plMenuItems*: tables.TTable[string, tuple[mi: PCheckMenuItem, id: string]]
+    plMenuItems*: tables.Table[string, tuple[mi: PCheckMenuItem, id: string]]
     stopPLToggle*: bool
     currentToggledLang*: string # ID of the currently active pl
 
@@ -210,44 +210,44 @@ type
     label*: PLabel
     closeBtn*: PButton # This is so that the close btn is only shown on selected tabs.
     filename*: string
-    highlighted*: THighlightAll
+    highlighted*: HighlightAll
     spbInfo*: tuple[lastUpper, value: float] # Scroll past bottom info
-    lineEnding*: TLineEnding
+    lineEnding*: LineEnding
 
-  TSuggestItem* = object
+  SuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string
     line*, col*: int32
 
-  TSearchEnum* = enum
+  SearchEnum* = enum
     SearchCaseSens, SearchCaseInsens, SearchStyleInsens, SearchRegex, SearchPeg
 
-  TGoLineBar* = object
+  GoLineBar* = object
     bar*: PHBox
     entry*: PEntry
 
-  TErrorType* = enum
+  ErrorType* = enum
     TETError, TETWarning
 
-  TError* = object
-    kind*: TErrorType
+  AporiaError* = object
+    kind*: ErrorType
     desc*, file*, line*, column*: string
 
-  TEncodingsAvailable* = enum
+  EncodingsAvailable* = enum
     UTF8 = "UTF-8", ISO88591 = "ISO-8859-1", GB2312 = "GB2312",
     Windows1251 = "Windows-1251", UTF16BE = "UTF-16BE", UTF16LE = "UTF-16LE"
 
-  TLineEnding* = enum
+  LineEnding* = enum
     leAuto = "Unknown", leLF = "LF", leCR = "CR", leCRLF = "CRLF"
 
-  THighlightAll* = object
+  HighlightAll* = object
     isHighlighted*: bool
     text*: string # What is currently being highlighted in this tab
     forSearch*: bool # Whether highlightedText is done as a result of a search.
     idleID*: int32
 
   AutoComplete* = ref object
-    thread*: TThread[void]
-    sockThread*: TThread[void]
+    thread*: Thread[void]
+    sockThread*: Thread[void]
     taskRunning*, nimSuggestRunning*: bool
     onSugLine*: proc (line: string) {.closure.}
     onSugExit*: proc (exit: int) {.closure.}
@@ -474,7 +474,7 @@ proc `saved=`*(t: Tab, b: bool) =
   assert(not t.buffer.isNil)
   t.buffer.setModified(not b)
 
-proc detectLineEndings*(text: string): TLineEnding =
+proc detectLineEndings*(text: string): LineEnding =
   var i = 0
   while true:
     case text[i]
@@ -487,14 +487,14 @@ proc detectLineEndings*(text: string): TLineEnding =
       if text[i] == '\0': return leAuto
     i.inc
 
-proc srepr(le: TLineEnding, auto: string): string =
+proc srepr(le: LineEnding, auto: string): string =
   case le
   of leLF: "\L"
   of leCR: "\C"
   of leCRLF: "\c\L"
   of leAuto: auto
 
-proc normalize*(le: TLineEnding, text: string): string =
+proc normalize*(le: LineEnding, text: string): string =
   ## Normalizes newlines and strips trailing whitespace.
   result = ""
   var i = 0
@@ -520,7 +520,7 @@ proc normalize*(le: TLineEnding, text: string): string =
 
     i.inc
 
-proc addExtraNL*(le: TLineEnding, text: var string) =
+proc addExtraNL*(le: LineEnding, text: var string) =
   const defaultLE = "\L"
   let sle = srepr(le, defaultLE)
   if not text.endswith(sle):

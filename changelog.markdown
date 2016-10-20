@@ -1,5 +1,19 @@
-Version 0.2
-=============
+08/06/2016 - Version 0.4.1
+==========================
+
+This is a hot fix release which fixes compilation on case sensitive file
+systems.
+
+08/06/2016 - Version 0.4.0
+==========================
+
+This release has been long overdue. It may surprise you to see the high jump
+in version number, this is because the Nim installer bundled a "fake"
+version 0.3.0 up until now.
+
+There are many changes between the last release and this one. Some of them
+are outlined below. A big change for this release is the inclusion of an icon
+and a Mac OS X build.
 
 * Tabs can now be reordered.
 * Close button can now only be shown on the selected tab. (This is configurable)
@@ -33,7 +47,7 @@ the Nimrod syntax highlighter.
 * When searching, all occurrences in the document of your search will now be
   highlighted.
 * When you select text all occurrences of the selected text will now be highlighted.
-* You are now notified when search wraps around the end of the file through the 
+* You are now notified when search wraps around the end of the file through the
   status bar.
 * Compiling an unsaved file now saves it to /tmp. Aporia will warn you about any
   files which are saved in /tmp with a red ``*``. Old behaviour can be restored

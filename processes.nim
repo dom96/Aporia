@@ -12,9 +12,9 @@ import gtk2, glib2
 import utils, CustomStatusBar
 
 # Threading channels
-var execThrTaskChan: TChannel[TExecThrTask]
+var execThrTaskChan: Channel[ExecThrTask]
 execThrTaskChan.open()
-var execThrEventChan: TChannel[TExecThrEvent]
+var execThrEventChan: Channel[ExecThrEvent]
 execThrEventChan.open()
 # Threading channels END
 
@@ -27,7 +27,7 @@ var
   reLineMessage = re".+\(\d+,\s\d+\)"
   pegLineInfo = peg"{[^(]*} '(' {\d+} ', ' \d+ ') Info:' \s* {.*}"
 
-proc `$`(theType: TErrorType): string =
+proc `$`(theType: ErrorType): string =
   case theType
   of TETError: result = "Error"
   of TETWarning: result = "Warning"
@@ -38,7 +38,7 @@ proc clearErrors*(win: var MainWin) =
   cast[PListStore](TreeModel).clear()
   win.tempStuff.errorList = @[]
 
-proc addError*(win: var MainWin, error: TError) =
+proc addError*(win: var MainWin, error: AporiaError) =
   # Make the file path a bit shorter, so it's more readable
   var fileShort = error.file
   var mainDir = win.tabs[win.sourceViewTabs.getCurrentPage()].filename
@@ -65,7 +65,7 @@ proc addError*(win: var MainWin, error: TError) =
 
   win.tempStuff.errorList.add(error)
 
-proc parseError(err: string, res: var TError) =
+proc parseError(err: string, res: var AporiaError) =
   ## Parses a line like:
   ##   ``a12.nim(1, 3) Error: undeclared identifier: 'asd'``
   ##
@@ -135,14 +135,14 @@ proc parseError(err: string, res: var TError) =
   i += skipWhitespace(err, i)
   res.desc = err.substr(i, err.len()-1)
 
-proc execProcAsync*(win: var MainWin, exec: PExecOptions)
+proc execProcAsync*(win: var MainWin, exec: ExecOptions)
 proc printProcOutput(win: var MainWin, line: string) =
   ## This shouldn't have to worry about receiving broken up errors (into new lines)
   ## continuous errors should be received, errors which span multiple lines
   ## should be received as one continuous message.
   echod("Printing: ", line.repr)
-  template paErr(): stmt =
-    var parseRes: TError
+  template paErr(): typed =
+    var parseRes: AporiaError
     parseError(line, parseRes)
 
     win.addError(parseRes)
@@ -172,7 +172,7 @@ proc printProcOutput(win: var MainWin, line: string) =
   of ExecRun, ExecCustom:
     win.outputTextView.addText(line & "\l", normalTag)
 
-proc parseCompilerOutput(win: var MainWin, event: TExecThrEvent) =
+proc parseCompilerOutput(win: var MainWin, event: ExecThrEvent) =
   if event.line == "" or event.line.startsWith(pegSuccess) or
       event.line =~ pegOtherHint:
     #echod(1)
@@ -216,7 +216,7 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
                                    "darkgreen")
       var errorTag = createColor(win.outputTextView, "errorTag", "red")
       for i in 0..events-1:
-        var event: TExecThrEvent = execThrEventChan.recv()
+        var event: ExecThrEvent = execThrEventChan.recv()
         case event.typ
         of EvStarted:
           win.tempStuff.execProcess = event.p
@@ -270,7 +270,7 @@ proc peekProcOutput*(win: ptr MainWin): gboolean {.cdecl.} =
     echod("idle proc exiting")
     return false
 
-proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
+proc execProcAsync*(win: var MainWin, exec: ExecOptions) =
   ## This function executes a process in a new thread, using only idle time
   ## to add the output of the process to the `outputTextview`.
   assert(win.tempStuff.currentExec == nil)
@@ -279,7 +279,7 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   # Execute the process
   win.tempStuff.currentExec = exec
   echod(exec.command)
-  var task: TExecThrTask
+  var task: ExecThrTask
   task.typ = ThrRun
   task.command = exec.command
   task.workDir = exec.workDir
@@ -298,10 +298,10 @@ proc execProcAsync*(win: var MainWin, exec: PExecOptions) =
   # Clear errors
   win.clearErrors()
 
-proc newExec*(command: string, workDir: string, mode: TExecMode, output = true,
-              onLine: proc (win: var MainWin, opts: PExecOptions, line: string) {.closure.} = nil,
-              onExit: proc (win: var MainWin, opts: PExecOptions, exitcode: int) {.closure.} = nil,
-              runAfter: PExecOptions = nil, runAfterSuccess = true): PExecOptions =
+proc newExec*(command: string, workDir: string, mode: ExecMode, output = true,
+              onLine: proc (win: var MainWin, opts: ExecOptions, line: string) {.closure.} = nil,
+              onExit: proc (win: var MainWin, opts: ExecOptions, exitcode: int) {.closure.} = nil,
+              runAfter: ExecOptions = nil, runAfterSuccess = true): ExecOptions =
   new(result)
   result.command = command
   result.workDir = workDir
@@ -312,9 +312,9 @@ proc newExec*(command: string, workDir: string, mode: TExecMode, output = true,
   result.runAfter = runAfter
   result.runAfterSuccess = runAfterSuccess
 
-template createExecThrEvent(t: TExecThrEventType, todo: stmt): stmt {.immediate.} =
+template createExecThrEvent(t: ExecThrEventType, todo: typed): typed {.immediate.} =
   ## Sends a thrEvent of type ``t``, does ``todo`` before sending.
-  var event {.inject.}: TExecThrEvent
+  var event {.inject.}: ExecThrEvent
   event.typ = t
   todo
   execThrEventChan.send(event)
@@ -329,13 +329,13 @@ proc cmdToArgs(cmd: string): tuple[bin: string, args: seq[string]] =
 
 proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream) =
   for i in 0..tasks-1:
-    var task: TExecThrTask = execThrTaskChan.recv()
+    var task: ExecThrTask = execThrTaskChan.recv()
     case task.typ
     of ThrRun:
       if not started:
         let (bin, args) = cmdToArgs(task.command)
         p = startProcess(bin, task.workDir, args,
-                         options = {poStdErrToStdOut, poUseShell})
+                         options = {poStdErrToStdOut, poUsePath, poInteractive})
         createExecThrEvent(EvStarted):
           event.p = p
         o = p.outputStream
@@ -353,8 +353,8 @@ proc dispatchTasks(tasks: int, started: var bool, p: var Process, o: var Stream)
       p.close()
 
 proc execThreadProc(){.thread.} =
-  var p: PProcess
-  var o: PStream
+  var p: Process
+  var o: Stream
   var started = false
   while true:
     var tasks = execThrTaskChan.peek()
@@ -395,7 +395,7 @@ proc execThreadProc(){.thread.} =
       createExecThrEvent(EvRecv):
         event.line = line
 
-  
+
 
 proc createProcessThreads*(win: var MainWin) =
   createThread[void](win.tempStuff.execThread, execThreadProc)

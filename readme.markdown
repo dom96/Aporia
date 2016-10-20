@@ -6,6 +6,70 @@ default toolkit, and the gtksourceview for the text editor component.
 
 ![Aporia on Mac OS X](https://github.com/nim-lang/Aporia/raw/master/screenshots/osx.png "Aporia on Mac OS X")
 
+## Installing
+
+The method by which Aporia can be installed depends on your platform. The
+following installation instructions are valid as of version 0.4.1 of Aporia.
+
+### Windows
+
+The easiest way to install Aporia on Windows is to use one of the Nim windows
+installers available at the following URL:
+http://nim-lang.org/download.html#binaries
+
+These installers give you the option to install the latest version of Aporia.
+
+You can also install Aporia via the Nimble package manager, take a look at
+the Linux/BSD installation instructions to see how this can be done.
+Keep in mind that you will
+need to also install Aporia's dependencies manually if you install Aporia
+this way. The dependencies are listed below under the
+[#dependencies](#dependencies) section.
+
+### Mac OS X
+
+As of version 0.4.0 Aporia now offers very good Mac OS X support. The
+[releases](https://github.com/nim-lang/Aporia/releases) page contains a
+zipped archive to an Aporia app bundle, which you can download and begin
+using immediately!
+
+For your convenience, here is the app bundle for Aporia v0.4.0:
+https://github.com/nim-lang/Aporia/releases/download/v0.4.0/Aporia_0.4.0_MacOSX.zip
+
+### Linux/BSD
+
+Some Linux/BSD distributions may package Aporia so make sure to search for it
+using your favourite package manager. For example, AUR offers an
+[``aporia-git``](https://aur.archlinux.org/packages/aporia-git/) package.
+
+In most cases, you will need to compile and install Aporia manually. The
+easiest way to do so is using [Nimble](http://github.com/nim-lang/nimble).
+First, if you haven't already done so, install Nimble. The instructions for
+doing so can be found [here](https://github.com/nim-lang/nimble#installation).
+
+Once Nimble is installed, you can install Aporia by executing the following
+in a terminal:
+
+```bash
+nimble install aporia
+```
+
+This will download the latest Aporia release, compile it and install it to
+``~/.nimble/pkgs/`` and ``~/.nimble/bin/aporia``. You can then execute Aporia
+by executing ``~/.nimble/bin/aporia`` from your terminal. You can add
+``~/.nimble/bin`` to your ``$PATH`` to make the execution easier.
+
+If Aporia fails to start with an error similar to the following:
+
+```
+could not load: libgtk2.so
+```
+
+Then you will need to use your Linux/BSD distribution's package manager to
+install Aporia's dependencies. These include ``gtk2``, ``gtksourceview``
+(version 2, not 3), and ``pcre``. More information about these can be found
+in the [#dependencies](#dependencies) section.
+
 ## Compiling
 
 To compile Aporia you need the latest version of the nim compiler, preferably
@@ -106,6 +170,16 @@ export GTK2_RC_FILES=$(nimble path aporia | tail -n 1)/share/themes/Quartz/gtk-2
 ```
 
 You can put those in your ``.bash_rc`` file or similar to make it system-wide.
+
+For El Capitan Mac OSX
+
+```bash
+brew tap homebrew/dupes
+brew install libiconv
+cd /usr/local/lib/
+sudo ln -s libgdk-quartz-2.0.dylib libgdk-x11-2.0.dylib
+sudo ln -s libgtk-quartz-2.0.dylib libgtk-x11-2.0.dylib
+```
 
 **Note:** For this to work you must have Aporia installed via Nimble.
 

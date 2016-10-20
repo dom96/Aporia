@@ -108,7 +108,7 @@
       <start>#\[</start>
       <end>\]#</end>
       <include>
-        <context ref="def:in-comment"/>
+        <context ref="multiline-comment"/>
       </include>
     </context>
 
