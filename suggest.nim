@@ -36,7 +36,7 @@ proc addSuggestItem*(win: var MainWin, name: string, markup: string,
   listStore.append(addr(iter))
   listStore.set(addr(iter), 0, name, 1, markup, 2, color, 3, tooltipText, -1)
 
-proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
+proc addSuggestItem(win: var MainWin, item: SuggestItem) =
   # TODO: Escape tooltip text for pango markup.
   var markup = "<b>$1</b>" % [escapePango(item.nmName)]
   case item.nodeType
@@ -44,6 +44,8 @@ proc addSuggestItem(win: var MainWin, item: TSuggestItem) =
     markup = "$1$2" % [escapePango(item.nmName), item.nimType.replaceWord("proc ","")]
   of "skField":
     markup = "<i>$1 - $2</i>" % [escapePango(item.nmName), item.nimType]
+  else:
+    discard
   win.addSuggestItem(item.nmName, markup, item.nimType)
 
 proc getIterGlobalCoords(iter: PTextIter, tab: Tab): tuple[x, y: int32] =
@@ -81,7 +83,7 @@ proc doMoveSuggest*(win: var MainWin) =
   tab.buffer.getIterAtMark(addr(start), tab.buffer.getInsert())
   moveSuggest(win, addr(start), tab)
 
-proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
+proc parseIDEToolsLine*(cmd, line: string, item: var SuggestItem): bool =
   if line.startsWith(cmd):
     var s = line.split('\t')
     assert s.len == 8
@@ -103,14 +105,14 @@ proc parseIDEToolsLine*(cmd, line: string, item: var TSuggestItem): bool =
 
     result = true
 
-proc clear*(suggest: var TSuggestDialog) =
+proc clear*(suggest: var SuggestDialog) =
   var treeModel = suggest.treeView.getModel()
   # TODO: Why do I have to cast it? Why can't I just do PListStore(treeModel)?
   cast[PListStore](treeModel).clear()
   suggest.items = @[]
   suggest.allItems = @[]
 
-proc show*(suggest: var TSuggestDialog) =
+proc show*(suggest: var SuggestDialog) =
   if not suggest.shown and suggest.items.len() > 0:
     var selection = suggest.treeview.getSelection()
     var selectedPath = tree_path_new_first()
@@ -120,7 +122,7 @@ proc show*(suggest: var TSuggestDialog) =
     suggest.shown = true
     suggest.dialog.show()
 
-proc hide*(suggest: var TSuggestDialog) =
+proc hide*(suggest: var SuggestDialog) =
   if suggest.shown:
     echod("[Suggest] Hide")
     suggest.shown = false
@@ -154,7 +156,7 @@ proc filterSuggest*(win: var MainWin) =
   # Filter the items.
   var allItems = win.suggest.allItems
   win.suggest.clear()
-  var newItems: seq[TSuggestItem] = @[]
+  var newItems: seq[SuggestItem] = @[]
   for i in items(allItems):
     if normalize(i.nmName).startsWith(normalize($text)):
       newItems.add(i)
@@ -191,8 +193,8 @@ proc asyncGetSuggest(win: var MainWin, file, projectFile, addToPath: string,
   var winPtr = addr win
 
   proc onSugLine(line: string) {.closure.} =
-    template win: expr = winPtr[]
-    var item: TSuggestItem
+    template win: untyped = winPtr[]
+    var item: SuggestItem
     if parseIDEToolsLine("sug", line, item):
       win.suggest.allItems.add(item)
       let text = getFilter(win)
@@ -254,7 +256,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
     var alreadySaved: seq[string] = @[]
     for t in items(win.tabs):
       if t.filename != "" and t.filename.splitFile.dir == currentTabSplit.dir:
-        var f: TFile
+        var f: File
         var fileSplit = splitFile(t.filename)
         if fileSplit.ext != ".nim": continue
         echod("Saving ", prefixDir / fileSplit.name & fileSplit.ext)
@@ -297,7 +299,7 @@ proc populateSuggest*(win: var MainWin, start: PTextIter, tab: Tab): bool =
                     start.getLineOffset())
   else:
     # Unsaved tab.
-    var f: TFile
+    var f: File
     var filename = prefixDir / "unknown.nim"
     echod("Saving ", filename)
     if f.open(filename, fmWrite):
@@ -458,7 +460,7 @@ proc rstToPango(s: string): string =
   result = ""
   rstToPango(r, result)
 
-proc showTooltip*(win: var MainWin, tab: Tab, item: TSuggestItem,
+proc showTooltip*(win: var MainWin, tab: Tab, item: SuggestItem,
                   selectedPath: PTreePath) =
   var markup = "<i>" & escapePango(item.nimType) & "</i>"
   if item.docs != "":

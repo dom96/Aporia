@@ -3,7 +3,7 @@
 ##
 ## Uses 'nimsuggest' and not 'nim idetools'
 
-import osproc, streams, os, net, glib2, gtk2, strutils
+import osproc, streams, os, net, glib2, gtk2, strutils, unicode
 
 import utils
 
@@ -15,9 +15,9 @@ const
   port = 6000.Port
 
 var
-  commands: TChannel[string]
-  results: TChannel[string]
-  suggestTasks: TChannel[string]
+  commands: Channel[string]
+  results: Channel[string]
+  suggestTasks: Channel[string]
 
 commands.open()
 results.open()
@@ -58,7 +58,7 @@ proc suggestThread() {.thread.} =
         if line.len == 0: continue
         echod("[AutoComplete] Got line from NimSuggest (stdout): ", line.repr)
 
-        if line.toLower().startsWith("error:"):
+        if unicode.toLower(line).startsWith("error:"):
           results.send(errorToken & line)
 
     var tasks = commands.peek()
@@ -83,7 +83,7 @@ proc suggestThread() {.thread.} =
         echod("[AutoComplete] Project file for NimSuggest: ", projectFileNorm)
         p = startProcess(findExe("nimsuggest"), nimPath,
                              ["--port:" & $port, projectFileNorm],
-                             options = {poStdErrToStdOut, poUseShell,
+                             options = {poStdErrToStdOut, poUsePath,
                                         poInteractive})
         echod("[AutoComplete] NimSuggest started on port ", port)
         o = p.outputStream
@@ -162,6 +162,8 @@ proc peekSuggestOutput(self: AutoComplete): gboolean {.cdecl.} =
       return false
     of errorToken:
       self.onSugError(msg.split("\t")[1])
+    else:
+      discard
     self.onSugLine(msg)
 
   if not result:

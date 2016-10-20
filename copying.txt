@@ -1,6 +1,6 @@
 =======================================================
-                Aporia - Nimrod IDE
-         Copyright (C) 2011  Dominik Picheta
+                 Aporia - Nim IDE
+       Copyright (C) 2011-2016  Dominik Picheta
 =======================================================
 
 This program is free software; you can redistribute it and/or
