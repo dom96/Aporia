@@ -331,20 +331,6 @@ proc confirmUnsaved(win: var MainWin, t: Tab): int =
   result = askSave.run()
   gtk2.destroy(PWidget(askSave))
 
-when false:
-  # not used yet
-  proc confirmReload(win: var MainWin, t: Tab): int =
-    var askSave = win.w.messageDialogNew(0, MessageWarning, BUTTONS_NONE, nil)
-
-    askSave.setTransientFor(win.w)
-    doAssert t.filename != ""
-    let name = t.filename.extractFilename
-    askSave.setMarkup(name & " has been modified, what would you like to do?")
-    askSave.addButtons("Reload", ResponseAccept, STOCK_CANCEL, ResponseCancel,
-                       nil)
-    result = askSave.run()
-    gtk2.destroy(PWidget(askSave))
-
 proc askCloseTab(tab: int): bool =
   result = true
   if not win.tabs[tab].saved and not win.tabs[tab].isTemporary:
@@ -894,8 +880,6 @@ proc addTab(name, filename: string, options = {tabSetCurrent},
       var existingTab = win.findTab(filename)
       if existingTab != -1:
         if tabTryToReload in options:
-          #if win.tabs[existingTab].saved or
-          #        win.confirmReload(win.tabs[existingTab]) == RESPONSE_ACCEPT:
           discard loadFileIntoTab(win.tabs[existingTab],
                                   win.tabs[existingTab].buffer,
                                   filename, encoding)
