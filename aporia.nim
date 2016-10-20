@@ -118,6 +118,8 @@ proc updateTabUI(t: Tab) =
     name = "Untitled"
   else:
     name = extractFilename(t.filename)
+  if win.globalSettings.truncateLongTitles:
+    if len(name) > 20: name = name[0..16] & "..."
   if not t.saved:
     name.add(" *")
 
@@ -126,6 +128,63 @@ proc updateTabUI(t: Tab) =
   else:
     t.label.setText(name)
   setTabTooltip(t)
+
+proc updateSettings() = 
+  ## Updates the settings.
+
+  # Toggle toolbar:
+  if win.globalSettings.toolBarVisible:
+    win.toolBar.show()
+  else:
+    win.toolBar.hide()
+
+  # Toggle bottom panel:
+  if win.autoSettings.bottomPanelVisible:
+    win.bottomPanelTabs.show()
+  else:
+    win.bottomPanelTabs.hide()
+
+  # Output font:
+  var outputFont = font_description_from_string(win.globalSettings.outputFont)
+  win.outputTextView.modifyFont(outputFont)
+  
+  var schemeMan = schemeManagerGetDefault()
+  win.scheme = schemeMan.getScheme(win.globalSettings.colorSchemeID)
+  var font = fontDescriptionFromString(win.globalSettings.font)
+  for i in 0..high(win.tabs):
+    var tab = win.tabs[i]
+
+    # Color scheme:
+    tab.buffer.setScheme(win.scheme)
+    # Font:
+    tab.sourceView.modifyFont(font)
+
+    # Line numbers:
+    tab.sourceView.setShowLineNumbers(win.globalSettings.showLineNumbers)
+    # Highlight current line:
+    tab.sourceView.setHighlightCurrentLine(win.globalSettings.highlightCurrentLine)
+    # Show right margin:
+    tab.sourceView.setShowRightMargin(win.globalSettings.rightMargin)
+    # Bracket matching:
+    tab.buffer.setHighlightMatchingBrackets(win.globalSettings.highlightMatchingBrackets)
+    # Indent width:
+    tab.sourceView.setIndentWidth(win.globalSettings.indentWidth)
+    # Auto indent:
+    tab.sourceView.setAutoIndent(win.globalSettings.autoIndent)
+    # Wrap mode:
+    tab.sourceView.setWrapMode(win.globalSettings.wrapMode)
+
+    # Tab close buttons:
+    if win.globalSettings.showCloseOnAllTabs:
+      tab.closeBtn.show()
+    else:
+      if i == win.sourceViewTabs.getCurrentPage():
+        tab.closeBtn.show()
+      else:
+        tab.closeBtn.hide()
+
+    # Tab titles:
+    updateTabUI(tab)
 
 proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
   ## If tab's filename is ``""`` and the user clicks "Cancel", the filename will
@@ -164,13 +223,14 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
 
     var config = false
     if path == os.getConfigDir() / "Aporia" / "config.global.ini":
-      # If we are overwriting Aporia's config file. Validate it.
+      # If we are overwriting Aporia's config file, validate it.
       cfgErrors = @[]
       var newSettings = cfg.loadGlobal(cfgErrors, newStringStream($text))
       if cfgErrors.len > 0:
         showConfigErrors()
         return
       win.globalSettings = newSettings
+      updateSettings()
       config = true
 
     # Handle text before saving
