@@ -129,9 +129,11 @@ proc updateTabUI(t: Tab) =
 proc checkFileUpdate(pageNum: int) = 
   ## Checks if the currently opened tab has been updated outside of Aporia.
 
+  if win.tabs[pageNum].filename == "":
+    return
+
   var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
-  if win.tabs[pageNum].filename != "" and
-    win.tabs[pageNum].lastEdit != changedInfo.lastWriteTime:
+  if win.tabs[pageNum].lastEdit != changedInfo.lastWriteTime:
 
     win.filecheckbar.show()
 
