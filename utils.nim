@@ -8,7 +8,7 @@
 #
 
 # Stdlib imports:
-import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils
+import gtk2, gtksourceview, glib2, pango, osproc, streams, asyncio, strutils, times
 import tables, os, dialogs, pegs, osproc
 from gdk2 import TRectangle, intersect, TColor, colorParse, TModifierType
 # Local imports:
@@ -105,6 +105,7 @@ type
     statusBar*: CustomStatusBar
 
     infobar*: PInfoBar ## For encoding selection
+    filecheckbar*: PInfoBar ## For accepting or rejecting file changes
 
     toolBar*: PToolBar # \
     # FIXME: should be notebook?
@@ -213,6 +214,7 @@ type
     highlighted*: HighlightAll
     spbInfo*: tuple[lastUpper, value: float] # Scroll past bottom info
     lineEnding*: LineEnding
+    lastEdit*: Time
 
   SuggestItem* = object
     nodeType*, name*, nimType*, file*, nmName*, docs*: string

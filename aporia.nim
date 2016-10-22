@@ -130,6 +130,33 @@ proc updateTabUI(t: Tab) =
   else:
     t.label.setText(name)
   setTabTooltip(t)
+ 
+proc checkFileUpdate(pageNum: int) = 
+  ## Checks if the currently opened tab has been updated outside of Aporia.
+
+  if win.tabs[pageNum].filename == "":
+    return
+
+  var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
+  if win.tabs[pageNum].lastEdit != changedInfo.lastWriteTime:
+
+    win.filecheckbar.show()
+
+proc updateFile(infobar: PInfoBar, response: gint) = 
+  ## Updates the currently opened tab to the most recent revision
+  ## of the file.
+  
+  var pageNum = win.sourceViewTabs.getCurrentPage()
+  var changedInfo: FileInfo = getFileInfo(win.tabs[pageNum].filename)
+  if response == ResponseAccept:
+    var fileTxt: string = readFile(win.tabs[pageNum].filename)
+    win.tabs[pageNum].buffer.set_text(fileTxt, len(fileTxt).int32)
+    win.tabs[pageNum].saved = true
+  else:
+    win.tabs[pageNum].saved = false
+  win.tabs[pageNum].lastEdit = changedInfo.lastWriteTime
+  
+  win.filecheckbar.hide()
 
 proc updateSettings() =
   ## Updates the settings.
@@ -249,6 +276,7 @@ proc saveTab(tabNr: int, startpath: string, updateGUI: bool = true) =
 
       # Change the tab name and .Tabs.filename etc.
       win.tabs[tabNr].filename = path
+      win.tabs[tabNr].lastEdit = getTime()
 
       if updateGUI:
         win.tabs[tabNr].saved = true
@@ -927,7 +955,7 @@ proc addTab(name, filename: string, options = {tabSetCurrent},
     if len(nam) > 20: nam = nam[0..16] & "..."
 
   var (TabLabel, labelText, closeBtn) = createTabLabel(nam, scrollWindow, filename)
-
+  
   # Add a tab
   nTab.buffer = buffer
   nTab.sourceView = sourceView
@@ -938,6 +966,8 @@ proc addTab(name, filename: string, options = {tabSetCurrent},
   nTab.highlighted = newNoHighlightAll()
   if not win.globalSettings.showCloseOnAllTabs:
     nTab.closeBtn.hide()
+  if filename != "":
+    nTab.lastEdit = getFileInfo(filename).lastWriteTime
   win.tabs.add(nTab)
 
   # Set the tooltip
@@ -1566,6 +1596,10 @@ proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
   # Toggle the "Syntax Highlighting" check menu item based in the new tabs
   # syntax highlighting.
   plCheckUpdate(pageNum)
+  
+  # Check if the file changed outside the program.
+  if win.tabs[pageNum].filename != "":
+    checkFileUpdate(pageNum)
 
 proc onDragDataReceived(widget: PWidget, context: PDragContext,
                         x: gint, y: gint, data: PSelectionData, info: guint,
@@ -2139,6 +2173,27 @@ proc initInfoBar(mainBox: PBox) =
   discard win.infobar.signalConnect("response",
          SIGNAL_FUNC(InfoBarResponse), encodingsComboBox)
 
+proc initFileCheckBar(mainBox: PBox) =
+  win.filecheckbar = infoBarNewWithButtons("_Update", ResponseAccept, "_Ignore", ResponseCancel, nil)
+  win.filecheckbar.setMessageType(MessageInfo)
+  var vbox = vboxNew(false, 0);vbox.show()
+  let msgText = "File has been been edited outside Aporia. Update to latest revision of the file?"
+  var messageLabel = labelNew(nil)
+  messageLabel.setUseMarkup(true)
+  messageLabel.setMarkup("<span style=\"oblique\" font=\"13.5\">" & msgText &
+                         "</span>")
+  messageLabel.setAlignment(0.0, 0.5) # Left align.
+  messageLabel.show()
+  vbox.packStart(messageLabel, false, false, 0)
+  
+  var contentArea = win.filecheckbar.getContentArea()
+  contentArea.add(vbox)
+
+  mainBox.packStart(win.filecheckbar, false, false, 0)
+
+  discard win.filecheckbar.signalConnect("response",
+         SIGNAL_FUNC(updateFile), nil)
+
 proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
   result.target = target
   result.flags = flags.int32
@@ -2539,6 +2594,7 @@ proc initControls() =
   initTopMenu(mainBox)
   initToolBar(mainBox)
   initInfoBar(mainBox)
+  initFileCheckBar(mainBox)
   initTAndBP(mainBox)
   initFindBar(mainBox)
   initGoLineBar(mainBox)
