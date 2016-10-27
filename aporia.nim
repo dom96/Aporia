@@ -1685,21 +1685,14 @@ proc extraBtn_Clicked(button: PButton, user_data: Pgpointer) =
 # Go to line bar.
 proc goLine_Changed(ed: PEditable, d: Pgpointer) =
   var line = win.goLineBar.entry.getText()
-  var lineNum: BiggestInt = -1
+  var lineNum: BiggestInt = 0
   var column: BiggestInt = 0
-  var validLine = 0
-  var validColumn = 0
-  var columnEntered = false
 
-  if ($line).count(":") == 1:
-    var lineComponents = ($line).split(":")
-    validLine = parseBiggestInt(lineComponents[0].strip(), lineNum)
-    validColumn = parseBiggestInt(lineComponents[1].strip(), column)
-    columnEntered = true
-  elif ($line).count(":") == 0:
-    validLine = parseBiggestInt(($line).strip(), lineNum)
+  var validLine = parseBiggestInt($line, lineNum, 0)
+  if line[validLine] == ':':
+    discard parseBiggestInt($line, column, validLine + 1)
 
-  if validLine != 0 and (not columnEntered or columnEntered and validColumn != 0):
+  if validLine != 0:
     # Get current tab
     var current = win.sourceViewTabs.getCurrentPage()
     template buffer: untyped = win.tabs[current].buffer
