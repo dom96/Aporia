@@ -545,23 +545,21 @@ proc initShortcuts(settingsTabs: PNotebook) =
   var VBox = vboxNew(false, 5)
   discard settingsTabs.appendPage(VBox, labelNew("Shortcuts"))
   VBox.show()
-  
-  var HBox = hboxNew(false, 30)
-  VBox.packStart(HBox, false, false, 5)
-  HBox.show()
 
-  var hint = labelNew("Use the Delete button to clear a shortcut. Changes will be active after restart")
+  var hint = labelNew("Use the Delete button to clear a shortcut. Changes will be active after restart.")
   hint.setAlignment(0, 0.5)
   hint.show()
-  var Box2 = hboxNew(false, 0)
-  VBox.packStart(Box2, false, false, 0)
-  Box2.show()
-  Box2.packStart(hint, false, false, 10)
-    
+  VBox.packStart(hint, false, false, 5)
+
+  var scrolledWindow = scrolledwindowNew(nil, nil)
+  scrolledWindow.setPolicy(POLICY_AUTOMATIC, POLICY_AUTOMATIC)
+  VBox.packStart(scrolledWindow, true, true, 5)
+  scrolledWindow.show()
+
   VBox = vboxNew(false, 5)
-  HBox.packStart(VBox, false, false, 5)
   VBox.show()
-  
+  scrolledWindow.addWithViewport(VBox)
+
   keyCommentLinesEdit = addKeyEdit(VBox, "Comment lines", win.globalSettings.keyCommentLines)
   keyDeleteLineEdit = addKeyEdit(VBox, "Delete line", win.globalSettings.keyDeleteLine)
   keyDuplicateLinesEdit = addKeyEdit(VBox, "Duplicate lines", win.globalSettings.keyDuplicateLines)
@@ -578,11 +576,6 @@ proc initShortcuts(settingsTabs: PNotebook) =
   keyReplaceEdit = addKeyEdit(VBox, "Find and replace", win.globalSettings.keyReplace)
   keyFindNextEdit = addKeyEdit(VBox, "Find next", win.globalSettings.keyFindNext)
   keyFindPreviousEdit = addKeyEdit(VBox, "Find previous", win.globalSettings.keyFindPrevious)
- 
-  VBox = vboxNew(false, 5)
-  HBox.packStart(VBox, false, false, 5)
-  VBox.show()
-
   keyGoToLineEdit = addKeyEdit(VBox, "Go to line", win.globalSettings.keyGoToLine)
   keyGoToDefEdit = addKeyEdit(VBox, "Go to definition under cursor", win.globalSettings.keyGoToDef)
   keyQuitEdit = addKeyEdit(VBox, "Quit", win.globalSettings.keyQuit)
