@@ -112,7 +112,11 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
     reOptions = reOptions + {reIgnoreCase}
     newPattern = styleInsensitive(newPattern)
     isRegex = true  
-    
+  
+  # Change .* to . to prevent a crash.
+  if isRegex and newPattern == ".*":
+    newPattern = "."
+
   var match = (-1, 0)
   var singleChar = false
   if forward:
@@ -128,6 +132,7 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
         inc(match[1])
         singleChar = true
       newMatch = findBoundsGen($text, newPattern, isRegex, reOptions, match[1])
+      if match[0] == newMatch[1] and match[1] == newMatch[0]: break
       if newMatch != (-1, 0): match = newMatch
       else: break
 
