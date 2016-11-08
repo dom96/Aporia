@@ -113,9 +113,10 @@ proc findRePeg(win: var utils.MainWin, forward: bool, startIter: PTextIter,
     newPattern = styleInsensitive(newPattern)
     isRegex = true  
   
-  # Change .* to . to prevent a crash.
+  # Change .* to prevent a crash.
   if isRegex and newPattern == ".*":
-    newPattern = "."
+    if forward: newPattern = ".*$"
+    else: newPattern = "^.*"
 
   var match = (-1, 0)
   var singleChar = false
