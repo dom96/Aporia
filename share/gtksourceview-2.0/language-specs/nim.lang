@@ -2,7 +2,7 @@
 <!--
 
  Author: Andreas Rumpf
- Copyright (C) 2012 Andreas Rumpf, Dominik Picheta
+ Copyright (C) 2012 Andreas Rumpf, Dominik Picheta, Mice Pápai
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -136,7 +136,7 @@
         </define-regex>
 
         <define-regex id="numbersuffix" extended="true">
-          (\'[Ff]32|\'[Ff]64|\'[IiUu]8|\'[IiUu]16|\'[IiUu]32|\'[IiUu]64)
+          (\'[Ff]32|\'[Ff]64|\'[IiUu]8|\'[IiUu]16|\'[IiUu]32|\'[IiUu]64|\'u)
         </define-regex>
 
         <context id="float" style-ref="floating-point">
@@ -244,6 +244,7 @@
           <start>^(\s*)(?=t_?(y|Y)_?(p|P)_?(e|E)\b)</start>
           <end>^(?!\s*$)(?!\%{1@start}\s)</end>
           <include>
+            <context ref="multiline-comment"/>
             <context id="type-decl-comments" style-ref="comment">
               <start>#.*</start>
               <end>$</end>
