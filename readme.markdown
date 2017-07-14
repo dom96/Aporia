@@ -13,13 +13,9 @@ following installation instructions are valid as of version 0.4.1 of Aporia.
 
 ### Windows
 
-The easiest way to install Aporia on Windows is to use one of the Nim windows
-installers available at the following URL:
-http://nim-lang.org/download.html#binaries
+No windows binaries available right now I'm afraid. Sorry!
 
-These installers give you the option to install the latest version of Aporia.
-
-You can also install Aporia via the Nimble package manager, take a look at
+You can install Aporia via the Nimble package manager, take a look at
 the Linux/BSD installation instructions to see how this can be done.
 Keep in mind that you will
 need to also install Aporia's dependencies manually if you install Aporia
