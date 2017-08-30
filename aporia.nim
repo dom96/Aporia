@@ -24,7 +24,7 @@ import settings, utils, cfg, search, suggest, AboutDialog, processes,
 {.push callConv:cdecl.}
 
 const
-  GTKVerReq = (2'i32, 24'i32, 0'i32) # Version of GTK required for Aporia to run.
+  GTKVerReq = (2.guint, 24.guint, 0.guint) # Version of GTK required for Aporia to run.
   aporiaVersion = "0.4.1"
   helpText = """./aporia [args] filename...
   -v  --version  Reports aporia's version
@@ -1569,7 +1569,7 @@ proc onTabsPressed(widg: PWidget, ev: PEventButton,
 
     discard addTab("", "")
 
-proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: guint,
+proc onSwitchTab(notebook: PNotebook, page: PNotebookPage, pageNum: int,
                  user_data: Pgpointer) =
   # hide close button of last active tab
   if not win.globalSettings.showCloseOnAllTabs and
@@ -1625,7 +1625,7 @@ proc onDragDataReceived(widget: PWidget, context: PDragContext,
 
 proc onPageReordered(notebook: PNotebook, child: PWidget, pageNum: cuint,
                      userData: pointer) =
-  let oldPos = win.tabs[win.tempStuff.lastTab]
+  let oldPos = win.tabs[win.tempStuff.lastTab.int]
   system.delete(win.tabs, win.tempStuff.lastTab)
   win.tabs.insert(oldPos, int(pageNum))
 
@@ -2160,7 +2160,7 @@ proc initInfoBar(mainBox: PBox) =
   encodingsComboBox.appendText($Windows1251)
   encodingsComboBox.appendText($UTF16BE)
   encodingsComboBox.appendText($UTF16LE)
-  encodingsComboBox.setActive(UTF8.guint)
+  encodingsComboBox.setActive(UTF8.gint)
   encodingsComboBox.show()
   hbox.packStart(encodingsComboBox, false, false, 0)
 
@@ -2196,8 +2196,8 @@ proc initFileCheckBar(mainBox: PBox) =
 
 proc createTargetEntry(target: string, flags, info: int): TTargetEntry =
   result.target = target
-  result.flags = flags.int32
-  result.info = info.int32
+  result.flags = flags.guint
+  result.info = info.guint
 
 proc initsourceViewTabs() =
   win.sourceViewTabs = notebookNew()

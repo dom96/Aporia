@@ -486,7 +486,7 @@ proc entryKeyRelease(entry: PEntry, EventKey: PEventKey) {.cdecl.} =
     entry.setText("")
   elif EventKey.keyval < 65505:
     let modMasks = MOD1_MASK or MOD2_MASK or MOD3_MASK or MOD4_MASK or
-        MOD5_MASK.guint
+        MOD5_MASK
     let shortcut = ShortcutKey(keyval: EventKey.keyval,
         state: EventKey.state and (not modMasks))
     if not shortcut.isValid(): return
