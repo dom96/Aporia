@@ -188,7 +188,7 @@ type
     compileSuccess*: bool
     execThread*: Thread[void]
     execProcess*: Process
-    idleFuncId*: guint#int32
+    idleFuncId*: guint
     progressStatusID*: StatusID
     lastProgressPulse*: float
     errorMsgStarted*: bool
