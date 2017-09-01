@@ -18,7 +18,7 @@ const
                        '{', '}', '`', '[', ']', ',', ';'} +
                       strutils.Whitespace + {'\t'}
 
-proc newHighlightAll*(text: string, forSearch: bool, idleID: int32): HighlightAll =
+proc newHighlightAll*(text: string, forSearch: bool, idleID: guint): HighlightAll =
   result.isHighlighted = true
   result.text = text
   result.forSearch = forSearch
@@ -305,7 +305,7 @@ proc findText*(win: var utils.MainWin, forward: bool) =
     highlightAll(win, pattern, true, win.autoSettings.search)
   else:
     # Stop it from highlighting due to selection.
-    win.tabs[currentTab].highlighted = newHighlightAll("", true, -1)
+    win.tabs[currentTab].highlighted = newHighlightAll("", true, guint.high)
   
   # Get the position where the cursor is,
   # Search based on that.

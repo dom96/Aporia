@@ -188,7 +188,7 @@ type
     compileSuccess*: bool
     execThread*: Thread[void]
     execProcess*: Process
-    idleFuncId*: int32
+    idleFuncId*: guint
     progressStatusID*: StatusID
     lastProgressPulse*: float
     errorMsgStarted*: bool
@@ -245,7 +245,7 @@ type
     isHighlighted*: bool
     text*: string # What is currently being highlighted in this tab
     forSearch*: bool # Whether highlightedText is done as a result of a search.
-    idleID*: int32
+    idleID*: guint
 
   AutoComplete* = ref object
     thread*: Thread[void]
