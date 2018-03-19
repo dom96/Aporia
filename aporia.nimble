@@ -7,4 +7,4 @@ license       = "GPLv2"
 bin           = "aporia"
 
 [Deps]
-Requires: "nim >= 0.11.0, gtk2#head, dialogs#head"
+Requires: "nim >= 0.11.0, gtk2 >= 1.3, dialogs >= 1.1.1"

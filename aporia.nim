@@ -10,7 +10,7 @@
 # Stdlib imports:
 import glib2, gtk2, gtksourceview, dialogs, os, pango, osproc
 import strutils except toLower
-import gdk2 except `delete` # Don't import delete to avoid "ambiguous identifier" error under Windows
+import gdk2 except `delete`, string # Don't import delete to avoid "ambiguous identifier" error under Windows
 import pegs, streams, times, parseopt, parseutils, asyncio, sockets, encodings, unicode
 import tables, algorithm
 
@@ -1180,10 +1180,10 @@ proc GoLine_Activate(menuitem: PMenuItem, user_data: pointer) =
   win.goLineBar.entry.grabFocus()
 
 proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
-  template cb(): untyped = win.tabs[currentPage].buffer
+  template cb(): untyped {.dirty.} = win.tabs[currentPage].buffer
   var currentPage = win.sourceViewTabs.getCurrentPage()
   var start, theEnd: TTextIter
-  proc toggleSingle() =
+  proc toggleSingle() {.closure.} =
     cb.beginUserAction()
     # start and end are the same line no.
     # get the whole
@@ -1217,7 +1217,7 @@ proc CommentLines_Activate(menuitem: PMenuItem, user_data: pointer) =
       cb.insert(addr(locNonWSIter), lineComment & ' ', lineComment.len.gint+1)
     cb.endUserAction()
 
-  proc toggleMultiline() =
+  proc toggleMultiline() {.closure.} =
     cb.beginUserAction()
     (addr theEnd).moveToEndLine() # Move to end of line.
     var selectedTxt = cb.getText(addr(start), addr(theEnd), false)
