@@ -1,6 +1,6 @@
 [Package]
 name          = "aporia"
-version       = "0.4.1"
+version       = "0.4.2"
 author        = "Dominik Picheta"
 description   = "A Nim IDE."
 license       = "GPLv2"

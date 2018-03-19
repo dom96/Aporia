@@ -1,4 +1,9 @@
 # Aporia
+
+**Note:** As of 2018 Aporia is considered obsolete. Most of the Nim community
+has switched to VS Code instead. Feel free to use Aporia, but know that it
+may not be maintained anymore.
+
 Aporia is an IDE for the Nim programming language. Aporia uses GTK as the
 default toolkit, and the gtksourceview for the text editor component.
 
